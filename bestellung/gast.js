@@ -51,9 +51,16 @@
     .catch(() => hinweis('Bestellen am Handy ist gerade nicht erreichbar. Bestellt bitte direkt bei uns.'));
 
   function starten(info) {
-    document.head.append(h('link', { rel: 'stylesheet', href: 'bestellung/gast.css' }));
+    document.head.append(h('link', { rel: 'stylesheet', href: 'bestellung/gast.css?v=4' }));
     // Bestellt werden kann nur, wenn die Theke es nicht pausiert hat und das Café geöffnet ist
     const bestellbar = info.aktiv && info.offen !== false;
+
+    // Öffnet sich die Handy-Tastatur, rückt das Blatt um ihre Höhe nach oben (sonst läge es dahinter)
+    if (window.visualViewport) {
+      const vv = window.visualViewport;
+      const tastatur = () => document.documentElement.style.setProperty('--nb-tastatur', Math.max(0, Math.round(window.innerHeight - vv.height - vv.offsetTop)) + 'px');
+      vv.addEventListener('resize', tastatur); vv.addEventListener('scroll', tastatur);
+    }
 
     // ---------------------------------------------------------- Zustand
     let korb = merken.lesen('korb', []);
@@ -77,7 +84,7 @@
     const tischKnopf = h(info.wahl ? 'button' : 'span', { class: 'nb-tisch', type: info.wahl && 'button', onclick: () => info.wahl && bestellbar && tischWaehlen() });
     function tischZeichnen() {
       tischKnopf.replaceChildren(h('b', {}, tisch ? tischName(tisch) : 'Tischnummer eintragen'),
-        bestellbar && h('span', {}, info.wahl && tisch ? 'ändern' : 'Bestellt direkt hier am Handy'));
+        bestellbar && h('span', {}, info.wahl ? (tisch ? 'ändern' : 'hier tippen') : 'Bestellt direkt hier am Handy'));
     }
     tischZeichnen();
     document.getElementById('status').after(h('br'), tischKnopf);
@@ -102,9 +109,9 @@
 
     // ---------------------------------------------------------- Bausteine
     // Ein Blatt, das von unten hochkommt: Kopf, Inhalt (scrollt), Fuß (bleibt stehen)
-    function blatt(titel, untertitel) {
+    function blatt(titel, untertitel, oben) {
       const inhalt = h('div', { class: 'nb-inhalt' }), fuss = h('div', { class: 'nb-fuss' });
-      const d = h('dialog', { class: 'nb-blatt' },
+      const d = h('dialog', { class: 'nb-blatt' + (oben ? ' oben' : '') },
         h('header', {}, h('div', {}, h('h3', {}, titel), untertitel && h('p', {}, untertitel)),
           h('button', { class: 'nb-zu', type: 'button', 'aria-label': 'Schließen', onclick: () => d.close() }, zeichen(KREUZ))),
         inhalt, fuss);
@@ -155,7 +162,7 @@
     // Der Gast tippt seine Tischnummer ein. Gibt es die Nummer in mehreren Bereichen
     // (z. B. Tisch 1 drinnen und draußen), fragt das Blatt danach noch nach dem Bereich.
     function tischWaehlen(danach) {
-      const b = blatt('An welchem Tisch sitzt ihr?', 'Die Nummer steht bei euch am Tisch.');
+      const b = blatt('An welchem Tisch sitzt ihr?', 'Die Nummer steht bei euch am Tisch.', true);
       if (!info.tische.length) return b.inhalt.append(h('p', {}, 'Es sind noch keine Tische eingerichtet. Bestellt bitte direkt bei uns.'));
       const nurZahlen = info.tische.every(t => /^\d+$/.test(t.name));
       const feld = h('input', { class: 'nb-nummer', type: 'text', inputmode: nurZahlen && 'numeric', maxlength: 20, autocomplete: 'off',

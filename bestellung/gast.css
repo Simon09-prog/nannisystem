@@ -1,7 +1,7 @@
 /* Bestellen am Tisch: wird von gast.js nur geladen, wenn ein gültiger Code im Link steht.
    Farben und Schriften kommen aus den Variablen der Kartenseite (--sage-deep, --paper, ...). */
 
-.nb-tisch { display: inline-flex; align-items: center; gap: 8px; margin-top: 12px; padding: 7px 14px; border: 0; border-radius: 999px; background: var(--espresso); color: var(--paper); font: 400 .9rem/1.2 var(--sans); }
+.nb-tisch { display: inline-flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 2px 8px; max-width: 100%; min-height: 44px; margin-top: 12px; padding: 8px 18px; border: 0; border-radius: 999px; background: var(--espresso); color: var(--paper); font: 400 .9rem/1.2 var(--sans); }
 .nb-tisch b { font-weight: 600; }
 .nb-tisch span { opacity: .8; }
 button.nb-tisch { cursor: pointer; }
@@ -18,30 +18,34 @@ button.nb-tisch span { text-decoration: underline; text-underline-offset: 3px; }
 .nb-blatt svg, .nb-plus svg { fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; }
 
 /* Blatt von unten */
-.nb-blatt { width: 100%; max-width: 560px; max-height: min(88dvh, 720px); margin: auto auto 0; padding: 0; border: 0; border-radius: 24px 24px 0 0; background: var(--paper); color: var(--espresso); font: 400 1rem/1.5 var(--sans); overflow: hidden; }
+.nb-blatt { box-sizing: border-box; inset: 0; width: 100%; max-width: 560px; max-height: 88vh; max-height: min(88dvh, 720px, calc(100dvh - var(--nb-tastatur, 0px) - 12px)); margin: auto auto var(--nb-tastatur, 0px); padding: 0; border: 0; border-radius: 24px 24px 0 0; background: var(--paper); color: var(--espresso); font: 400 1rem/1.5 var(--sans); overflow: hidden; }
 .nb-blatt[open] { display: flex; flex-direction: column; animation: nb-hoch .25s cubic-bezier(.2, .8, .2, 1); }
 .nb-blatt::backdrop { background: rgba(51, 38, 31, .45); }
 @keyframes nb-hoch { from { transform: translateY(40px); opacity: 0; } }
-@media (min-width: 620px) { .nb-blatt { margin: auto; border-radius: 24px; } }
+/* Blatt mit Eingabefeld sitzt oben, damit die Handy-Tastatur es nicht verdeckt */
+.nb-blatt.oben { width: calc(100% - 24px); margin: calc(12px + env(safe-area-inset-top)) auto auto; border-radius: 24px; }
+.nb-blatt.oben[open] { animation-name: nb-runter; }
+@keyframes nb-runter { from { transform: translateY(-30px); opacity: 0; } }
+@media (min-width: 620px) { .nb-blatt, .nb-blatt.oben { margin: auto; border-radius: 24px; } }
 @media (prefers-reduced-motion: reduce) { .nb-blatt[open] { animation: none; } }
-.nb-blatt > header { display: flex; gap: 12px; align-items: flex-start; padding: 20px 20px 12px; }
+.nb-blatt > header { flex: none; display: flex; gap: 12px; align-items: flex-start; padding: 20px 20px 12px; }
 .nb-blatt > header > div { flex: 1; min-width: 0; }
 .nb-blatt h3 { margin: 0; font: 450 1.5rem/1.2 var(--serif); }
 .nb-blatt > header p { margin: 4px 0 0; color: var(--muted); font-size: .93rem; }
 .nb-zu { flex: none; width: 40px; height: 40px; margin: -6px -8px 0 0; border: 0; border-radius: 50%; background: var(--cream); color: var(--espresso); display: grid; place-items: center; cursor: pointer; }
 .nb-zu svg { width: 16px; height: 16px; }
-.nb-inhalt { flex: 1; min-height: 0; overflow-y: auto; padding: 0 20px 8px; overscroll-behavior: contain; }
-.nb-fuss { padding: 12px 20px calc(16px + env(safe-area-inset-bottom)); border-top: 1px solid var(--line); }
+.nb-inhalt { flex: 0 1 auto; min-height: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 0 20px 8px; overscroll-behavior: contain; }
+.nb-fuss { flex: none; padding: 12px 20px calc(16px + env(safe-area-inset-bottom)); border-top: 1px solid var(--line); }
 .nb-fuss:empty { display: none; }
 .nb-blatt h4 { margin: 14px 0 6px; font: 600 .74rem/1 var(--sans); letter-spacing: .18em; text-transform: uppercase; color: var(--muted); }
-.nb-blatt textarea { display: block; width: 100%; padding: 10px 12px; border: 1px solid var(--line); border-radius: 12px; background: #fff; color: inherit; font: inherit; resize: none; }
+.nb-blatt textarea { display: block; box-sizing: border-box; width: 100%; -webkit-appearance: none; appearance: none; padding: 10px 12px; border: 1px solid var(--line); border-radius: 12px; background: #fff; color: inherit; font: inherit; resize: none; }
 
 .nb-extras { list-style: none; margin: 0; padding: 0; }
-.nb-extras label { display: flex; align-items: center; gap: 12px; min-height: 46px; cursor: pointer; border-top: 1px dashed var(--line); }
+.nb-extras label { display: flex; align-items: center; gap: 12px; min-height: 50px; -webkit-tap-highlight-color: transparent; cursor: pointer; border-top: 1px dashed var(--line); }
 .nb-extras li:first-child label { border-top: 0; }
-.nb-extras input { width: 22px; height: 22px; margin: 0; accent-color: var(--sage-deep); }
-.nb-extras span { flex: 1; }
-.nb-extras em { font-style: normal; color: var(--sage-deep); font-variant-numeric: tabular-nums; }
+.nb-extras input { flex: none; width: 24px; height: 24px; margin: 0; accent-color: var(--sage-deep); }
+.nb-extras span { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.nb-extras em { flex: none; white-space: nowrap; font-style: normal; color: var(--sage-deep); font-variant-numeric: tabular-nums; }
 
 /* Knöpfe */
 .nb-knopf { flex: 1; display: flex; justify-content: space-between; align-items: center; gap: 12px; min-height: 52px; padding: 0 22px; border: 0; border-radius: 999px; background: var(--sage-deep); color: #fff; font: 500 1.02rem/1 var(--sans); cursor: pointer; font-variant-numeric: tabular-nums; }
@@ -71,7 +75,7 @@ button.nb-tisch span { text-decoration: underline; text-underline-offset: 3px; }
 .nb-klein { margin: 2px 0 12px; color: var(--muted); font-size: .88rem; }
 .nb-fehler { margin: 8px 0; padding: 10px 14px; border-radius: 12px; background: var(--blush-soft); color: #7c3138; font-size: .93rem; }
 
-.nb-nummer { display: block; width: 100%; margin: 6px 0 4px; padding: 14px 16px; border: 1px solid var(--line); border-radius: 16px; background: #fff; color: inherit; font: 500 2rem/1.2 var(--serif); text-align: center; }
+.nb-nummer { display: block; box-sizing: border-box; width: 100%; -webkit-appearance: none; appearance: none; margin: 6px 0 4px; padding: 14px 16px; border: 1px solid var(--line); border-radius: 16px; background: #fff; color: inherit; font: 500 2rem/1.2 var(--serif); text-align: center; }
 .nb-nummer::placeholder { font: 400 1.1rem/1.9 var(--sans); color: var(--muted); }
 .nb-bereiche .nb-reihe { flex-wrap: wrap; gap: 10px; padding-bottom: 8px; }
 
@@ -94,9 +98,9 @@ button.nb-tisch span { text-decoration: underline; text-underline-offset: 3px; }
 @media (prefers-reduced-motion: reduce) { [data-stand="angenommen"] i { animation: none; } }
 
 /* Leiste unten */
-.nb-leiste { position: fixed; left: 0; right: 0; bottom: 0; z-index: 30; display: grid; gap: 8px; width: min(560px, 100%); margin: 0 auto; padding: 0 12px calc(12px + env(safe-area-inset-bottom)); pointer-events: none; }
+.nb-leiste { position: fixed; left: 0; right: 0; bottom: 0; z-index: 30; display: grid; grid-template-columns: minmax(0, 1fr); gap: 8px; width: min(560px, 100%); margin: 0 auto; padding: 0 12px calc(12px + env(safe-area-inset-bottom)); pointer-events: none; }
 .nb-leiste:empty { display: none; }
-.nb-leiste button { pointer-events: auto; display: flex; align-items: center; gap: 10px; width: 100%; border: 0; border-radius: 999px; font: 400 .95rem/1.2 var(--sans); cursor: pointer; text-align: left; box-shadow: 0 14px 30px -14px rgba(51, 38, 31, .6); }
+.nb-leiste button { pointer-events: auto; display: flex; align-items: center; gap: 10px; width: 100%; min-width: 0; overflow: hidden; border: 0; border-radius: 999px; font: 400 .95rem/1.2 var(--sans); cursor: pointer; text-align: left; box-shadow: 0 14px 30px -14px rgba(51, 38, 31, .6); }
 .nb-leiste .text { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .nb-stand { min-height: 46px; padding: 0 16px; background: var(--paper); color: var(--espresso); border: 1px solid var(--line) !important; }
 .nb-stand .mehr { color: var(--sage-deep); text-decoration: underline; text-underline-offset: 3px; white-space: nowrap; }
@@ -104,3 +108,7 @@ button.nb-tisch span { text-decoration: underline; text-underline-offset: 3px; }
 .nb-korb .anzahl { flex: none; min-width: 40px; height: 40px; padding: 0 8px; border-radius: 999px; background: rgba(255, 255, 255, .18); display: grid; place-items: center; font-weight: 600; }
 body.nb-mit-leiste { padding-bottom: calc(var(--nb-leiste, 0px) + 8px); }
 body.nb-mit-leiste .totop { bottom: calc(var(--nb-leiste, 0px) + 12px); }
+
+/* Knöpfe sehen auf dem iPhone sonst blau und im Systemstil aus */
+.nb-blatt button, .nb-leiste button, .nb-plus, button.nb-tisch { -webkit-appearance: none; appearance: none; font-family: var(--sans); touch-action: manipulation; }
+.nb-zaehler button, .nb-zu { color: var(--espresso); }
