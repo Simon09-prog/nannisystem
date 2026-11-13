@@ -1,0 +1,103 @@
+/* Bestellen am Tisch: wird von gast.js nur geladen, wenn ein gültiger Code im Link steht.
+   Farben und Schriften kommen aus den Variablen der Kartenseite (--sage-deep, --paper, ...). */
+
+.nb-tisch { display: inline-flex; align-items: center; gap: 8px; margin-top: 12px; padding: 7px 14px; border: 0; border-radius: 999px; background: var(--espresso); color: var(--paper); font: 400 .9rem/1.2 var(--sans); }
+.nb-tisch b { font-weight: 600; }
+.nb-tisch span { opacity: .8; }
+button.nb-tisch { cursor: pointer; }
+button.nb-tisch span { text-decoration: underline; text-underline-offset: 3px; }
+.nb-pause { margin: 16px auto 0; max-width: 30em; padding: 12px 16px; border-radius: 14px; background: var(--blush-soft); color: #7c3138; font-size: .95rem; }
+
+/* Plus-Knopf an jeder Position */
+.nb-plus { flex: none; align-self: center; position: relative; isolation: isolate; width: 44px; height: 44px; margin: -8px -6px -8px 0; padding: 0; border: 0; border-radius: 50%; background: none; color: var(--sage-deep); font: 600 .95rem/1 var(--sans); cursor: pointer; display: grid; place-items: center; -webkit-tap-highlight-color: transparent; }
+.nb-plus::before { content: ""; position: absolute; inset: 6px; z-index: -1; border-radius: 50%; background: var(--sage-soft); transition: background-color .15s; }
+.nb-plus svg { width: 16px; height: 16px; }
+.nb-plus.voll { color: #fff; }
+.nb-plus.voll::before { background: var(--sage-deep); }
+.nb-plus:active::before { background: var(--sage); }
+.nb-blatt svg, .nb-plus svg { fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; }
+
+/* Blatt von unten */
+.nb-blatt { width: 100%; max-width: 560px; max-height: min(88dvh, 720px); margin: auto auto 0; padding: 0; border: 0; border-radius: 24px 24px 0 0; background: var(--paper); color: var(--espresso); font: 400 1rem/1.5 var(--sans); overflow: hidden; }
+.nb-blatt[open] { display: flex; flex-direction: column; animation: nb-hoch .25s cubic-bezier(.2, .8, .2, 1); }
+.nb-blatt::backdrop { background: rgba(51, 38, 31, .45); }
+@keyframes nb-hoch { from { transform: translateY(40px); opacity: 0; } }
+@media (min-width: 620px) { .nb-blatt { margin: auto; border-radius: 24px; } }
+@media (prefers-reduced-motion: reduce) { .nb-blatt[open] { animation: none; } }
+.nb-blatt > header { display: flex; gap: 12px; align-items: flex-start; padding: 20px 20px 12px; }
+.nb-blatt > header > div { flex: 1; min-width: 0; }
+.nb-blatt h3 { margin: 0; font: 450 1.5rem/1.2 var(--serif); }
+.nb-blatt > header p { margin: 4px 0 0; color: var(--muted); font-size: .93rem; }
+.nb-zu { flex: none; width: 40px; height: 40px; margin: -6px -8px 0 0; border: 0; border-radius: 50%; background: var(--cream); color: var(--espresso); display: grid; place-items: center; cursor: pointer; }
+.nb-zu svg { width: 16px; height: 16px; }
+.nb-inhalt { flex: 1; min-height: 0; overflow-y: auto; padding: 0 20px 8px; overscroll-behavior: contain; }
+.nb-fuss { padding: 12px 20px calc(16px + env(safe-area-inset-bottom)); border-top: 1px solid var(--line); }
+.nb-fuss:empty { display: none; }
+.nb-blatt h4 { margin: 14px 0 6px; font: 600 .74rem/1 var(--sans); letter-spacing: .18em; text-transform: uppercase; color: var(--muted); }
+.nb-blatt textarea { display: block; width: 100%; padding: 10px 12px; border: 1px solid var(--line); border-radius: 12px; background: #fff; color: inherit; font: inherit; resize: none; }
+
+.nb-extras { list-style: none; margin: 0; padding: 0; }
+.nb-extras label { display: flex; align-items: center; gap: 12px; min-height: 46px; cursor: pointer; border-top: 1px dashed var(--line); }
+.nb-extras li:first-child label { border-top: 0; }
+.nb-extras input { width: 22px; height: 22px; margin: 0; accent-color: var(--sage-deep); }
+.nb-extras span { flex: 1; }
+.nb-extras em { font-style: normal; color: var(--sage-deep); font-variant-numeric: tabular-nums; }
+
+/* Knöpfe */
+.nb-knopf { flex: 1; display: flex; justify-content: space-between; align-items: center; gap: 12px; min-height: 52px; padding: 0 22px; border: 0; border-radius: 999px; background: var(--sage-deep); color: #fff; font: 500 1.02rem/1 var(--sans); cursor: pointer; font-variant-numeric: tabular-nums; }
+.nb-knopf.mitte { width: 100%; justify-content: center; }
+.nb-knopf.hell { background: var(--cream); color: var(--espresso); }
+.nb-knopf:disabled { opacity: .6; }
+.nb-knopf:active { transform: scale(.985); }
+.nb-reihe { display: flex; align-items: center; gap: 14px; }
+
+.nb-zaehler { flex: none; display: inline-flex; align-items: center; border-radius: 999px; background: var(--cream); }
+.nb-zaehler button { width: 44px; height: 44px; border: 0; border-radius: 50%; background: none; color: var(--espresso); display: grid; place-items: center; cursor: pointer; }
+.nb-zaehler svg { width: 14px; height: 14px; }
+.nb-zaehler output { min-width: 1.6em; text-align: center; font-weight: 600; font-variant-numeric: tabular-nums; }
+
+/* Warenkorb */
+.nb-zeilen { list-style: none; margin: 0; padding: 0; }
+.nb-zeilen li { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-top: 1px dashed var(--line); }
+.nb-zeilen li:first-child { border-top: 0; }
+.nb-zeilen .was { flex: 1; min-width: 0; line-height: 1.3; }
+.nb-zeilen .was b { font-weight: 500; overflow-wrap: anywhere; }
+.nb-zeilen small { display: block; color: var(--muted); font-size: .88rem; overflow-wrap: anywhere; }
+.nb-zeilen .preis { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.nb-zeilen .nb-zaehler button { width: 38px; height: 38px; }
+.nb-tischzeile { display: flex; justify-content: space-between; align-items: center; width: 100%; min-height: 46px; margin-bottom: 10px; padding: 0 16px; border: 1px solid var(--line); border-radius: 14px; background: #fff; color: inherit; font: inherit; cursor: pointer; }
+.nb-tischzeile span { color: var(--sage-deep); text-decoration: underline; text-underline-offset: 3px; }
+.nb-summe { display: flex; justify-content: space-between; font-size: 1.1rem; font-variant-numeric: tabular-nums; }
+.nb-klein { margin: 2px 0 12px; color: var(--muted); font-size: .88rem; }
+.nb-fehler { margin: 8px 0; padding: 10px 14px; border-radius: 12px; background: var(--blush-soft); color: #7c3138; font-size: .93rem; }
+
+.nb-tische { display: grid; grid-template-columns: repeat(auto-fill, minmax(64px, 1fr)); gap: 10px; padding-bottom: 8px; }
+.nb-tische button { min-height: 56px; border: 1px solid var(--line); border-radius: 14px; background: #fff; color: inherit; font: 500 1.15rem/1 var(--serif); cursor: pointer; }
+.nb-tische button.an { background: var(--sage-deep); border-color: var(--sage-deep); color: #fff; }
+
+/* Stand der Bestellungen */
+.nb-bestellung { margin-bottom: 12px; padding: 14px 16px; border: 1px solid var(--line); border-radius: 16px; background: #fff; }
+.nb-bestellung header { display: flex; align-items: center; gap: 8px; }
+.nb-bestellung header b { flex: 1; font-weight: 600; }
+.nb-bestellung small { color: var(--muted); font-size: .86rem; }
+.nb-bestellung p { margin: 2px 0 8px 18px; color: var(--muted); font-size: .93rem; }
+.nb-bestellung ul { list-style: none; margin: 0; padding: 8px 0 0; border-top: 1px dashed var(--line); font-size: .95rem; }
+.nb-bestellung footer { display: flex; justify-content: space-between; margin-top: 8px; color: var(--muted); font-size: .88rem; font-variant-numeric: tabular-nums; }
+.nb-bestellung header i, .nb-stand i { flex: none; width: 10px; height: 10px; border-radius: 50%; background: #d49a3a; }
+[data-stand="angenommen"] i { background: var(--sage-deep) !important; animation: nb-puls 1.6s ease-in-out infinite; }
+[data-stand="serviert"] i { background: var(--sage) !important; }
+[data-stand="abgelehnt"] i { background: var(--rose) !important; }
+@keyframes nb-puls { 50% { opacity: .35; } }
+@media (prefers-reduced-motion: reduce) { [data-stand="angenommen"] i { animation: none; } }
+
+/* Leiste unten */
+.nb-leiste { position: fixed; left: 0; right: 0; bottom: 0; z-index: 30; display: grid; gap: 8px; width: min(560px, 100%); margin: 0 auto; padding: 0 12px calc(12px + env(safe-area-inset-bottom)); pointer-events: none; }
+.nb-leiste:empty { display: none; }
+.nb-leiste button { pointer-events: auto; display: flex; align-items: center; gap: 10px; width: 100%; border: 0; border-radius: 999px; font: 400 .95rem/1.2 var(--sans); cursor: pointer; text-align: left; box-shadow: 0 14px 30px -14px rgba(51, 38, 31, .6); }
+.nb-leiste .text { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.nb-stand { min-height: 46px; padding: 0 16px; background: var(--paper); color: var(--espresso); border: 1px solid var(--line) !important; }
+.nb-stand .mehr { color: var(--sage-deep); text-decoration: underline; text-underline-offset: 3px; white-space: nowrap; }
+.nb-korb { min-height: 56px; padding: 0 20px 0 8px; background: var(--sage-deep); color: #fff; font-weight: 500 !important; font-size: 1.02rem !important; font-variant-numeric: tabular-nums; }
+.nb-korb .anzahl { flex: none; min-width: 40px; height: 40px; padding: 0 8px; border-radius: 999px; background: rgba(255, 255, 255, .18); display: grid; place-items: center; font-weight: 600; }
+body.nb-mit-leiste { padding-bottom: calc(var(--nb-leiste, 0px) + 8px); }
+body.nb-mit-leiste .totop { bottom: calc(var(--nb-leiste, 0px) + 12px); }

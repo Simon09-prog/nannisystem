@@ -3,12 +3,6 @@
 <html lang="de">
 <head>
 <meta charset="utf-8">
-<script>
-// Ältere gedruckte Tischsticker (QR-Code) zeigen auf karte.html OHNE Zusatz.
-// Diese Aufrufe gehen über /tisch/, damit dort Bestellen am Tisch aktiv ist.
-// Links von der eigenen Website nutzen karte.html?web und bleiben hier als Lesekarte.
-if (!location.search) location.replace('tisch/' + location.hash);
-</script>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Speisekarte – NANNI Coffee &amp; Bar Osnabrück</title>
 <meta name="description" content="Die Karte von NANNI Coffee & Bar in Osnabrück: Kaffee, Matcha, hausgemachte Limos, Frühstück, Shokupan, Bagel, Waffeln, Lunch Deal und Kuchen – mit allen Preisen.">
@@ -1144,5 +1138,7 @@ h1, h2, h4, p { margin: 0; }
 })();
 </script>
 <!-- Bestellen am Tisch: wird nur aktiv, wenn die Karte mit einem Tisch-Code (?t=...) geöffnet wird -->
+<script src="bestellung/config.js" defer></script>
+<script src="bestellung/gast.js" defer></script>
 </body>
 </html>

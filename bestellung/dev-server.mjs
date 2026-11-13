@@ -27,6 +27,11 @@ export async function start({ port = 8787, memory = false } = {}) {
   await db.exec(readFileSync(join(HIER, 'schema.sql'), 'utf8'));
   await db.exec(karteSql());
 
+  // Zum Ausprobieren ein paar Tische anlegen, solange es noch keine gibt
+  if (!memory) await db.exec(`insert into tische (name, bereich, code)
+    select n::text, b, _code(10) from (values ('Drinnen', 6), ('Draußen', 4)) v(b, anz), generate_series(1, anz) n
+    where not exists (select 1 from tische)`);
+
   // Theken-Schlüssel: beim ersten Start erzeugen und lokal merken
   const keyDatei = join(ordner, 'theke-key.txt');
   let thekeKey = !memory && existsSync(keyDatei) ? readFileSync(keyDatei, 'utf8').trim() : null;
@@ -94,15 +99,18 @@ export async function start({ port = 8787, memory = false } = {}) {
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
   const s = await start({ port: +process.env.PORT || 8787 });
   const laden = (await s.db.query('select laden_code from einstellungen')).rows[0].laden_code;
+  const t1 = (await s.db.query('select name, bereich, code from tische order by id limit 1')).rows[0];
   console.log(`
 NANNI Testserver läuft.
 
   Website:        ${s.basis}/
   Karte (lesen):  ${s.basis}/karte.html
-  Noch nicht gebaut, die Links gelten später:
-  Karte + Bestellen (gemeinsamer QR-Link):
+  Bestellen, Gast wählt den Tisch (gemeinsamer QR-Link):
                   ${s.basis}/karte.html?t=${laden}
-  Theke:          ${s.basis}/theke.html#k=${s.thekeKey}
+  Bestellen an Tisch ${t1.name} ${t1.bereich} (eigener Link des Tisches):
+                  ${s.basis}/karte.html?t=${t1.code}
+  Theke (noch nicht gebaut):
+                  ${s.basis}/theke.html#k=${s.thekeKey}
 
 Beenden mit Strg+C. Die Testdaten liegen in bestellung/daten.local/.
 `);
