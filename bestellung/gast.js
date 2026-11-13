@@ -34,7 +34,10 @@
     p.setAttribute('d', pfad); s.append(p);
     return s;
   };
+  // Inhalt eines Elements ersetzen; leere Einträge (null, false) werden übersprungen
+  const fuellen = (el, ...kinder) => el.replaceChildren(...kinder.flat().filter(k => k != null && k !== false));
   const PLUS = 'M8 3v10M3 8h10', MINUS = 'M3 8h10', KREUZ = 'M4 4l8 8M12 4l-8 8';
+  const GLOCKE = 'M4 11V7.5a4 4 0 0 1 8 0V11l1.2 1.5H2.8L4 11zM6.6 14h2.8';
 
   // Merkt sich Warenkorb und Bestellungen auf dem Handy (übersteht Neuladen)
   const merken = {
@@ -51,7 +54,7 @@
     .catch(() => hinweis('Bestellen am Handy ist gerade nicht erreichbar. Bestellt bitte direkt bei uns.'));
 
   function starten(info) {
-    document.head.append(h('link', { rel: 'stylesheet', href: 'bestellung/gast.css?v=4' }));
+    document.head.append(h('link', { rel: 'stylesheet', href: 'bestellung/gast.css?v=5' }));
     // Bestellt werden kann nur, wenn die Theke es nicht pausiert hat und das Café geöffnet ist
     const bestellbar = info.aktiv && info.offen !== false;
 
@@ -65,13 +68,19 @@
     // ---------------------------------------------------------- Zustand
     let korb = merken.lesen('korb', []);
     let bestellungen = merken.lesen('bestellungen', []).filter(b => Date.now() - b.zeit < 12 * STUNDE);
-    // Beim Laden-Code merkt sich das Handy den gewählten Tisch für drei Stunden
+    // Beim Laden-Code fragt die Karte bei jedem neuen Öffnen des Links nach der Tischnummer.
+    // Nur beim Neuladen im selben Tab bleibt sie erhalten (sessionStorage), höchstens drei Stunden.
     let tisch = info.wahl ? null : { name: info.tisch, bereich: info.bereich };
+    const SITZ = 'nanni:sitz:' + code;
     if (info.wahl) {
-      const alt = merken.lesen('tisch', null);
-      if (alt && Date.now() - alt.zeit < 3 * STUNDE) tisch = info.tische.find(t => t.id === alt.id) || null;
+      try {
+        const alt = JSON.parse(sessionStorage.getItem(SITZ));
+        if (alt && Date.now() - alt.zeit < 3 * STUNDE) tisch = info.tische.find(t => t.id === alt.id) || null;
+      } catch { /* kein Speicher: einfach neu fragen */ }
     }
+    const ausverkauft = new Set(info.ausverkauft || []);
     const tischName = t => 'Tisch ' + t.name + (t.bereich ? ' · ' + t.bereich : '');
+    korb = korb.filter(z => !ausverkauft.has(z.name));   // was inzwischen ausverkauft ist, fliegt aus dem Korb
     const zeilenPreis = z => (z.cent + z.extras.reduce((s, x) => s + x.cent, 0)) * z.menge;
     const korbSumme = () => korb.reduce((s, z) => s + zeilenPreis(z), 0);
     const korbAnzahl = () => korb.reduce((s, z) => s + z.menge, 0);
@@ -83,9 +92,15 @@
     // ---------------------------------------------------------- Tisch-Anzeige im Kopf
     const tischKnopf = h(info.wahl ? 'button' : 'span', { class: 'nb-tisch', type: info.wahl && 'button', onclick: () => info.wahl && bestellbar && tischWaehlen() });
     function tischZeichnen() {
-      tischKnopf.replaceChildren(h('b', {}, tisch ? tischName(tisch) : 'Tischnummer eintragen'),
+      fuellen(tischKnopf, h('b', {}, tisch ? tischName(tisch) : 'Tischnummer eintragen'),
         bestellbar && h('span', {}, info.wahl ? (tisch ? 'ändern' : 'hier tippen') : 'Bestellt direkt hier am Handy'));
+      sitzLeiste.classList.toggle('fehlt', !tisch);
+      fuellen(sitzLeiste, h('span', {}, tisch ? 'Ihr bestellt für' : 'Noch kein Tisch gewählt'), h('b', {}, tisch ? tischName(tisch) : 'Tischnummer eintragen'),
+        info.wahl && bestellbar && tisch && h('u', {}, 'ändern'));
     }
+    // Zweite Anzeige in der festen Leiste über den Kategorien, damit der Tisch beim Scrollen sichtbar bleibt
+    const sitzLeiste = h(info.wahl ? 'button' : 'div', { class: 'nb-sitz', type: info.wahl && 'button', onclick: () => info.wahl && bestellbar && tischWaehlen() });
+    document.querySelector('.chips-wrap')?.prepend(sitzLeiste);
     tischZeichnen();
     document.getElementById('status').after(h('br'), tischKnopf);
 
@@ -96,6 +111,11 @@
         const extras = [...bereich.querySelectorAll('.extras li[data-n]')].map(li => ({ name: li.dataset.n, cent: +li.dataset.p }));
         for (const li of bereich.querySelectorAll('.mi[data-n]')) {
           const artikel = { name: li.dataset.n, cent: +li.dataset.p, text: li.querySelector('p')?.textContent || '', extras };
+          if (ausverkauft.has(artikel.name)) {
+            li.classList.add('nb-aus');
+            li.querySelector('.mi-top').append(h('span', { class: 'nb-ausverkauft' }, 'ausverkauft'));
+            continue;
+          }
           const knopf = h('button', { class: 'nb-plus', type: 'button', 'aria-label': artikel.name + ' hinzufügen', onclick: () => artikelBlatt(artikel) });
           li.querySelector('.mi-top').append(knopf);
           knoepfe.set(artikel.name, knopf);
@@ -109,13 +129,14 @@
 
     // ---------------------------------------------------------- Bausteine
     // Ein Blatt, das von unten hochkommt: Kopf, Inhalt (scrollt), Fuß (bleibt stehen)
-    function blatt(titel, untertitel, oben) {
+    function blatt(titel, untertitel, oben, pflicht) {
       const inhalt = h('div', { class: 'nb-inhalt' }), fuss = h('div', { class: 'nb-fuss' });
       const d = h('dialog', { class: 'nb-blatt' + (oben ? ' oben' : '') },
         h('header', {}, h('div', {}, h('h3', {}, titel), untertitel && h('p', {}, untertitel)),
-          h('button', { class: 'nb-zu', type: 'button', 'aria-label': 'Schließen', onclick: () => d.close() }, zeichen(KREUZ))),
+          !pflicht && h('button', { class: 'nb-zu', type: 'button', 'aria-label': 'Schließen', onclick: () => d.close() }, zeichen(KREUZ))),
         inhalt, fuss);
-      d.addEventListener('click', ev => { if (ev.target === d) d.close(); });   // Tipp neben das Blatt schließt es
+      d.addEventListener('click', ev => { if (ev.target === d && !pflicht) d.close(); });   // Tipp neben das Blatt schließt es
+      d.addEventListener('cancel', ev => { if (pflicht) ev.preventDefault(); });              // Pflicht-Blatt: auch nicht per Zurück-Taste
       d.addEventListener('close', () => d.remove());
       document.body.append(d);
       d.showModal();
@@ -142,7 +163,8 @@
           haken.map(k => h('li', {}, h('label', {}, k.feld, h('span', {}, k.x.name), h('em', {}, '+' + euro(k.x.cent)))))));
       }
       const wunsch = h('textarea', { rows: 2, maxlength: 200, placeholder: 'z. B. mit Hafermilch, koffeinfrei, ohne Zwiebeln' });
-      b.inhalt.append(h('h4', {}, 'Wunsch dazu'), wunsch);
+      b.inhalt.append(h('h4', {}, 'Wunsch dazu'), wunsch,
+        h('p', { class: 'nb-klein' }, 'Fragen zu Allergenen oder Zusatzstoffen? Tippt unten auf „Kellner rufen“, wir helfen gern.'));
 
       const dazu = h('button', { class: 'nb-knopf', type: 'button', onclick: () => {
         const zeile = { name: artikel.name, cent: artikel.cent, menge, notiz: wunsch.value.trim(), extras: gewaehlt() };
@@ -161,8 +183,8 @@
     // ---------------------------------------------------------- Blatt: Tisch wählen (nur beim Laden-Code)
     // Der Gast tippt seine Tischnummer ein. Gibt es die Nummer in mehreren Bereichen
     // (z. B. Tisch 1 drinnen und draußen), fragt das Blatt danach noch nach dem Bereich.
-    function tischWaehlen(danach) {
-      const b = blatt('An welchem Tisch sitzt ihr?', 'Die Nummer steht bei euch am Tisch.', true);
+    function tischWaehlen(danach, pflicht) {
+      const b = blatt('An welchem Tisch sitzt ihr?', pflicht ? 'Tragt bitte zuerst eure Tischnummer ein. Sie steht bei euch am Tisch.' : 'Die Nummer steht bei euch am Tisch.', true, pflicht);
       if (!info.tische.length) return b.inhalt.append(h('p', {}, 'Es sind noch keine Tische eingerichtet. Bestellt bitte direkt bei uns.'));
       const nurZahlen = info.tische.every(t => /^\d+$/.test(t.name));
       const feld = h('input', { class: 'nb-nummer', type: 'text', inputmode: nurZahlen && 'numeric', maxlength: 20, autocomplete: 'off',
@@ -170,8 +192,9 @@
       const fehler = h('p', { class: 'nb-fehler', role: 'alert', hidden: true });
       const bereiche = h('div', { class: 'nb-bereiche' });
       const nehmen = t => {
-        tisch = t; merken.schreiben('tisch', { id: t.id, zeit: Date.now() });
-        tischZeichnen(); b.d.close(); danach?.();
+        tisch = t;
+        try { sessionStorage.setItem(SITZ, JSON.stringify({ id: t.id, zeit: Date.now() })); } catch { /* egal */ }
+        tischZeichnen(); leisteZeichnen(); b.d.close(); danach?.();
       };
       const pruefen = () => {
         const eingabe = feld.value.trim().toLowerCase();
@@ -195,7 +218,7 @@
       const b = blatt('Eure Bestellung', !info.wahl && tischName(tisch));
       const liste = h('ul', { class: 'nb-zeilen' }), summe = h('b', {});
       const tischZeile = h('button', { class: 'nb-tischzeile', type: 'button', onclick: () => tischWaehlen(tischZeileZeichnen) });
-      const tischZeileZeichnen = () => tischZeile.replaceChildren(h('b', {}, tisch ? tischName(tisch) : 'Euer Tisch'), h('span', {}, tisch ? 'ändern' : 'Nummer eintragen'));
+      const tischZeileZeichnen = () => tischZeile.replaceChildren(h('b', {}, tisch ? 'Bestellung für ' + tischName(tisch) : 'Euer Tisch'), h('span', {}, tisch ? 'ändern' : 'Nummer eintragen'));
       const fehler = h('p', { class: 'nb-fehler', role: 'alert', hidden: true });
       const senden = h('button', { class: 'nb-knopf mitte', type: 'button', onclick: abschicken }, 'Bestellung abschicken');
 
@@ -219,6 +242,9 @@
             p_positionen: korb.map(z => ({ name: z.name, menge: z.menge, notiz: z.notiz, extras: z.extras.map(x => ({ name: x.name })) }))
           });
         } catch { return scheitern('Keine Verbindung. Prüft kurz euer Netz und versucht es noch einmal.'); }
+        if (!antwort.ok && antwort.fehler === 'ausverkauft') {
+          return scheitern('„' + antwort.artikel + '“ ist leider gerade ausverkauft. Nehmt es bitte aus der Bestellung.');
+        }
         if (!antwort.ok) {
           return scheitern({
             pausiert: 'Bestellen am Handy ist gerade pausiert. Bestellt bitte an der Theke.',
@@ -238,9 +264,27 @@
 
       tischZeileZeichnen();
       b.inhalt.append(liste);
-      b.fuss.append(info.wahl && tischZeile, h('div', { class: 'nb-summe' }, h('span', {}, 'Summe'), summe), fehler,
+      b.fuss.append(info.wahl ? tischZeile : h('div', { class: 'nb-tischzeile fest' }, h('b', {}, tischName(tisch))), h('div', { class: 'nb-summe' }, h('span', {}, 'Summe'), summe), fehler,
         h('p', { class: 'nb-klein' }, 'Bezahlt wird wie gewohnt bei uns im Café.'), senden);
       zeichnen();
+    }
+
+    // ---------------------------------------------------------- Blatt: Kellner rufen
+    function rufBlatt() {
+      if (!tisch) return tischWaehlen(rufBlatt);
+      const b = blatt('Kellner rufen', 'Wir kommen zu euch an ' + tischName(tisch) + '.');
+      const fehler = h('p', { class: 'nb-fehler', role: 'alert', hidden: true });
+      const knopf = h('button', { class: 'nb-knopf mitte', type: 'button', onclick: async () => {
+        knopf.disabled = true; fehler.hidden = true;
+        try {
+          const antwort = await NANNI.rpc('kellner_rufen', { p_code: code, ...(info.wahl && { p_tisch: tisch.id }) });
+          if (antwort.ok) return knopf.replaceWith(h('p', { class: 'nb-bescheid' }, h('b', {}, 'Wir wissen Bescheid.'), ' Jemand kommt gleich zu euch.'));
+          fehler.textContent = 'Das hat nicht geklappt. Kommt bitte kurz zu uns an die Theke.';
+        } catch { fehler.textContent = 'Keine Verbindung. Versucht es noch einmal oder kommt zu uns an die Theke.'; }
+        fehler.hidden = false; knopf.disabled = false;
+      } }, 'Ja, bitte kommen');
+      b.inhalt.append(h('p', {}, 'Habt ihr eine Frage oder braucht ihr etwas? Wir kommen gern vorbei.'));
+      b.fuss.append(knopf, fehler, h('button', { class: 'nb-knopf hell mitte', type: 'button', onclick: () => b.d.close() }, 'Schließen'));
     }
 
     // ---------------------------------------------------------- Blatt: Stand der Bestellungen
@@ -258,7 +302,8 @@
         h('header', {}, h('i'), h('b', {}, stand(b)[0]), h('small', {}, 'Nr. ' + b.nr + ' · ' + uhr(b.zeit))),
         h('p', {}, stand(b)[1]),
         h('ul', {}, b.zeilen.map(z => h('li', {}, z.menge + ' × ' + z.name, z.zusatz && h('small', {}, ' · ' + z.zusatz)))),
-        h('footer', {}, h('span', {}, b.tisch), h('span', {}, euro(b.summe))))));
+        h('footer', {}, h('span', {}, b.tisch), h('span', {}, euro(b.summe))),
+        b.bezahlt && /^https:\/\//.test(info.bewertung_url || '') && h('a', { class: 'nb-bewerten', href: info.bewertung_url, target: '_blank', rel: 'noopener' }, 'Hat es euch gefallen? Bewertet uns'))));
     }
     function standBlatt() {
       const b = blatt('Eure Bestellungen', 'Bezahlt wird wie gewohnt bei uns im Café.');
@@ -312,6 +357,7 @@
     document.body.append(leiste);
     function leisteZeichnen() {
       leiste.replaceChildren();
+      if (bestellbar) leiste.append(h('button', { class: 'nb-ruf', type: 'button', onclick: rufBlatt }, zeichen(GLOCKE), 'Kellner rufen'));
       const letzte = bestellungen[0];
       // Fertige Bestellungen verschwinden nach 15 Minuten aus der Leiste
       if (letzte && !(fertig(letzte) && Date.now() - (letzte.fertigUm || letzte.zeit) > 15 * 60e3)) {
@@ -322,7 +368,7 @@
       }
       if (korb.length && bestellbar) {
         leiste.append(h('button', { class: 'nb-korb', type: 'button', onclick: korbBlatt },
-          h('span', { class: 'anzahl' }, String(korbAnzahl())), h('span', { class: 'text' }, 'Bestellung ansehen'), h('span', {}, euro(korbSumme()))));
+          h('span', { class: 'anzahl' }, String(korbAnzahl())), h('span', { class: 'text' }, 'Bestellung ansehen', tisch && h('small', {}, tischName(tisch))), h('span', {}, euro(korbSumme()))));
       }
       // Plus-Knöpfe zeigen, wie oft der Artikel schon im Korb liegt
       for (const [name, knopf] of knoepfe) {
@@ -337,5 +383,7 @@
     leisteZeichnen();
     standAbfragen();
     setInterval(leisteZeichnen, 60e3);
+    // Ohne Tischnummer geht es nicht los: gleich beim Öffnen fragen
+    if (info.wahl && bestellbar && !tisch) tischWaehlen(null, true);
   }
 })();

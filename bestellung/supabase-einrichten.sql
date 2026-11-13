@@ -70,6 +70,13 @@ insert into oeffnungszeiten (tag, von, bis)
   where not exists (select 1 from oeffnungszeiten);
 alter table oeffnungszeiten enable row level security;
 
+-- Spätere Erweiterung "Service": Kellner rufen, ausverkauft, Ruhetage, Bewertungslink
+alter table tische        add column if not exists ruf_at timestamptz;            -- Gast hat "Kellner rufen" getippt
+alter table artikel       add column if not exists ausverkauft_am date;           -- gilt nur an diesem Tag, am nächsten Tag ist der Artikel wieder da
+alter table einstellungen add column if not exists bewertung_url text not null default '';
+create table if not exists ruhetage (datum date primary key);                     -- einzelne geschlossene Tage (Feiertag, Betriebsferien)
+alter table ruhetage enable row level security;
+
 -- Zeilenschutz an und keine einzige Regel: Direkter Zugriff auf die Tabellen ist damit für alle gesperrt.
 alter table einstellungen enable row level security;
 alter table tische        enable row level security;
@@ -86,13 +93,33 @@ $$;
 
 insert into einstellungen (id, laden_code) values (1, _code(10)) on conflict (id) do nothing;
 
--- Hat das Café jetzt geöffnet? Gerechnet wird in deutscher Zeit, egal wo der Server steht.
+-- Das heutige Datum in deutscher Zeit, egal wo der Server steht
+create or replace function _heute() returns date
+language sql stable as $$ select (now() at time zone 'Europe/Berlin')::date $$;
+
+-- Hat das Café jetzt geöffnet? Ruhetage gehen vor, sonst gelten die Zeiten des Wochentags.
 create or replace function _offen() returns boolean
 language sql stable security definer set search_path = public as $$
-  select (select immer_offen from einstellungen) or exists (
-    select 1 from oeffnungszeiten
-    where tag = extract(isodow from now() at time zone 'Europe/Berlin')
-      and (now() at time zone 'Europe/Berlin')::time between von and bis)
+  select (select immer_offen from einstellungen) or (
+    not exists (select 1 from ruhetage where datum = _heute())
+    and exists (
+      select 1 from oeffnungszeiten
+      where tag = extract(isodow from now() at time zone 'Europe/Berlin')
+        and (now() at time zone 'Europe/Berlin')::time between von and bis))
+$$;
+
+-- Namen der Artikel, die heute ausverkauft sind
+create or replace function _ausverkauft() returns jsonb
+language sql stable security definer set search_path = public as $$
+  select coalesce(jsonb_agg(name), '[]'::jsonb) from artikel where ausverkauft_am = _heute()
+$$;
+
+-- Welcher Tisch gehört zu diesem Link? (Tisch-Code: der Tisch selbst, Laden-Code: der gewählte Tisch)
+create or replace function _tisch(p_code text, p_tisch bigint) returns tische
+language sql stable security definer set search_path = public as $$
+  select t.* from tische t, einstellungen e
+  where case when p_code = e.laden_code then t.id = p_tisch else t.code = p_code end
+  limit 1
 $$;
 
 create or replace function _theke_ok(p_key text) returns boolean
@@ -127,13 +154,13 @@ declare e einstellungen; t tische;
 begin
   select * into e from einstellungen;
   if p_code = e.laden_code then
-    return jsonb_build_object('ok', true, 'wahl', true, 'aktiv', e.aktiv, 'offen', _offen(), 'tische', coalesce(
+    return jsonb_build_object('ok', true, 'wahl', true, 'aktiv', e.aktiv, 'offen', _offen(), 'ausverkauft', _ausverkauft(), 'bewertung_url', e.bewertung_url, 'tische', coalesce(
       (select jsonb_agg(jsonb_build_object('id', id, 'name', name, 'bereich', bereich) order by bereich, length(name), name) from tische),
       '[]'::jsonb));
   end if;
   select * into t from tische where code = p_code;
   if not found then return jsonb_build_object('ok', false); end if;
-  return jsonb_build_object('ok', true, 'wahl', false, 'aktiv', e.aktiv, 'offen', _offen(), 'tisch', t.name, 'bereich', t.bereich);
+  return jsonb_build_object('ok', true, 'wahl', false, 'aktiv', e.aktiv, 'offen', _offen(), 'ausverkauft', _ausverkauft(), 'bewertung_url', e.bewertung_url, 'tisch', t.name, 'bereich', t.bereich);
 end $$;
 
 -- Bestellung abschicken. Preise, die der Browser mitschickt, werden ignoriert:
@@ -172,6 +199,7 @@ begin
     end if;
     select * into a from artikel where name = pos->>'name';
     if not found then return jsonb_build_object('ok', false, 'fehler', 'artikel'); end if;
+    if a.ausverkauft_am = _heute() then return jsonb_build_object('ok', false, 'fehler', 'ausverkauft', 'artikel', a.name); end if;
 
     -- Extras: nur solche, die es in der Kategorie dieses Artikels wirklich gibt
     select count(distinct j->>'name') into v_gewollt
@@ -227,6 +255,18 @@ begin
   return jsonb_build_object('ok', true);
 end $$;
 
+-- "Kellner rufen": merkt am Tisch vor, dass jemand kommen soll. Geht auch ohne Bestellung.
+create or replace function kellner_rufen(p_code text, p_tisch bigint default null) returns jsonb
+language plpgsql security definer set search_path = public as $$
+declare t tische;
+begin
+  select * into t from _tisch(p_code, p_tisch);
+  if t.id is null then return jsonb_build_object('ok', false, 'fehler', 'tisch'); end if;
+  if not _offen() then return jsonb_build_object('ok', false, 'fehler', 'geschlossen'); end if;
+  update tische set ruf_at = coalesce(ruf_at, now()) where id = t.id;
+  return jsonb_build_object('ok', true);
+end $$;
+
 -- ---------------------------------------------------------------- Für die Theke (alles nur mit Schlüssel)
 
 -- Alles, was die Theke braucht: offene Bestellungen, noch nicht bezahlte (höchstens 18 Stunden alt),
@@ -236,7 +276,8 @@ language plpgsql stable security definer set search_path = public as $$
 begin
   if not _theke_ok(p_key) then return jsonb_build_object('ok', false, 'fehler', 'key'); end if;
   return jsonb_build_object('ok', true, 'jetzt', now(), 'aktiv', (select aktiv from einstellungen),
-    'zahlen', coalesce((select jsonb_agg(jsonb_build_object('tisch_id', id, 'seit', zahlen_at)) from tische where zahlen_at is not null), '[]'::jsonb),
+    'zahlen', coalesce((select jsonb_agg(jsonb_build_object('tisch_id', id, 'tisch', name, 'bereich', bereich, 'seit', zahlen_at)) from tische where zahlen_at is not null), '[]'::jsonb),
+    'rufe', coalesce((select jsonb_agg(jsonb_build_object('tisch_id', id, 'tisch', name, 'bereich', bereich, 'seit', ruf_at) order by ruf_at) from tische where ruf_at is not null), '[]'::jsonb),
     'bestellungen', coalesce(
     (select jsonb_agg(jsonb_build_object('id', id, 'nr', nr, 'tisch_id', tisch_id, 'tisch', tisch, 'bereich', bereich, 'status', status,
         'summe_cent', summe_cent, 'positionen', positionen, 'created_at', created_at, 'updated_at', updated_at, 'bezahlt_at', bezahlt_at) order by created_at)
@@ -258,23 +299,139 @@ begin
   return jsonb_build_object('ok', true);
 end $$;
 
--- Tisch abrechnen: alle offenen Bestellungen des Tisches gelten als bezahlt, der Zahlwunsch ist erledigt.
+-- Tisch abrechnen. Ohne Auswahl wird alles Offene bezahlt, mit Auswahl nur diese Positionen (getrennt zahlen):
+--   p_auswahl = [{"id": Bestell-ID, "pos": Nummer der Position ab 0, "menge": wie viele davon}]
+-- Jede Position merkt sich in "bezahlt", wie viele Stück schon abgerechnet sind.
 -- Das ist eine Übersicht zum Kassieren. Den Kassenbon erzeugt weiterhin die Kasse des Cafés.
-create or replace function theke_bezahlt(p_key text, p_tisch bigint) returns jsonb
+drop function if exists theke_bezahlt(text, bigint);
+create or replace function theke_bezahlt(p_key text, p_tisch bigint, p_auswahl jsonb default null) returns jsonb
 language plpgsql security definer set search_path = public as $$
-declare v_summe int; v_anzahl int;
+declare
+  b bestellungen; p jsonb; v_pos jsonb; i int;
+  v_rest int; v_nimm int; v_einzel int; v_summe int := 0; v_offen boolean; v_rest_da boolean;
 begin
   if not _theke_ok(p_key) then return jsonb_build_object('ok', false, 'fehler', 'key'); end if;
-  with fertig as (
+  if p_auswahl is not null and jsonb_typeof(p_auswahl) <> 'array' then return jsonb_build_object('ok', false, 'fehler', 'ungueltig'); end if;
+  for b in select * from bestellungen where tisch_id = p_tisch and bezahlt_at is null and status <> 'abgelehnt' order by created_at for update loop
+    v_pos := b.positionen; v_offen := false;
+    for i in 0 .. jsonb_array_length(v_pos) - 1 loop
+      p := v_pos -> i;
+      v_rest := (p->>'menge')::int - coalesce((p->>'bezahlt')::int, 0);
+      if p_auswahl is null then
+        v_nimm := v_rest;
+      else
+        select coalesce(sum((x->>'menge')::int), 0) into v_nimm
+          from jsonb_array_elements(p_auswahl) x where x->>'id' = b.id::text and (x->>'pos')::int = i;
+        v_nimm := greatest(0, least(v_nimm, v_rest));
+      end if;
+      if v_nimm > 0 then
+        v_einzel := (p->>'preis_cent')::int + coalesce((select sum((e->>'preis_cent')::int) from jsonb_array_elements(p->'extras') e), 0);
+        v_summe := v_summe + v_einzel * v_nimm;
+        v_pos := jsonb_set(v_pos, array[i::text, 'bezahlt'], to_jsonb(coalesce((p->>'bezahlt')::int, 0) + v_nimm));
+      end if;
+      if v_nimm < v_rest then v_offen := true; end if;
+    end loop;
     update bestellungen
-      set bezahlt_at = now(), updated_at = now(),
-          status = case when status in ('neu', 'angenommen') then 'serviert' else status end
-      where tisch_id = p_tisch and bezahlt_at is null and status <> 'abgelehnt'
-      returning summe_cent)
-  select coalesce(sum(summe_cent), 0), count(*) into v_summe, v_anzahl from fertig;
-  update tische set zahlen_at = null where id = p_tisch;
+      set positionen = v_pos, updated_at = now(),
+          bezahlt_at = case when v_offen then null else now() end,
+          status = case when not v_offen and status in ('neu', 'angenommen') then 'serviert' else status end
+      where id = b.id;
+  end loop;
+  v_rest_da := exists (select 1 from bestellungen where tisch_id = p_tisch and bezahlt_at is null and status <> 'abgelehnt');
+  if not v_rest_da then update tische set zahlen_at = null where id = p_tisch; end if;
   perform _aufraeumen();
-  return jsonb_build_object('ok', true, 'summe_cent', v_summe, 'anzahl', v_anzahl, 'bezahlt_at', now());
+  return jsonb_build_object('ok', true, 'summe_cent', v_summe, 'rest', v_rest_da, 'bezahlt_at', now());
+exception when invalid_text_representation or numeric_value_out_of_range then
+  return jsonb_build_object('ok', false, 'fehler', 'ungueltig');
+end $$;
+
+create or replace function theke_ruf_erledigt(p_key text, p_tisch bigint) returns jsonb
+language plpgsql security definer set search_path = public as $$
+begin
+  if not _theke_ok(p_key) then return jsonb_build_object('ok', false, 'fehler', 'key'); end if;
+  update tische set ruf_at = null where id = p_tisch;
+  return jsonb_build_object('ok', true);
+end $$;
+
+-- Ausverkauft: Liste aller Artikel und Schalter je Artikel. Gilt immer nur für den heutigen Tag.
+create or replace function theke_artikel(p_key text) returns jsonb
+language plpgsql stable security definer set search_path = public as $$
+begin
+  if not _theke_ok(p_key) then return jsonb_build_object('ok', false, 'fehler', 'key'); end if;
+  return jsonb_build_object('ok', true, 'artikel', coalesce(
+    (select jsonb_agg(jsonb_build_object('name', name, 'kategorie', kategorie, 'aus', ausverkauft_am is not distinct from _heute()) order by kategorie, name) from artikel),
+    '[]'::jsonb));
+end $$;
+
+create or replace function theke_ausverkauft(p_key text, p_name text, p_aus boolean) returns jsonb
+language plpgsql security definer set search_path = public as $$
+begin
+  if not _theke_ok(p_key) then return jsonb_build_object('ok', false, 'fehler', 'key'); end if;
+  update artikel set ausverkauft_am = case when p_aus then _heute() else null end where name = p_name;
+  return jsonb_build_object('ok', found);
+end $$;
+
+-- Einstellungen: Öffnungszeiten, Ruhetage, Bewertungslink
+create or replace function theke_einstellungen(p_key text) returns jsonb
+language plpgsql stable security definer set search_path = public as $$
+begin
+  if not _theke_ok(p_key) then return jsonb_build_object('ok', false, 'fehler', 'key'); end if;
+  return jsonb_build_object('ok', true, 'offen', _offen(), 'bewertung_url', (select bewertung_url from einstellungen),
+    'zeiten', coalesce((select jsonb_agg(jsonb_build_object('tag', tag, 'von', to_char(von, 'HH24:MI'), 'bis', to_char(bis, 'HH24:MI')) order by tag) from oeffnungszeiten), '[]'::jsonb),
+    'ruhetage', coalesce((select jsonb_agg(datum order by datum) from ruhetage where datum >= _heute()), '[]'::jsonb));
+end $$;
+
+-- p_zeiten = [{"tag": 1, "von": "10:00", "bis": "18:00"}, ...]; ein Wochentag, der fehlt, ist geschlossen
+create or replace function theke_zeiten_setzen(p_key text, p_zeiten jsonb) returns jsonb
+language plpgsql security definer set search_path = public as $$
+begin
+  if not _theke_ok(p_key) then return jsonb_build_object('ok', false, 'fehler', 'key'); end if;
+  if jsonb_typeof(p_zeiten) is distinct from 'array' then return jsonb_build_object('ok', false, 'fehler', 'ungueltig'); end if;
+  delete from oeffnungszeiten;
+  insert into oeffnungszeiten (tag, von, bis)
+    select (z->>'tag')::int, (z->>'von')::time, (z->>'bis')::time from jsonb_array_elements(p_zeiten) z;
+  delete from ruhetage where datum < _heute() - 7;
+  return jsonb_build_object('ok', true);
+exception when others then
+  return jsonb_build_object('ok', false, 'fehler', 'ungueltig');
+end $$;
+
+create or replace function theke_ruhetag(p_key text, p_datum date, p_an boolean) returns jsonb
+language plpgsql security definer set search_path = public as $$
+begin
+  if not _theke_ok(p_key) then return jsonb_build_object('ok', false, 'fehler', 'key'); end if;
+  if p_an then insert into ruhetage (datum) values (p_datum) on conflict do nothing;
+  else delete from ruhetage where datum = p_datum; end if;
+  return jsonb_build_object('ok', true);
+end $$;
+
+-- Link zur Bewertungsseite (z. B. Google). Leer = kein Link. Nur https-Adressen.
+create or replace function theke_bewertung(p_key text, p_url text) returns jsonb
+language plpgsql security definer set search_path = public as $$
+declare v_url text := btrim(coalesce(p_url, ''));
+begin
+  if not _theke_ok(p_key) then return jsonb_build_object('ok', false, 'fehler', 'key'); end if;
+  if v_url <> '' and (v_url !~ '^https://[^\s"<>]+$' or length(v_url) > 300) then return jsonb_build_object('ok', false, 'fehler', 'ungueltig'); end if;
+  update einstellungen set bewertung_url = v_url;
+  return jsonb_build_object('ok', true);
+end $$;
+
+-- Tagesübersicht: Bestellungen, Umsatz und meistbestellte Artikel von heute (ohne abgelehnte)
+create or replace function theke_tag(p_key text) returns jsonb
+language plpgsql stable security definer set search_path = public as $$
+declare v_start timestamptz := _heute()::timestamp at time zone 'Europe/Berlin';
+begin
+  if not _theke_ok(p_key) then return jsonb_build_object('ok', false, 'fehler', 'key'); end if;
+  return jsonb_build_object('ok', true, 'datum', _heute(),
+    'anzahl', (select count(*) from bestellungen where created_at >= v_start and status <> 'abgelehnt'),
+    'abgelehnt', (select count(*) from bestellungen where created_at >= v_start and status = 'abgelehnt'),
+    'umsatz_cent', (select coalesce(sum(summe_cent), 0) from bestellungen where created_at >= v_start and status <> 'abgelehnt'),
+    'tische', (select count(distinct tisch_id) from bestellungen where created_at >= v_start and status <> 'abgelehnt'),
+    'top', coalesce((select jsonb_agg(jsonb_build_object('name', name, 'menge', menge) order by menge desc, name) from (
+        select p->>'name' as name, sum((p->>'menge')::int) as menge
+        from bestellungen, jsonb_array_elements(positionen) p
+        where created_at >= v_start and status <> 'abgelehnt'
+        group by 1 order by 2 desc, 1 limit 10) x), '[]'::jsonb));
 end $$;
 
 create or replace function theke_aktiv(p_key text, p_aktiv boolean) returns jsonb
@@ -332,7 +489,7 @@ begin
 end $$;
 
 -- ---------------------------------------------------------------- Rechte
--- Erst allen alles wegnehmen, dann dem Browser (Rolle "anon" bei Supabase) genau die 13 Funktionen erlauben.
+-- Erst allen alles wegnehmen, dann dem Browser (Rolle "anon" bei Supabase) genau diese Funktionen erlauben.
 revoke execute on all functions in schema public from public;
 do $$
 begin
@@ -340,8 +497,10 @@ begin
     revoke all on all tables in schema public from anon, authenticated;
     revoke execute on all functions in schema public from anon, authenticated;
     grant execute on function
-      tisch_info(text), bestellung_aufgeben(text, jsonb, bigint), bestellung_status(uuid[]), zahlen_wuenschen(text, bigint),
-      theke_bestellungen(text), theke_status(text, uuid, text), theke_bezahlt(text, bigint), theke_aktiv(text, boolean),
+      tisch_info(text), bestellung_aufgeben(text, jsonb, bigint), bestellung_status(uuid[]), zahlen_wuenschen(text, bigint), kellner_rufen(text, bigint),
+      theke_bestellungen(text), theke_status(text, uuid, text), theke_bezahlt(text, bigint, jsonb), theke_ruf_erledigt(text, bigint), theke_aktiv(text, boolean),
+      theke_artikel(text), theke_ausverkauft(text, text, boolean), theke_einstellungen(text), theke_zeiten_setzen(text, jsonb),
+      theke_ruhetag(text, date, boolean), theke_bewertung(text, text), theke_tag(text),
       theke_tische(text), theke_tisch_anlegen(text, text, text), theke_tisch_loeschen(text, bigint),
       theke_tisch_neuer_code(text, bigint), theke_laden_code_neu(text)
     to anon;
@@ -351,7 +510,7 @@ end $$;
 -- Erzeugt aus menu.json mit "npm run karte". Nicht von Hand ändern.
 begin;
 delete from extras;
-delete from artikel;
+delete from artikel where name not in ('Café Crema', 'Americano', 'Espresso', 'Espresso Doppio', 'Espresso Macchiato', 'Cappuccino', 'Flat White', 'Milchkaffee', 'Latte Macchiato', 'Kaffee & Kuchen Deal', 'Earl Grey', 'Jasmin-Grüntee', 'Früchtetee Waldbeere', 'Frischer Minztee', 'Frischer Ingwer-Zitronentee', 'Hot Matcha', 'Iced Matcha', 'Strawberry Iced Matcha', 'Mango Iced Matcha', 'Iced Americano', 'Iced Latte', 'Iced Vanilla Latte', 'Iced Chai Latte', 'Chai Latte', 'Pumpkin Spice Latte', 'Hot Chocolate', 'Hot White Chocolate', 'Pfirsich-Limo', 'Zitronen-Minze-Holunder-Limo', 'Himbeer-Minze-Holunder-Limo', 'Maracuja-Limette-Limo', 'Frisch gepresster Orangensaft', 'Beet & Juice', 'Berry Banana', 'Green Glow', 'Mango Sunshine', 'fritz-kola 0,2 l', 'fritz-kola super zero 0,2 l', 'fritz-limo Apfel-Kirsch-Holunder 0,2 l', 'fritz-spritz Bio-Rhabarberschorle 0,2 l', 'Zurück zu den Quellen, still 0,33 l', 'Zurück zu den Quellen, sprudelnd 0,33 l', 'Rührei Genuss', 'Omelett-Bar', 'Nannis Brunch-Favourite', 'Classic Açaí Bowl', 'Lotus Crunch Açaí Bowl', 'Apfel Crunch Porridge', 'Nanni Egg Drop', 'Halloumi-Honey Drop', 'Pastrami New York Style Drop', 'Burrata Italia', 'Kleine Süßkartoffel-Pommes + Dip', 'Süßkartoffel-Pancakes mit Halloumi', 'Süßkartoffel-Pancakes mit Tofu & Avocado', 'Süßkartoffel-Pancakes Vegan Greek', 'Süßkartoffel-Pancakes Apple Lotus', 'Avocado & Poached Egg', 'Smoky Tofu Bagel', 'Sucuk Egg Bagel', 'Egg Bagel', 'Salmon Bagel', 'Golden Goat Club Sandwich', 'Chicken Karaage Burger', 'Avocado-Halloumi Burger', 'Süßkartoffel-Pommes mit Dip', 'Classic French Toast', 'Classy Berry Pancakes', 'Bueno Berry Pancakes', 'Nannis Vegan Banana Bread', 'Classic Vegan', 'Banana Choc', 'Lotus Crunch', 'White Bueno Crunch', 'Heiße Liebe', 'Kirschtraum', 'Oreo Berry Banana');
 insert into artikel (name, kategorie, preis_cent) values
   ('Café Crema', 'kaffee', 320),
   ('Americano', 'kaffee', 350),
@@ -429,7 +588,8 @@ insert into artikel (name, kategorie, preis_cent) values
   ('White Bueno Crunch', 'waffeln', 790),
   ('Heiße Liebe', 'waffeln', 590),
   ('Kirschtraum', 'waffeln', 690),
-  ('Oreo Berry Banana', 'waffeln', 750);
+  ('Oreo Berry Banana', 'waffeln', 750)
+  on conflict (name) do update set kategorie = excluded.kategorie, preis_cent = excluded.preis_cent;
 insert into extras (kategorie, name, preis_cent) values
   ('kaffee', 'Extra Espresso Shot', 150),
   ('kaffee', 'Sahne', 80),

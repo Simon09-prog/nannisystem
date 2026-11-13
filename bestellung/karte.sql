@@ -1,7 +1,7 @@
 -- Erzeugt aus menu.json mit "npm run karte". Nicht von Hand ändern.
 begin;
 delete from extras;
-delete from artikel;
+delete from artikel where name not in ('Café Crema', 'Americano', 'Espresso', 'Espresso Doppio', 'Espresso Macchiato', 'Cappuccino', 'Flat White', 'Milchkaffee', 'Latte Macchiato', 'Kaffee & Kuchen Deal', 'Earl Grey', 'Jasmin-Grüntee', 'Früchtetee Waldbeere', 'Frischer Minztee', 'Frischer Ingwer-Zitronentee', 'Hot Matcha', 'Iced Matcha', 'Strawberry Iced Matcha', 'Mango Iced Matcha', 'Iced Americano', 'Iced Latte', 'Iced Vanilla Latte', 'Iced Chai Latte', 'Chai Latte', 'Pumpkin Spice Latte', 'Hot Chocolate', 'Hot White Chocolate', 'Pfirsich-Limo', 'Zitronen-Minze-Holunder-Limo', 'Himbeer-Minze-Holunder-Limo', 'Maracuja-Limette-Limo', 'Frisch gepresster Orangensaft', 'Beet & Juice', 'Berry Banana', 'Green Glow', 'Mango Sunshine', 'fritz-kola 0,2 l', 'fritz-kola super zero 0,2 l', 'fritz-limo Apfel-Kirsch-Holunder 0,2 l', 'fritz-spritz Bio-Rhabarberschorle 0,2 l', 'Zurück zu den Quellen, still 0,33 l', 'Zurück zu den Quellen, sprudelnd 0,33 l', 'Rührei Genuss', 'Omelett-Bar', 'Nannis Brunch-Favourite', 'Classic Açaí Bowl', 'Lotus Crunch Açaí Bowl', 'Apfel Crunch Porridge', 'Nanni Egg Drop', 'Halloumi-Honey Drop', 'Pastrami New York Style Drop', 'Burrata Italia', 'Kleine Süßkartoffel-Pommes + Dip', 'Süßkartoffel-Pancakes mit Halloumi', 'Süßkartoffel-Pancakes mit Tofu & Avocado', 'Süßkartoffel-Pancakes Vegan Greek', 'Süßkartoffel-Pancakes Apple Lotus', 'Avocado & Poached Egg', 'Smoky Tofu Bagel', 'Sucuk Egg Bagel', 'Egg Bagel', 'Salmon Bagel', 'Golden Goat Club Sandwich', 'Chicken Karaage Burger', 'Avocado-Halloumi Burger', 'Süßkartoffel-Pommes mit Dip', 'Classic French Toast', 'Classy Berry Pancakes', 'Bueno Berry Pancakes', 'Nannis Vegan Banana Bread', 'Classic Vegan', 'Banana Choc', 'Lotus Crunch', 'White Bueno Crunch', 'Heiße Liebe', 'Kirschtraum', 'Oreo Berry Banana');
 insert into artikel (name, kategorie, preis_cent) values
   ('Café Crema', 'kaffee', 320),
   ('Americano', 'kaffee', 350),
@@ -79,7 +79,8 @@ insert into artikel (name, kategorie, preis_cent) values
   ('White Bueno Crunch', 'waffeln', 790),
   ('Heiße Liebe', 'waffeln', 590),
   ('Kirschtraum', 'waffeln', 690),
-  ('Oreo Berry Banana', 'waffeln', 750);
+  ('Oreo Berry Banana', 'waffeln', 750)
+  on conflict (name) do update set kategorie = excluded.kategorie, preis_cent = excluded.preis_cent;
 insert into extras (kategorie, name, preis_cent) values
   ('kaffee', 'Extra Espresso Shot', 150),
   ('kaffee', 'Sahne', 80),

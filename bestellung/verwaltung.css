@@ -1,0 +1,51 @@
+/* Einstellungen: Karten untereinander bzw. zweispaltig, baut auf theke.css auf */
+html, body.verwaltung { height: auto; }
+body.verwaltung { display: block; }
+.felder { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; padding: 16px 20px calc(24px + env(safe-area-inset-bottom)); max-width: 1100px; margin: 0 auto; }
+.feld { min-width: 0; padding: 18px 20px 20px; border: 1px solid var(--line); border-radius: 22px; background: var(--paper); }
+.feld.breit { grid-column: 1 / -1; }
+.feld > header { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.feld h2 { font: 450 1.5rem/1.2 var(--serif); }
+.feld h3 { margin: 16px 0 8px; font: 600 .74rem/1 var(--sans); letter-spacing: .18em; text-transform: uppercase; color: var(--muted); }
+.erklaer { margin: 6px 0 14px; color: var(--muted); font-size: .95rem; }
+.leer { color: var(--muted); font-size: .95rem; list-style: none; }
+
+.feld input { min-height: 46px; padding: 0 14px; border: 1px solid var(--line); border-radius: 12px; background: #fff; min-width: 0; }
+.feld input[type="search"] { flex: 0 1 240px; }
+.feld button { min-height: 46px; padding: 0 18px; border: 0; border-radius: 999px; background: var(--sage-deep); color: #fff; font-weight: 500; }
+.feld button.klein-knopf { min-height: 40px; padding: 0 14px; background: var(--cream); color: var(--espresso); font-size: .9rem; }
+.feld button.warn { background: var(--rose) !important; color: #fff !important; }
+.zeile { display: flex; gap: 10px; flex-wrap: wrap; }
+.zeile input { flex: 1 1 140px; }
+
+/* Heute */
+.kacheln { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin-top: 14px; }
+.kachel { padding: 14px 16px; border-radius: 16px; background: var(--cream); }
+.kachel b { display: block; font: 500 1.9rem/1.1 var(--serif); font-variant-numeric: tabular-nums; }
+.kachel span { color: var(--muted); font-size: .9rem; }
+.top { margin: 0; padding: 0; list-style: none; columns: 2; column-gap: 28px; }
+.top li { display: flex; justify-content: space-between; gap: 12px; padding: 6px 0; border-bottom: 1px dashed var(--line); break-inside: avoid; }
+.top li.leer { border: 0; }
+.top b { font-variant-numeric: tabular-nums; }
+
+/* Artikel und Tische als antippbare Marken */
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.feld .chips button { min-height: 44px; padding: 0 16px; border: 1px solid var(--line); background: #fff; color: var(--espresso); font-weight: 400; }
+.feld .chips button.aus { border-color: var(--rose); background: var(--blush-soft); color: #7c3138; text-decoration: line-through; }
+.chips em { margin-left: 8px; font-style: normal; font-weight: 600; font-size: .72rem; letter-spacing: .08em; text-transform: uppercase; text-decoration: none; display: inline-block; }
+
+/* Öffnungszeiten */
+.tag { display: flex; align-items: center; gap: 10px; padding: 6px 0; border-bottom: 1px dashed var(--line); }
+.tag label { flex: 1; display: flex; align-items: center; gap: 10px; min-height: 46px; }
+.tag input[type="checkbox"] { width: 22px; height: 22px; min-height: 0; padding: 0; accent-color: var(--sage-deep); }
+.tag input[type="time"] { width: 7.2em; padding: 0 8px; }
+.tag.zu input[type="time"], .tag.zu > span { opacity: .35; }
+#zeiten-form > button { margin-top: 14px; }
+.liste { margin: 14px 0 0; padding: 0; list-style: none; }
+.liste li { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 6px 0; border-bottom: 1px dashed var(--line); }
+.liste li.leer { border: 0; }
+
+@media (max-width: 800px) {
+  .felder { grid-template-columns: minmax(0, 1fr); padding-inline: 12px; }
+  .top { columns: 1; }
+}

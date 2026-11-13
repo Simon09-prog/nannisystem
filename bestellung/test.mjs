@@ -38,11 +38,12 @@ test('Theke: Tische anlegen, doppelte werden abgelehnt', async () => {
 test('Gast: Link-Arten', async () => {
   assert.deepEqual(await rpc('tisch_info', { p_code: 'gibtsnicht' }), { ok: false });
   const fest = await rpc('tisch_info', { p_code: tischCode });
-  assert.deepEqual(fest, { ok: true, wahl: false, aktiv: true, offen: true, tisch: '1', bereich: 'Drinnen' });
+  assert.deepEqual(fest, { ok: true, wahl: false, aktiv: true, offen: true, ausverkauft: [], bewertung_url: '', tisch: '1', bereich: 'Drinnen' });
   const laden = await rpc('tisch_info', { p_code: ladenCode });
   assert.equal(laden.wahl, true);
   assert.equal(laden.tische.length, 2);
   assert.equal(laden.tische[0].code, undefined, 'Tisch-Codes dürfen beim Gast nicht ankommen');
+  assert.deepEqual(laden.ausverkauft, []);
 });
 
 test('Gast: bestellen, der Server rechnet mit seinen eigenen Preisen', async () => {
@@ -103,19 +104,91 @@ test('Bezahlen: Gast meldet sich, Theke rechnet den Tisch ab', async () => {
   assert.equal(t.bestellungen.filter(b => b.tisch_id === tischId && !b.bezahlt_at).length, 4);
   assert.equal((await rpc('theke_bezahlt', { p_key: 'falsch', p_tisch: tischId })).fehler, 'key');
   const r = await rpc('theke_bezahlt', { p_key: K, p_tisch: tischId });
-  assert.equal(r.ok, true); assert.equal(r.anzahl, 4); assert.equal(r.summe_cent, 1370 + 3 * 290);
+  assert.equal(r.ok, true); assert.equal(r.rest, false); assert.equal(r.summe_cent, 1370 + 3 * 290);
   t = await rpc('theke_bestellungen', { p_key: K });
   assert.equal(t.zahlen.length, 0);
   assert.equal(t.bestellungen.filter(b => !b.bezahlt_at).length, 0);
   assert.deepEqual(await rpc('bestellung_status', { p_ids: [bestellId] }), [{ id: bestellId, status: 'serviert', bezahlt: true }]);
   // zweites Abrechnen findet nichts mehr
-  assert.equal((await rpc('theke_bezahlt', { p_key: K, p_tisch: tischId })).anzahl, 0);
+  assert.equal((await rpc('theke_bezahlt', { p_key: K, p_tisch: tischId })).summe_cent, 0);
 });
 
 test('Aufräumen: alte bezahlte Bestellungen werden gelöscht', async () => {
   await s.db.exec("update bestellungen set created_at = now() - interval '4 days' where nr = 1");
   await s.db.exec('select _aufraeumen()');
   assert.equal((await s.db.query('select count(*)::int as n from bestellungen')).rows[0].n, 3);
+});
+
+test('Getrennt zahlen: erst ein Teil, dann der Rest', async () => {
+  const t2 = (await rpc('theke_tische', { p_key: K })).tische[1];
+  const b = await rpc('bestellung_aufgeben', { p_code: t2.code, p_positionen: [
+    { name: 'Cappuccino', menge: 3, extras: [{ name: 'Sahne' }] }, { name: 'Espresso', menge: 1 }] });
+  assert.equal(b.summe_cent, 3 * (390 + 80) + 290);
+  // zwei der drei Cappuccino zahlen; mehr als vorhanden wird gekappt
+  let r = await rpc('theke_bezahlt', { p_key: K, p_tisch: t2.id, p_auswahl: [{ id: b.id, pos: 0, menge: 2 }] });
+  assert.equal(r.summe_cent, 2 * 470); assert.equal(r.rest, true);
+  assert.deepEqual(await rpc('bestellung_status', { p_ids: [b.id] }), [{ id: b.id, status: 'neu', bezahlt: false }]);
+  r = await rpc('theke_bezahlt', { p_key: K, p_tisch: t2.id, p_auswahl: [{ id: b.id, pos: 0, menge: 9 }] });
+  assert.equal(r.summe_cent, 470); assert.equal(r.rest, true);
+  // der Rest in einem Rutsch
+  r = await rpc('theke_bezahlt', { p_key: K, p_tisch: t2.id });
+  assert.equal(r.summe_cent, 290); assert.equal(r.rest, false);
+  assert.deepEqual(await rpc('bestellung_status', { p_ids: [b.id] }), [{ id: b.id, status: 'serviert', bezahlt: true }]);
+  assert.equal((await rpc('theke_bezahlt', { p_key: K, p_tisch: t2.id, p_auswahl: 'x' })).fehler, 'ungueltig');
+});
+
+test('Kellner rufen', async () => {
+  const t2 = (await rpc('theke_tische', { p_key: K })).tische[1];
+  assert.equal((await rpc('kellner_rufen', { p_code: 'falsch' })).fehler, 'tisch');
+  assert.equal((await rpc('kellner_rufen', { p_code: ladenCode })).fehler, 'tisch', 'Laden-Code ohne Tisch');
+  assert.equal((await rpc('kellner_rufen', { p_code: ladenCode, p_tisch: t2.id })).ok, true);
+  let t = await rpc('theke_bestellungen', { p_key: K });
+  assert.deepEqual(t.rufe.map(r => [r.tisch_id, r.tisch, r.bereich]), [[t2.id, '2', 'Drinnen']]);
+  assert.equal((await rpc('theke_ruf_erledigt', { p_key: 'falsch', p_tisch: t2.id })).fehler, 'key');
+  assert.equal((await rpc('theke_ruf_erledigt', { p_key: K, p_tisch: t2.id })).ok, true);
+  t = await rpc('theke_bestellungen', { p_key: K });
+  assert.equal(t.rufe.length, 0);
+});
+
+test('Ausverkauft: Artikel ist für heute gesperrt', async () => {
+  const t2 = (await rpc('theke_tische', { p_key: K })).tische[1];
+  assert.equal((await rpc('theke_ausverkauft', { p_key: 'falsch', p_name: 'Espresso', p_aus: true })).fehler, 'key');
+  assert.equal((await rpc('theke_ausverkauft', { p_key: K, p_name: 'Espresso', p_aus: true })).ok, true);
+  assert.deepEqual((await rpc('tisch_info', { p_code: t2.code })).ausverkauft, ['Espresso']);
+  assert.equal((await rpc('theke_artikel', { p_key: K })).artikel.find(a => a.name === 'Espresso').aus, true);
+  const r = await rpc('bestellung_aufgeben', { p_code: t2.code, p_positionen: [{ name: 'Espresso', menge: 1 }] });
+  assert.equal(r.fehler, 'ausverkauft'); assert.equal(r.artikel, 'Espresso');
+  // gestern ausverkauft zählt heute nicht mehr
+  await s.db.exec("update artikel set ausverkauft_am = current_date - 1 where name = 'Espresso'");
+  assert.deepEqual((await rpc('tisch_info', { p_code: t2.code })).ausverkauft, []);
+  assert.equal((await rpc('theke_ausverkauft', { p_key: K, p_name: 'Espresso', p_aus: false })).ok, true);
+});
+
+test('Einstellungen: Zeiten, Ruhetage, Bewertungslink, Tagesübersicht', async () => {
+  let e = await rpc('theke_einstellungen', { p_key: K });
+  assert.equal(e.zeiten.length, 7); assert.equal(e.zeiten[0].von, '10:00');
+  assert.equal((await rpc('theke_zeiten_setzen', { p_key: K, p_zeiten: [{ tag: 1, von: '08:00', bis: '20:00' }] })).ok, true);
+  assert.deepEqual((await rpc('theke_einstellungen', { p_key: K })).zeiten, [{ tag: 1, von: '08:00', bis: '20:00' }]);
+  assert.equal((await rpc('theke_zeiten_setzen', { p_key: K, p_zeiten: [{ tag: 9, von: 'x', bis: 'y' }] })).fehler, 'ungueltig');
+  assert.equal((await rpc('theke_einstellungen', { p_key: K })).zeiten.length, 1, 'ungültige Eingabe ändert nichts');
+  await s.db.exec("delete from oeffnungszeiten; insert into oeffnungszeiten select g, '10:00', '18:00' from generate_series(1, 7) g");
+  // Ruhetag heute: trotz Zeiten geschlossen
+  const heute = (await s.db.query("select to_char((now() at time zone 'Europe/Berlin')::date, 'YYYY-MM-DD') as d")).rows[0].d;
+  await s.db.exec("update einstellungen set immer_offen = false; update oeffnungszeiten set von = '00:00', bis = '23:59:59'");
+  assert.equal((await rpc('theke_einstellungen', { p_key: K })).offen, true);
+  assert.equal((await rpc('theke_ruhetag', { p_key: K, p_datum: heute, p_an: true })).ok, true);
+  e = await rpc('theke_einstellungen', { p_key: K });
+  assert.equal(e.offen, false); assert.deepEqual(e.ruhetage, [heute]);
+  await rpc('theke_ruhetag', { p_key: K, p_datum: heute, p_an: false });
+  await s.db.exec('update einstellungen set immer_offen = true');
+  // Bewertungslink
+  assert.equal((await rpc('theke_bewertung', { p_key: K, p_url: 'javascript:alert(1)' })).fehler, 'ungueltig');
+  assert.equal((await rpc('theke_bewertung', { p_key: K, p_url: 'https://g.page/r/abc/review' })).ok, true);
+  assert.equal((await rpc('tisch_info', { p_code: ladenCode })).bewertung_url, 'https://g.page/r/abc/review');
+  // Tagesübersicht
+  const tag = await rpc('theke_tag', { p_key: K });
+  assert.equal(tag.ok, true); assert.ok(tag.anzahl >= 2); assert.ok(tag.umsatz_cent > 0);
+  assert.ok(tag.top.some(x => x.name === 'Cappuccino'));
 });
 
 test('Öffnungszeiten: außerhalb wird nicht bestellt', async () => {
@@ -146,6 +219,6 @@ test('Pausieren und Codes erneuern', async () => {
 test('Tisch löschen: alte Bestellungen bleiben lesbar', async () => {
   assert.equal((await rpc('theke_tisch_loeschen', { p_key: K, p_id: tischId })).ok, true);
   const t = await rpc('theke_bestellungen', { p_key: K });
-  assert.equal(t.bestellungen.length, 4);
+  assert.equal(t.bestellungen.length, 5);
   assert.equal(t.bestellungen[0].tisch, '1');
 });

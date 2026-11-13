@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Einstellungen – NANNI</title>
+<meta name="robots" content="noindex, nofollow">
+<meta name="referrer" content="no-referrer">
+<meta name="theme-color" content="#33261f">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ccircle cx='32' cy='32' r='32' fill='%239aae93'/%3E%3Ctext x='32' y='41' font-family='sans-serif' font-size='26' text-anchor='middle' fill='%23fbf7f1'%3EN%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="bestellung/theke.css?v=5">
+<link rel="stylesheet" href="bestellung/verwaltung.css?v=5">
+</head>
+<body class="verwaltung">
+
+<header class="kopf">
+  <h1>NANNI <small>Einstellungen</small></h1>
+  <a href="theke.html">Zurück zur Theke</a>
+</header>
+<p class="band rot" id="sperre" hidden></p>
+<p class="band gelb" id="hinweis" hidden></p>
+
+<main class="felder" id="felder" hidden>
+
+  <section class="feld breit">
+    <header><h2>Heute</h2><button type="button" class="klein-knopf" id="tag-neu">Aktualisieren</button></header>
+    <div class="kacheln" id="tag-kacheln"></div>
+    <h3>Am meisten bestellt</h3>
+    <ol class="top" id="tag-top"></ol>
+  </section>
+
+  <section class="feld breit">
+    <header><h2>Ausverkauft</h2><input type="search" id="artikel-suche" placeholder="Artikel suchen" aria-label="Artikel suchen"></header>
+    <p class="erklaer">Tippt einen Artikel an, um ihn für heute zu sperren. Morgen ist er automatisch wieder bestellbar.</p>
+    <div id="artikel"></div>
+  </section>
+
+  <section class="feld">
+    <header><h2>Öffnungszeiten</h2></header>
+    <p class="erklaer">Nur in diesen Zeiten können Gäste am Handy bestellen.</p>
+    <form id="zeiten-form">
+      <div id="zeiten"></div>
+      <button type="submit">Zeiten speichern</button>
+    </form>
+  </section>
+
+  <section class="feld">
+    <header><h2>Geschlossene Tage</h2></header>
+    <p class="erklaer">Feiertage oder Betriebsferien. An diesen Tagen ist das Bestellen gesperrt.</p>
+    <form class="zeile" id="ruhetag-form">
+      <input type="date" id="ruhetag-datum" required aria-label="Datum">
+      <button type="submit">Hinzufügen</button>
+    </form>
+    <ul class="liste" id="ruhetage"></ul>
+  </section>
+
+  <section class="feld">
+    <header><h2>Tische</h2></header>
+    <p class="erklaer">Gäste können nur Nummern eintragen, die hier stehen.</p>
+    <form class="zeile" id="tisch-form">
+      <input id="tisch-name" required maxlength="20" placeholder="Nummer" aria-label="Tischnummer" inputmode="numeric">
+      <input id="tisch-bereich" maxlength="30" placeholder="Bereich, z. B. Drinnen" aria-label="Bereich" list="bereiche">
+      <datalist id="bereiche"></datalist>
+      <button type="submit">Hinzufügen</button>
+    </form>
+    <div id="tische"></div>
+  </section>
+
+  <section class="feld">
+    <header><h2>Bewertungslink</h2></header>
+    <p class="erklaer">Nach dem Bezahlen sehen Gäste einen Knopf „Bewertet uns“. Tragt hier den Link zu eurer Bewertungsseite ein, zum Beispiel von Google. Leer lassen, wenn ihr keinen Knopf wollt.</p>
+    <form class="zeile" id="bewertung-form">
+      <input type="url" id="bewertung-url" placeholder="https://…" aria-label="Bewertungslink" maxlength="300">
+      <button type="submit">Speichern</button>
+    </form>
+  </section>
+
+</main>
+
+<script src="bestellung/config.js?v=5"></script>
+<script src="bestellung/verwaltung.js?v=5"></script>
+</body>
+</html>

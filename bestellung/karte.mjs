@@ -31,9 +31,10 @@ export function karteSql() {
     '-- Erzeugt aus menu.json mit "npm run karte". Nicht von Hand ändern.',
     'begin;',
     'delete from extras;',
-    'delete from artikel;',
+    `delete from artikel where name not in (${artikel.map(a => q(a.name)).join(', ')});`,
     'insert into artikel (name, kategorie, preis_cent) values',
-    artikel.map(a => `  (${q(a.name)}, ${q(a.kategorie)}, ${a.preis_cent})`).join(',\n') + ';',
+    artikel.map(a => `  (${q(a.name)}, ${q(a.kategorie)}, ${a.preis_cent})`).join(',\n'),
+    '  on conflict (name) do update set kategorie = excluded.kategorie, preis_cent = excluded.preis_cent;',
     ...(extras.length ? ['insert into extras (kategorie, name, preis_cent) values',
       extras.map(x => `  (${q(x.kategorie)}, ${q(x.name)}, ${x.preis_cent})`).join(',\n') + ';'] : []),
     'commit;', ''

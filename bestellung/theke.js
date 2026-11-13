@@ -18,6 +18,9 @@
     return n;
   }
 
+  // Inhalt eines Elements ersetzen; leere Einträge (null, false) werden übersprungen
+  const fuellen = (el, ...kinder) => el.replaceChildren(...kinder.flat().filter(k => k != null && k !== false));
+
   // ------------------------------------------------------------ Schlüssel
   const MERK = 'nanni:theke-key';
   const ausLink = new URLSearchParams(location.hash.slice(1)).get('k');
@@ -91,8 +94,10 @@
 
   // ------------------------------------------------------------ Zustand
   let bestellungen = [], aktiv = true;
-  let zahlen = [];              // Tische, die zahlen möchten: [{tisch_id, seit}]
-  const zahlenGesehen = new Set();
+  let zahlen = [];              // Tische, die zahlen möchten: [{tisch_id, tisch, bereich, seit}]
+  let rufe = [];                // Tische, die einen Kellner rufen
+  const zahlenGesehen = new Set(), rufeGesehen = new Set();
+  const tischText = t => 'Tisch ' + t.tisch + (t.bereich ? ' ' + t.bereich : '');
   let uhrFehler = 0;            // Unterschied zwischen der Uhr dieses Geräts und der Datenbank
   const gesehen = new Set();    // IDs, für die schon gegongt wurde
   let ersterAbruf = true, letzterGong = 0, fehlversuche = 0;
@@ -102,7 +107,7 @@
 
   function uebernehmen(antwort) {
     uhrFehler = new Date(antwort.jetzt) - Date.now();
-    bestellungen = antwort.bestellungen; aktiv = antwort.aktiv; zahlen = antwort.zahlen || [];
+    bestellungen = antwort.bestellungen; aktiv = antwort.aktiv; zahlen = antwort.zahlen || []; rufe = antwort.rufe || [];
     const neue = bestellungen.filter(b => b.status === 'neu');
     const frisch = neue.filter(b => !gesehen.has(b.id));
     bestellungen.forEach(b => gesehen.add(b.id));
@@ -116,8 +121,13 @@
     zahlen.forEach(z => zahlenGesehen.add(z.tisch_id));
     if (zahlNeu.length && !ersterAbruf) {
       gong();
-      melden('Zahlen bitte', zahlNeu.map(z => { const b = bestellungen.find(x => x.tisch_id === z.tisch_id); return b ? 'Tisch ' + b.tisch + (b.bereich ? ' ' + b.bereich : '') : 'ein Tisch'; }).join(', '));
+      melden('Zahlen bitte', zahlNeu.map(tischText).join(', '));
     }
+    // Kellner-Rufe genauso
+    const rufNeu = rufe.filter(r => !rufeGesehen.has(r.tisch_id));
+    for (const id of [...rufeGesehen]) if (!rufe.some(r => r.tisch_id === id)) rufeGesehen.delete(id);
+    rufe.forEach(r => rufeGesehen.add(r.tisch_id));
+    if (rufNeu.length && !ersterAbruf) { gong(); melden('Kellner gerufen', rufNeu.map(tischText).join(', ')); }
     ersterAbruf = false;
     zeichnen();
   }
@@ -202,8 +212,15 @@
     const tische = new Map();
     for (const b of bestellungen) {
       if (b.bezahlt_at || b.status === 'abgelehnt' || b.tisch_id == null) continue;
-      const t = tische.get(b.tisch_id) || { id: b.tisch_id, name: b.tisch, bereich: b.bereich, summe: 0, bestellungen: [] };
-      t.summe += b.summe_cent; t.bestellungen.push(b);
+      const t = tische.get(b.tisch_id) || { id: b.tisch_id, name: b.tisch, bereich: b.bereich, summe: 0, zeilen: [] };
+      // Jede Position mit dem, was davon noch offen ist (bei getrennt zahlen kann ein Teil schon bezahlt sein)
+      b.positionen.forEach((p, pos) => {
+        const rest = p.menge - (p.bezahlt || 0);
+        if (rest <= 0) return;
+        const einzel = p.preis_cent + p.extras.reduce((s, x) => s + x.preis_cent, 0);
+        t.zeilen.push({ id: b.id, pos, name: p.name, extras: p.extras, rest, einzel });
+        t.summe += rest * einzel;
+      });
       tische.set(b.tisch_id, t);
     }
     return [...tische.values()].map(t => ({ ...t, zahlen: zahlen.some(z => z.tisch_id === t.id) }))
@@ -212,45 +229,70 @@
 
   function tischeZeichnen() {
     const liste = offeneTische();
-    $('tische').hidden = !liste.length;
-    $('tische-liste').replaceChildren(...liste.map(t => h('button', { type: 'button', class: t.zahlen && 'zahlen', onclick: () => rechnungZeigen(t.id) },
+    $('tische').hidden = !liste.length && !rufe.length;
+    const rufKnoepfe = rufe.map(r => h('button', { type: 'button', class: 'ruf', onclick: async () => {
+      rufe = rufe.filter(x => x !== r); tischeZeichnen();
+      try { await NANNI.rpc('theke_ruf_erledigt', { p_key: KEY, p_tisch: r.tisch_id }); } catch { netz(false); }
+      abfragen();
+    } }, h('b', {}, 'Tisch ' + r.tisch), r.bereich && h('small', {}, r.bereich), h('em', {}, 'ruft · erledigt?')));
+    $('tische-liste').replaceChildren(...rufKnoepfe, ...liste.map(t => h('button', { type: 'button', class: t.zahlen && 'zahlen', onclick: () => rechnungZeigen(t.id) },
       h('b', {}, 'Tisch ' + t.name), t.bereich && h('small', {}, t.bereich), h('span', {}, euro(t.summe)), t.zahlen && h('em', {}, 'möchte zahlen'))));
   }
 
   const datum = d => d.toLocaleString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) + ' Uhr';
 
+  // Rechnung eines Tisches. Ohne Auswahl wird alles abgerechnet; mit den Zählern nur ein Teil (getrennt zahlen).
   function rechnungZeigen(tischId) {
     const t = offeneTische().find(x => x.id === tischId);
-    if (!t) return;
     const d = $('rechnung');
-    const zeilen = t.bestellungen.flatMap(b => b.positionen.map(p => ({ ...p, cent: (p.preis_cent + p.extras.reduce((s, x) => s + x.preis_cent, 0)) * p.menge })));
+    if (!t) { if (d.open) d.close(); return; }
     const zu = () => h('button', { type: 'button', class: 'zweit', onclick: () => d.close() }, 'Schließen');
+    const wahl = t.zeilen.map(() => 0);   // wie viele Stück je Zeile gerade ausgewählt sind
+    const wahlSumme = () => t.zeilen.reduce((s, z, i) => s + z.einzel * wahl[i], 0);
     let sicher = false;
+    const bezahlt = h('button', { type: 'button', onclick: zahlen });
+    const beschriften = () => {
+      sicher = false; bezahlt.classList.remove('warn');
+      bezahlt.textContent = wahlSumme() ? 'Auswahl bezahlt · ' + euro(wahlSumme()) : 'Alles bezahlt · ' + euro(t.summe);
+    };
     // Bezahlt braucht zwei Tipps, damit kein Tisch aus Versehen abgerechnet wird
-    const bezahlt = h('button', { type: 'button', onclick: async () => {
-      if (!sicher) { sicher = true; bezahlt.textContent = 'Wirklich bezahlt?'; bezahlt.classList.add('warn'); return; }
+    async function zahlen() {
+      if (!sicher) { sicher = true; bezahlt.textContent = 'Wirklich bezahlt? ' + euro(wahlSumme() || t.summe); bezahlt.classList.add('warn'); return; }
       bezahlt.disabled = true;
       try {
-        const r = await NANNI.rpc('theke_bezahlt', { p_key: KEY, p_tisch: t.id });
+        const auswahl = wahlSumme() ? t.zeilen.map((z, i) => ({ id: z.id, pos: z.pos, menge: wahl[i] })).filter(x => x.menge > 0) : null;
+        const r = await NANNI.rpc('theke_bezahlt', { p_key: KEY, p_tisch: t.id, ...(auswahl && { p_auswahl: auswahl }) });
         if (!r.ok) throw new Error('abgelehnt');
-        d.replaceChildren(
+        fuellen(d, 
           h('header', {}, h('h2', {}, 'Bezahlt'), h('span', { class: 'ort' }, 'Tisch ' + t.name + (t.bereich ? ' · ' + t.bereich : ''))),
           h('p', { class: 'betrag' }, euro(r.summe_cent)),
           h('p', { class: 'datum' }, datum(new Date(r.bezahlt_at))),
-          h('div', { class: 'knoepfe' }, zu()));
+          r.rest && h('p', { class: 'klein' }, 'An diesem Tisch ist noch etwas offen.'),
+          h('div', { class: 'knoepfe' },
+            r.rest && h('button', { type: 'button', onclick: async () => { await abfragen(); rechnungZeigen(t.id); } }, 'Rest anzeigen'), zu()));
         abfragen();
       } catch { bezahlt.disabled = false; bezahlt.textContent = 'Hat nicht geklappt. Noch einmal?'; }
-    } }, 'Bezahlt');
-    d.replaceChildren(
+    }
+    const zaehler = i => {
+      const zahl = h('output', {}, '0');
+      const schritt = n => { wahl[i] = Math.max(0, Math.min(t.zeilen[i].rest, wahl[i] + n)); zahl.textContent = wahl[i]; zeile[i].classList.toggle('gewaehlt', wahl[i] > 0); beschriften(); };
+      return h('span', { class: 'teil' },
+        h('button', { type: 'button', 'aria-label': 'Weniger', onclick: () => schritt(-1) }, '−'), zahl,
+        h('button', { type: 'button', 'aria-label': 'Mehr', onclick: () => schritt(1) }, '+'));
+    };
+    const zeile = t.zeilen.map((z, i) => h('li', {},
+      h('span', { class: 'menge' }, z.rest + ' ×'),
+      h('span', { class: 'name' }, z.name, z.extras.length > 0 && h('span', { class: 'extra' }, '+ ' + z.extras.map(x => x.name).join(', '))),
+      h('span', { class: 'preis' }, euro(z.einzel * z.rest)),
+      zaehler(i)));
+    fuellen(d, 
       h('header', {}, h('h2', {}, 'Rechnung Tisch ' + t.name), t.bereich && h('span', { class: 'ort' }, t.bereich)),
       h('p', { class: 'datum' }, datum(new Date(Date.now() + uhrFehler))),
-      h('ul', { class: 'posten' }, zeilen.map(p => h('li', {},
-        h('span', { class: 'menge' }, p.menge + ' ×'),
-        h('span', { class: 'name' }, p.name, p.extras.length > 0 && h('span', { class: 'extra' }, '+ ' + p.extras.map(x => x.name).join(', '))),
-        h('span', { class: 'preis' }, euro(p.cent))))),
+      h('ul', { class: 'posten' }, zeile),
       h('div', { class: 'summe' }, h('span', {}, 'Summe'), h('b', {}, euro(t.summe))),
-      h('p', { class: 'klein' }, 'Übersicht zum Kassieren. Den Kassenbon gibt es wie gewohnt aus eurer Kasse.'),
+      h('p', { class: 'klein' }, 'Getrennt zahlen: rechts mit + die Stücke wählen, die jetzt bezahlt werden. Übersicht zum Kassieren, den Kassenbon gibt es wie gewohnt aus eurer Kasse.'),
       h('div', { class: 'knoepfe' }, bezahlt, zu()));
+    beschriften();
     if (!d.open) d.showModal();
   }
   $('rechnung').addEventListener('click', ev => { if (ev.target === $('rechnung')) $('rechnung').close(); });

@@ -16,7 +16,8 @@ const TYPEN = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; ch
   '.css': 'text/css; charset=utf-8', '.json': 'application/json', '.webp': 'image/webp', '.jpg': 'image/jpeg', '.png': 'image/png',
   '.svg': 'image/svg+xml', '.woff2': 'font/woff2', '.mp4': 'video/mp4', '.mp3': 'audio/mpeg' };
 // Nur diese Funktionen sind von außen erreichbar (wie die "grant"-Liste am Ende von schema.sql)
-const ERLAUBT = new Set(['tisch_info', 'bestellung_aufgeben', 'bestellung_status', 'zahlen_wuenschen', 'theke_bezahlt', 'theke_bestellungen', 'theke_status', 'theke_aktiv',
+const ERLAUBT = new Set(['tisch_info', 'bestellung_aufgeben', 'bestellung_status', 'zahlen_wuenschen', 'theke_bezahlt', 'kellner_rufen', 'theke_ruf_erledigt', 'theke_artikel', 'theke_ausverkauft',
+  'theke_einstellungen', 'theke_zeiten_setzen', 'theke_ruhetag', 'theke_bewertung', 'theke_tag', 'theke_bestellungen', 'theke_status', 'theke_aktiv',
   'theke_tische', 'theke_tisch_anlegen', 'theke_tisch_loeschen', 'theke_tisch_neuer_code', 'theke_laden_code_neu']);
 
 // memory: true = frische Datenbank nur im Arbeitsspeicher (für Tests)
