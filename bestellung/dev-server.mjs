@@ -109,7 +109,7 @@ NANNI Testserver läuft.
                   ${s.basis}/karte.html?t=${laden}
   Bestellen an Tisch ${t1.name} ${t1.bereich} (eigener Link des Tisches):
                   ${s.basis}/karte.html?t=${t1.code}
-  Theke (noch nicht gebaut):
+  Theke:
                   ${s.basis}/theke.html#k=${s.thekeKey}
 
 Beenden mit Strg+C. Die Testdaten liegen in bestellung/daten.local/.
