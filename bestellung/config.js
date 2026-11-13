@@ -3,8 +3,8 @@
 // Für den echten Betrieb kommen hier die Adresse und der öffentliche Schlüssel des eigenen Supabase-Projekts hinein.
 (() => {
   const lokal = ['localhost', '127.0.0.1'].includes(location.hostname);
-  const url = lokal ? '' : '';   // z. B. 'https://xxxx.supabase.co'
-  const key = lokal ? '' : '';   // öffentlicher (publishable) Schlüssel, darf im Browser stehen
+  const url = lokal ? '' : 'https://kpgabhgmstwbackbilcu.supabase.co';
+  const key = lokal ? '' : 'sb_publishable_IFyw97KtbU8t3JX5YzDMzQ_OTBDoyYU';   // öffentlicher (publishable) Schlüssel, darf im Browser stehen
   if (!lokal && !url) return;    // noch nicht eingerichtet: die Karte bleibt eine Lesekarte
   window.NANNI = {
     async rpc(funktion, werte) {
