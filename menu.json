@@ -1,0 +1,196 @@
+{
+  "stand": "Oktober 2026",
+  "hinweis": "1:1 nach der gedruckten Karte im Café (Foto-PDF raw/Nanni_Speisekarte.pdf, Okt. 2026). Tippfehler der Druckversion sind hier korrigiert. Nur der Hinweis zum Lunch Deal stammt von Instagram (Sept. 2026).",
+  "addons": [
+    ["Pochiertes Ei", "1,50"], ["Avocado", "2,00"], ["Sucuk", "2,00"], ["Halloumi", "2,50"], ["Lachs", "2,50"],
+    ["Veganer Lachs", "2,80"], ["Pastrami", "2,80"], ["Bacon", "2,50"], ["Burrata", "4,50"]
+  ],
+  "kategorien": [
+    {
+      "id": "kaffee", "name": "Kaffee", "sub": "Regional geröstet, mit Liebe ausgewählt", "img": "bilder/cappuccino.webp",
+      "callout": { "title": "Unser Kaffee. Hier zu Hause.", "text": "Unsere Kaffeebohnen werden hier in Osnabrück geröstet und sorgfältig auf den Geschmack abgestimmt, den wir bei NANNI lieben. Vollmundig, weich und harmonisch – für den perfekten Kaffeemoment bei uns." },
+      "items": [
+        { "name": "Café Crema", "price": "3,20" },
+        { "name": "Americano", "price": "3,50" },
+        { "name": "Espresso", "price": "2,90" },
+        { "name": "Espresso Doppio", "price": "4,40" },
+        { "name": "Espresso Macchiato", "price": "3,30" },
+        { "name": "Cappuccino", "price": "3,90" },
+        { "name": "Flat White", "price": "5,30" },
+        { "name": "Milchkaffee", "price": "4,50" },
+        { "name": "Latte Macchiato", "price": "4,50" },
+        { "name": "Kaffee & Kuchen Deal", "price": "6,00", "desc": "Immer montags von 12 bis 18 Uhr.", "badge": "Montag" }
+      ],
+      "extras": [{ "title": "Extras", "items": [["Extra Espresso Shot", "1,50"], ["Sahne", "0,80"], ["Flavours", "1,00"]] }],
+      "notes": ["Alle Kaffees gibt es auch koffeinfrei.", "Milchalternativen ohne Aufpreis: Kokos-, Hafer- und Sojamilch."]
+    },
+    {
+      "id": "tee-matcha", "name": "Tee & Matcha", "sub": "Frisch aufgegossen", "img": "bilder/matcha-mango.webp",
+      "items": [
+        { "name": "Earl Grey", "price": "3,50", "desc": "Feiner Schwarztee mit Bergamotte-Aroma." },
+        { "name": "Jasmin-Grüntee", "price": "3,50", "desc": "Frisch aufgegossen – leicht, blumig und wohltuend." },
+        { "name": "Früchtetee Waldbeere", "price": "3,50", "desc": "Aus feinen Beerennoten – fruchtig, süß-säuerlich und aromatisch." },
+        { "name": "Frischer Minztee", "price": "4,20", "desc": "Aus frischer Minze – mild und beruhigend." },
+        { "name": "Frischer Ingwer-Zitronentee", "price": "4,20", "desc": "Frischer Ingwer – wärmend, intensiv und natürlich erfrischend." },
+        { "name": "Hot Matcha", "price": "5,90" },
+        { "name": "Iced Matcha", "price": "5,90" },
+        { "name": "Strawberry Iced Matcha", "price": "6,50" },
+        { "name": "Mango Iced Matcha", "price": "6,50" }
+      ]
+    },
+    {
+      "id": "favourites", "name": "Nannis Favourites", "short": "Favourites", "sub": "Iced, hot und sweet", "img": null,
+      "groups": [
+        { "title": "Iced", "items": [
+          { "name": "Iced Americano", "price": "3,90" },
+          { "name": "Iced Latte", "price": "4,50" },
+          { "name": "Iced Vanilla Latte", "price": "5,20" },
+          { "name": "Iced Chai Latte", "price": "4,90" }
+        ] },
+        { "title": "Hot & Special", "items": [
+          { "name": "Chai Latte", "price": "4,90" },
+          { "name": "Pumpkin Spice Latte", "price": "5,50" }
+        ] },
+        { "title": "Sweet", "items": [
+          { "name": "Hot Chocolate", "price": "4,50" },
+          { "name": "Hot White Chocolate", "price": "4,50" }
+        ] }
+      ]
+    },
+    {
+      "id": "limo", "name": "Hausgemachte Limo", "short": "Limo", "sub": "Frisch. Fruchtig. Hausgemacht.", "img": "bilder/limo-karaffe.webp",
+      "items": [
+        { "name": "Pfirsich-Limo", "price": "4,90", "desc": "Pfirsichsirup und Mineralwasser." },
+        { "name": "Zitronen-Minze-Holunder-Limo", "price": "6,50", "desc": "Zitrone, Minze, Ingwersirup, Holundersirup und Mineralwasser." },
+        { "name": "Himbeer-Minze-Holunder-Limo", "price": "6,50", "desc": "Zitrone, Minze, Himbeersirup, Holundersirup und Mineralwasser." },
+        { "name": "Maracuja-Limette-Limo", "price": "6,50", "desc": "Limette, Maracujasirup und Mineralwasser." }
+      ]
+    },
+    {
+      "id": "fresh", "name": "Nannis Fresh Bar", "short": "Fresh Bar", "sub": "Frisch gepresste Säfte und Smoothies", "img": null,
+      "groups": [
+        { "title": "Frisch gepresst", "items": [
+          { "name": "Frisch gepresster Orangensaft", "price": "5,90", "desc": "Frisch gepresst und ohne Zusätze." },
+          { "name": "Beet & Juice", "price": "6,50", "desc": "Frisch gepresster Mix aus Roter Bete, Apfel, Möhre, Ingwer, Zitrone und frischem Orangensaft – fruchtig und leicht würzig." }
+        ] },
+        { "title": "Smoothies", "items": [
+          { "name": "Berry Banana", "price": "6,90", "desc": "Beerenmix, Banane, Apfel und Orange – fruchtig, cremig und harmonisch." },
+          { "name": "Green Glow", "price": "6,90", "desc": "Spinat, Banane, Apfel, Mango und Zitrone – frisch, fruchtig und belebend." },
+          { "name": "Mango Sunshine", "price": "6,90", "desc": "Mango, Banane, Orange und Passionsfruchtsirup – fruchtig und erfrischend." }
+        ] }
+      ]
+    },
+    {
+      "id": "soft", "name": "Kaltgetränke & Wasser", "short": "Kaltgetränke", "sub": "Kalt. Frisch. Nanni.", "img": null,
+      "items": [
+        { "name": "fritz-kola 0,2 l", "price": "3,30" },
+        { "name": "fritz-kola super zero 0,2 l", "price": "3,30" },
+        { "name": "fritz-limo Apfel-Kirsch-Holunder 0,2 l", "price": "3,30" },
+        { "name": "fritz-spritz Bio-Rhabarberschorle 0,2 l", "price": "3,30" },
+        { "name": "Zurück zu den Quellen, still 0,33 l", "price": "3,50" },
+        { "name": "Zurück zu den Quellen, sprudelnd 0,33 l", "price": "3,50" }
+      ],
+      "notes": ["„Zurück zu den Quellen“ ist natürliches Mineralwasser aus ursprünglichen, geschützten Quellen in Deutschland."]
+    },
+    {
+      "id": "fruehstueck", "name": "Good Morning, Nanni", "short": "Frühstück", "sub": "Mit Eiern aus ökologischer Haltung", "img": null,
+      "items": [
+        { "name": "Rührei Genuss", "price": "7,90", "desc": "Cremiges Rührei, geröstetes Sauerteigbrot und Frischkäsecreme.", "tags": ["veggie", "vegan-opt"] },
+        { "name": "Omelett-Bar", "price": "8,90", "desc": "Frisch zubereitetes Omelett mit Brot und Frischkäsecreme – verfeinere dein Omelett mit den Extras unten.", "tags": ["veggie"] },
+        { "name": "Nannis Brunch-Favourite", "price": "14,90", "desc": "Cremiges Rührei auf geröstetem Sauerteigbrot mit Avocado, Tomaten, Pickled Onions und Granatapfelkernen. Dazu zwei fluffige vegane Pancakes mit Beeren, Soja-Vanillecreme und Bio-Ahornsirup.", "tags": ["veggie", "vegan-opt"] }
+      ],
+      "extras": [{ "title": "Omelett-Extras", "items": [["Tomaten", "0,80"], ["Rote Zwiebeln", "0,80"], ["Paprika", "0,80"], ["Rucola", "0,80"], ["Käse", "1,50"], ["Avocado", "2,00"], ["Sucuk", "2,00"], ["Bacon", "2,50"], ["Halloumi", "2,50"], ["Lachs", "2,50"]] }],
+      "addons": true
+    },
+    {
+      "id": "bowls", "name": "Bowls & Porridge", "short": "Bowls", "sub": "Açaí kalt, Porridge warm", "img": null,
+      "items": [
+        { "name": "Classic Açaí Bowl", "price": "11,90", "desc": "Cremige Açaí, kalt serviert mit Beeren, Banane, Crunchy Granola, Chiasamen und Kokosflocken – verfeinert mit Dattelsirup.", "tags": ["vegan"] },
+        { "name": "Lotus Crunch Açaí Bowl", "price": "12,90", "desc": "Cremige Açaí, kalt serviert mit Beeren, Banane, Crunchy Granola, Soja-Vanillecreme, Chiasamen und Kokosflocken – getoppt mit Lotus Swirl und Lotus Crumble.", "tags": ["vegan"] },
+        { "name": "Apfel Crunch Porridge", "price": "9,90", "desc": "Warmes, cremiges Porridge mit Apfelkompott und Apfelstücken, Granola, gemahlenen Haselnüssen, Kokosflocken und Zimt – verfeinert mit einem Hauch Lotus Swirl.", "tags": ["vegan"] }
+      ],
+      "notes": [
+        "Porridge auch mit glutenfreien Zutaten (+1,50 €): glutenfreie Haferflocken, glutenfreier Haferdrink und glutenfreies Crunchy-Nuss-Topping.",
+        "Unser Granola ist vegan und wird mit glutenfreien Haferflocken hergestellt. Kann Spuren von Gluten enthalten."
+      ]
+    },
+    {
+      "id": "shokupan", "name": "Shokupan Sandwiches", "short": "Shokupan", "sub": "Frisch gebacken, liebevoll belegt und knusprig getoastet", "img": "bilder/club-sandwich.webp",
+      "callout": { "title": "Shokupan. New. Fresh. Urban.", "text": "Unser Egg Drop Sandwich wird mit japanischem Milchbrot zubereitet – besonders soft und fluffig, mit feiner, brioche-ähnlicher Note. Goldig getoastet und frisch belegt wird es bei uns zum modernen Brunch- und Lunch-Sandwich." },
+      "items": [
+        { "name": "Nanni Egg Drop", "price": "10,90", "desc": "Goldbraun getoastet mit Topping deiner Wahl, Cheddar-Melt, fluffigem, cremigem Rührei und Avocado, dazu hausgemachter Sweet-Cream-Senf als Finish. Topping: Bacon, Sucuk, Lachs oder Tofu. Sauce: Trüffelcreme oder Sriracha-Mayo.", "tags": ["veggie"] },
+        { "name": "Halloumi-Honey Drop", "price": "12,90", "desc": "Toskanacreme, Rucola, Halloumi, Tomaten, Honig, Kürbiskerne, Chili und Granatapfel-Drizzle.", "tags": ["veggie", "scharf"] },
+        { "name": "Pastrami New York Style Drop", "price": "13,90", "desc": "Frischkäse, Rucola, Tomaten, Pastrami, Cornichons und Käse-Melt, Dattel-Senf-Dressing und Balsamico." },
+        { "name": "Burrata Italia", "price": "13,90", "desc": "Pesto, Rucola, Tomaten, Burrata, geröstete Pinienkerne, Olivenöl und Balsamico-Drizzle.", "tags": ["veggie"] },
+        { "name": "Kleine Süßkartoffel-Pommes + Dip", "price": "3,90", "desc": "Zu deinem Shokupan. Dip: Trüffelcreme, Kräuterquark, vegane Mayo oder Ketchup." }
+      ],
+      "addons": true
+    },
+    {
+      "id": "pancakes", "name": "Süßkartoffel-Pancakes", "short": "Pancakes", "sub": "Herzhaft. Süß. Süßkartoffel.", "img": "bilder/brunch-tisch.webp",
+      "items": [
+        { "name": "Süßkartoffel-Pancakes mit Halloumi", "price": "12,90", "desc": "Vegane Creme, Rucola, Tomaten, Halloumi, Chiliflocken, Kürbiskerne und Granatapfel-Drizzle.", "tags": ["veggie", "scharf"] },
+        { "name": "Süßkartoffel-Pancakes mit Tofu & Avocado", "price": "12,90", "desc": "Vegane Creme, Rucola, Tomaten, Tofu, Avocado, Granatapfelkerne und Granatapfel-Drizzle.", "tags": ["vegan"] },
+        { "name": "Süßkartoffel-Pancakes Vegan Greek", "price": "12,90", "desc": "Vegane Creme, Rucola, Tomate, Avocado, veganer Hirtenkäse, Granatapfelkerne und Balsamico.", "tags": ["vegan"] },
+        { "name": "Süßkartoffel-Pancakes Apple Lotus", "price": "11,90", "desc": "Apfelkompott, Mandelblättchen und Lotus-Swirl.", "tags": ["vegan"] }
+      ],
+      "notes": [
+        "Unser hausgemachter Pancake-Teig ist vegan und wird aus glutenfreien Zutaten zubereitet.",
+        "Auf Wunsch glutenfreie Topping-Variante: Crunchy Mandel-Nuss-Topping. Kann Spuren von Gluten enthalten."
+      ],
+      "addons": true
+    },
+    {
+      "id": "bagels", "name": "Bagels", "sub": "Frisch belegt. Knusprig. Nanni.", "img": null,
+      "items": [
+        { "name": "Avocado & Poached Egg", "price": "9,90", "desc": "Frischkäse, Rucola, Tomaten, Avocado, pochiertes Ei und Sweet-Cream-Senf-Drizzle.", "tags": ["veggie"] },
+        { "name": "Smoky Tofu Bagel", "price": "9,90", "desc": "Frischkäse, Rucola, Tomaten, Avocado, Tofu, Pickled Onions und Granatapfel-Drizzle.", "tags": ["vegan"] },
+        { "name": "Sucuk Egg Bagel", "price": "9,90", "desc": "Avocado-Mash, Rucola, Tomate, Rührei, Sucuk und Sriracha-Mayo." },
+        { "name": "Egg Bagel", "price": "8,90", "desc": "Frischkäse, Rucola, Tomate, Rührei, veganes Reibe-Topping und Maple-Mustard-Drizzle.", "tags": ["veggie", "vegan-opt"] },
+        { "name": "Salmon Bagel", "price": "10,90", "desc": "Frisch belegt mit Frischkäse, Rucola, Gurkensalat, Lachs, Pickled Onions und Dill-Dattelsenf-Dressing. Auch mit veganem Lachs.", "tags": ["vegan-opt"] }
+      ],
+      "notes": [
+        "Alle Bagels gibt es auch glutenfrei (+1,50 €). Kann Spuren von Gluten enthalten.",
+        "Alle veganen Optionen werden mit unserer veganen Creme serviert."
+      ],
+      "addons": true
+    },
+    {
+      "id": "lunch", "name": "Nannis Lunch Favourites", "short": "Lunch", "sub": "Mo–Fr ab 15 Uhr, am Wochenende schon ab 12 Uhr", "img": "bilder/golden-goat.webp",
+      "items": [
+        { "name": "Golden Goat Club Sandwich", "price": "14,90", "desc": "Frischkäse, Rucola, Tomaten, Avocado, karamellisierter Ziegenkäse und Walnüsse. Dazu Süßkartoffel-Pommes mit veganem Reibe-Topping und Dip.", "tags": ["veggie"] },
+        { "name": "Chicken Karaage Burger", "price": "15,50", "desc": "Brioche Bun, Honey-Mustard-Sauce, Romanasalat, Tomate, Chicken Karaage, Cheddar-Melt und Pickled Onions. Dazu Süßkartoffel-Pommes mit veganem Reibe-Topping und Dip." },
+        { "name": "Avocado-Halloumi Burger", "price": "15,50", "desc": "Brioche Bun, Avocado-Mash, Romanasalat, Tomate, Avocado, Halloumi, Honig-Drizzle, Pickled Onions und hausgemachte Honig-Senf-Sauce. Dazu Süßkartoffel-Pommes mit veganem Reibe-Topping und Dip.", "tags": ["veggie"] },
+        { "name": "Süßkartoffel-Pommes mit Dip", "price": "6,90", "desc": "Dip deiner Wahl: Trüffelcreme, Kräuterquark, vegane Mayo oder Ketchup.", "tags": ["vegan"] }
+      ],
+      "notes": ["Mittags von Mo–Fr (11:30–14:30 Uhr) gibt es den Lunch Deal mit Getränk inklusive."],
+      "addons": true
+    },
+    {
+      "id": "sweets", "name": "Nannis Sweets", "short": "Sweets", "sub": "French Toast und fluffige vegane Pancakes", "img": "bilder/french-toast.webp",
+      "groups": [
+        { "title": "French Toast", "items": [
+          { "name": "Classic French Toast", "price": "12,50", "desc": "Goldbraun gebraten, serviert mit hausgemachter Vanille-Mascarpone-Creme, Beerenkompott, frischen Beeren, karamellisierter Banane, Bio-Ahornsirup und Brownie-Crumble.", "tags": ["veggie"] }
+        ] },
+        { "title": "Fluffy Vegan Pancakes", "items": [
+          { "name": "Classy Berry Pancakes", "price": "11,90", "desc": "Goldbraun gebackene vegane Pancakes mit Beeren, cremiger Soja-Vanillecreme und Bio-Ahornsirup.", "tags": ["vegan"] },
+          { "name": "Bueno Berry Pancakes", "price": "11,90", "desc": "Goldbraun gebackene vegane Pancakes mit Beeren, Bueno Crumble und Bueno-Sauce.", "tags": ["veggie"] },
+          { "name": "Nannis Vegan Banana Bread", "price": "9,90", "desc": "Getoastetes veganes Bananenbrot aus glutenfreien Zutaten mit Soja-Vanillecreme, Banane, Beeren, hausgemachtem Granola und Bio-Ahornsirup.", "tags": ["vegan"] }
+        ] }
+      ]
+    },
+    {
+      "id": "waffeln", "name": "Nannis Waffel Specials", "short": "Waffeln", "sub": "Unser Waffelteig ist hausgemacht und vegan", "img": null,
+      "items": [
+        { "name": "Classic Vegan", "price": "3,90", "desc": "Puderzucker.", "tags": ["vegan"] },
+        { "name": "Banana Choc", "price": "6,90", "desc": "Puderzucker, Bananen, Schokodrops und Schokosauce." },
+        { "name": "Lotus Crunch", "price": "7,50", "desc": "Puderzucker, Apfelkompott, Lotus-Creme und Lotus-Crumble.", "tags": ["vegan"] },
+        { "name": "White Bueno Crunch", "price": "7,90", "desc": "Puderzucker, Bueno-Haselnusssauce, weiße Schokosauce, gemahlene Haselnüsse und Bueno-Crunch." },
+        { "name": "Heiße Liebe", "price": "5,90", "desc": "Puderzucker und heiße Kirschen.", "tags": ["vegan"] },
+        { "name": "Kirschtraum", "price": "6,90", "desc": "Puderzucker, heiße Kirschen und hausgemachte Mascarpone-Creme." },
+        { "name": "Oreo Berry Banana", "price": "7,50", "desc": "Puderzucker, Banane, Oreo-Crunch und Erdbeersauce.", "tags": ["vegan"] }
+      ],
+      "extras": [{ "title": "Waffel-Extras", "items": [["Veganes Vanilleeis", "1,20"], ["Sahne", "0,80"], ["Ahornsirup", "1,00"]] }]
+    }
+  ]
+}
