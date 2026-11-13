@@ -3,7 +3,7 @@
 // Ohne Code im Link (karte.html) passiert hier nichts, die Karte bleibt eine Lesekarte.
 // Mit Code (karte.html?t=CODE) fragt das Skript die Datenbank, was der Code darf:
 //   - Tisch-Code:  der Tisch steht fest (eigener Link je Tisch, z. B. auf einem NFC-Chip)
-//   - Laden-Code:  ein gemeinsamer QR-Code für alle, der Gast wählt seinen Tisch selbst
+//   - Laden-Code:  ein gemeinsamer QR-Code für alle, der Gast trägt seine Tischnummer selbst ein
 // Die Positionen liest es aus der Karte selbst (data-n = Name, data-p = Preis in Cent).
 // Diese Preise sind nur für die Anzeige; verbindlich rechnet die Datenbank.
 (() => {
@@ -73,7 +73,7 @@
     // ---------------------------------------------------------- Tisch-Anzeige im Kopf
     const tischKnopf = h(info.wahl ? 'button' : 'span', { class: 'nb-tisch', type: info.wahl && 'button', onclick: () => info.wahl && info.aktiv && tischWaehlen() });
     function tischZeichnen() {
-      tischKnopf.replaceChildren(h('b', {}, tisch ? tischName(tisch) : 'Tisch wählen'),
+      tischKnopf.replaceChildren(h('b', {}, tisch ? tischName(tisch) : 'Tischnummer eintragen'),
         info.aktiv && h('span', {}, info.wahl && tisch ? 'ändern' : 'Bestellt direkt hier am Handy'));
     }
     tischZeichnen();
@@ -147,17 +147,35 @@
     }
 
     // ---------------------------------------------------------- Blatt: Tisch wählen (nur beim Laden-Code)
+    // Der Gast tippt seine Tischnummer ein. Gibt es die Nummer in mehreren Bereichen
+    // (z. B. Tisch 1 drinnen und draußen), fragt das Blatt danach noch nach dem Bereich.
     function tischWaehlen(danach) {
       const b = blatt('An welchem Tisch sitzt ihr?', 'Die Nummer steht bei euch am Tisch.');
-      for (const bereich of new Set(info.tische.map(t => t.bereich))) {
-        if (bereich) b.inhalt.append(h('h4', {}, bereich));
-        b.inhalt.append(h('div', { class: 'nb-tische' }, info.tische.filter(t => t.bereich === bereich).map(t =>
-          h('button', { type: 'button', class: tisch && tisch.id === t.id && 'an', 'aria-label': tischName(t), onclick: () => {
-            tisch = t; merken.schreiben('tisch', { id: t.id, zeit: Date.now() });
-            tischZeichnen(); b.d.close(); danach?.();
-          } }, t.name))));
-      }
-      if (!info.tische.length) b.inhalt.append(h('p', {}, 'Es sind noch keine Tische eingerichtet. Bestellt bitte direkt bei uns.'));
+      if (!info.tische.length) return b.inhalt.append(h('p', {}, 'Es sind noch keine Tische eingerichtet. Bestellt bitte direkt bei uns.'));
+      const nurZahlen = info.tische.every(t => /^\d+$/.test(t.name));
+      const feld = h('input', { class: 'nb-nummer', type: 'text', inputmode: nurZahlen && 'numeric', maxlength: 20, autocomplete: 'off',
+        'aria-label': 'Tischnummer', placeholder: 'Tischnummer', value: tisch ? tisch.name : null });
+      const fehler = h('p', { class: 'nb-fehler', role: 'alert', hidden: true });
+      const bereiche = h('div', { class: 'nb-bereiche' });
+      const nehmen = t => {
+        tisch = t; merken.schreiben('tisch', { id: t.id, zeit: Date.now() });
+        tischZeichnen(); b.d.close(); danach?.();
+      };
+      const pruefen = () => {
+        const eingabe = feld.value.trim().toLowerCase();
+        const treffer = info.tische.filter(t => t.name.toLowerCase() === eingabe);
+        bereiche.replaceChildren(); fehler.hidden = true;
+        if (!eingabe) { fehler.textContent = 'Tragt bitte eure Tischnummer ein.'; fehler.hidden = false; return feld.focus(); }
+        if (!treffer.length) { fehler.textContent = 'Diesen Tisch gibt es bei uns nicht. Schaut bitte noch einmal auf die Nummer am Tisch.'; fehler.hidden = false; return feld.focus(); }
+        if (treffer.length === 1) return nehmen(treffer[0]);
+        bereiche.append(h('h4', {}, 'Wo sitzt ihr?'), h('div', { class: 'nb-reihe' },
+          treffer.map(t => h('button', { class: 'nb-knopf hell mitte', type: 'button', onclick: () => nehmen(t) }, t.bereich || 'Tisch ' + t.name))));
+      };
+      feld.addEventListener('input', () => { bereiche.replaceChildren(); fehler.hidden = true; });
+      const form = h('form', { onsubmit: ev => { ev.preventDefault(); pruefen(); } }, feld, fehler, bereiche);
+      b.inhalt.append(form);
+      b.fuss.append(h('button', { class: 'nb-knopf mitte', type: 'button', onclick: pruefen }, 'Weiter'));
+      feld.focus(); feld.select();
     }
 
     // ---------------------------------------------------------- Blatt: Warenkorb und Abschicken
@@ -165,7 +183,7 @@
       const b = blatt('Eure Bestellung', !info.wahl && tischName(tisch));
       const liste = h('ul', { class: 'nb-zeilen' }), summe = h('b', {});
       const tischZeile = h('button', { class: 'nb-tischzeile', type: 'button', onclick: () => tischWaehlen(tischZeileZeichnen) });
-      const tischZeileZeichnen = () => tischZeile.replaceChildren(h('b', {}, tisch ? tischName(tisch) : 'Euer Tisch'), h('span', {}, tisch ? 'ändern' : 'bitte wählen'));
+      const tischZeileZeichnen = () => tischZeile.replaceChildren(h('b', {}, tisch ? tischName(tisch) : 'Euer Tisch'), h('span', {}, tisch ? 'ändern' : 'Nummer eintragen'));
       const fehler = h('p', { class: 'nb-fehler', role: 'alert', hidden: true });
       const senden = h('button', { class: 'nb-knopf mitte', type: 'button', onclick: abschicken }, 'Bestellung abschicken');
 

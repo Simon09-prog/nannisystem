@@ -61,18 +61,31 @@
   });
 
   // ------------------------------------------------------------ Ton und Bildschirm
-  // Der Gong wird im Browser erzeugt, es braucht keine Tondatei.
-  let audio = null;
-  function tonAn() { try { audio = audio || new (window.AudioContext || window.webkitAudioContext)(); audio.resume(); } catch { /* kein Ton möglich */ } }
-  function gong() {
-    if (!audio) return;
-    [[880, 0], [1175, .18], [880, .7], [1175, .88]].forEach(([hz, ab]) => {
-      const o = audio.createOscillator(), g = audio.createGain(), t = audio.currentTime + ab;
-      o.type = 'sine'; o.frequency.value = hz;
-      g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(.5, t + .02); g.gain.exponentialRampToValueAtTime(.001, t + .5);
-      o.connect(g).connect(audio.destination); o.start(t); o.stop(t + .55);
-    });
+  // Der Gong wird hier im Browser als kleine Tondatei errechnet, es braucht keine mp3.
+  // Er läuft über ein normales <audio>-Element: das klingt auf dem iPad auch dann,
+  // wenn das Gerät auf "lautlos" steht (nur die Lautstärke muss aufgedreht sein).
+  function gongDatei() {
+    const rate = 22050, laenge = 1.5, daten = new Int16Array(rate * laenge);
+    for (const [hz, ab] of [[880, 0], [1175, .18], [880, .7], [1175, .88]]) {
+      for (let i = 0; i < rate * .6; i++) {
+        const t = i / rate, ort = Math.floor(ab * rate) + i;
+        if (ort >= daten.length) break;
+        const huelle = Math.min(1, t / .01) * Math.exp(-t * 7);   // schnell an, weich aus
+        daten[ort] += Math.sin(2 * Math.PI * hz * t) * huelle * 14000;
+      }
+    }
+    const kopf = new DataView(new ArrayBuffer(44)), text = (ab, s) => [...s].forEach((c, i) => kopf.setUint8(ab + i, c.charCodeAt(0)));
+    text(0, 'RIFF'); kopf.setUint32(4, 36 + daten.byteLength, true); text(8, 'WAVEfmt ');
+    kopf.setUint32(16, 16, true); kopf.setUint16(20, 1, true); kopf.setUint16(22, 1, true);
+    kopf.setUint32(24, rate, true); kopf.setUint32(28, rate * 2, true); kopf.setUint16(32, 2, true); kopf.setUint16(34, 16, true);
+    text(36, 'data'); kopf.setUint32(40, daten.byteLength, true);
+    return URL.createObjectURL(new Blob([kopf, daten], { type: 'audio/wav' }));
   }
+  const ton = new Audio(gongDatei());
+  ton.preload = 'auto';
+  // Browser erlauben Ton erst nach einem Tipp. Darum wird er beim Tipp auf "Starten" einmal freigeschaltet.
+  function tonAn() { ton.muted = true; ton.play().then(() => { ton.pause(); ton.currentTime = 0; ton.muted = false; }).catch(() => { ton.muted = false; }); }
+  function gong() { ton.muted = false; ton.currentTime = 0; ton.play().catch(() => { /* noch nicht freigeschaltet */ }); }
   async function wachBleiben() { try { await navigator.wakeLock?.request('screen'); } catch { /* nicht unterstützt */ } }
   document.addEventListener('visibilitychange', () => { if (!document.hidden && KEY && $('tor').hidden) { wachBleiben(); abfragen(); } });
 
@@ -93,6 +106,7 @@
     bestellungen.forEach(b => gesehen.add(b.id));
     // Gong bei jeder neuen Bestellung, danach alle 20 Sekunden, solange etwas unangenommen wartet
     if ((frisch.length && !ersterAbruf) || (neue.length && Date.now() - letzterGong > 20e3)) { gong(); letzterGong = Date.now(); }
+    if (frisch.length && !ersterAbruf) melden(frisch);
     ersterAbruf = false;
     zeichnen();
   }
@@ -125,6 +139,18 @@
     $('netz').lastElementChild.textContent = ok ? 'Verbunden' : 'Keine Verbindung';
     $('band-netz').hidden = ok;
   }
+
+  // Einblendung oben: "Neue Bestellung · Tisch 3", verschwindet nach 8 Sekunden oder per Tipp
+  let meldungWeg = null;
+  function melden(frisch) {
+    const m = $('meldung');
+    m.replaceChildren(h('b', {}, frisch.length > 1 ? frisch.length + ' neue Bestellungen' : 'Neue Bestellung'),
+      ' · ' + frisch.map(b => 'Tisch ' + b.tisch + (b.bereich ? ' ' + b.bereich : '')).join(', '));
+    m.hidden = false;
+    clearTimeout(meldungWeg); meldungWeg = setTimeout(() => { m.hidden = true; }, 8000);
+  }
+  $('meldung').addEventListener('click', () => { $('meldung').hidden = true; });
+  $('ton-test').addEventListener('click', gong);
 
   // Ablehnen braucht zwei Tipps: der Knopf fragt erst nach, statt ein Fenster zu öffnen
   function ablehnKnopf(b) {

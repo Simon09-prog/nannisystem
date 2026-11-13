@@ -71,9 +71,9 @@ button.nb-tisch span { text-decoration: underline; text-underline-offset: 3px; }
 .nb-klein { margin: 2px 0 12px; color: var(--muted); font-size: .88rem; }
 .nb-fehler { margin: 8px 0; padding: 10px 14px; border-radius: 12px; background: var(--blush-soft); color: #7c3138; font-size: .93rem; }
 
-.nb-tische { display: grid; grid-template-columns: repeat(auto-fill, minmax(64px, 1fr)); gap: 10px; padding-bottom: 8px; }
-.nb-tische button { min-height: 56px; border: 1px solid var(--line); border-radius: 14px; background: #fff; color: inherit; font: 500 1.15rem/1 var(--serif); cursor: pointer; }
-.nb-tische button.an { background: var(--sage-deep); border-color: var(--sage-deep); color: #fff; }
+.nb-nummer { display: block; width: 100%; margin: 6px 0 4px; padding: 14px 16px; border: 1px solid var(--line); border-radius: 16px; background: #fff; color: inherit; font: 500 2rem/1.2 var(--serif); text-align: center; }
+.nb-nummer::placeholder { font: 400 1.1rem/1.9 var(--sans); color: var(--muted); }
+.nb-bereiche .nb-reihe { flex-wrap: wrap; gap: 10px; padding-bottom: 8px; }
 
 /* Stand der Bestellungen */
 .nb-bestellung { margin-bottom: 12px; padding: 14px 16px; border: 1px solid var(--line); border-radius: 16px; background: #fff; }
