@@ -44,13 +44,9 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
   writeFileSync(HIER + 'karte.sql', karteSql());
   // Alles in einer Datei für die erste Einrichtung bei Supabase: einmal in den SQL-Editor kopieren und ausführen.
   // Die letzte Zeile erzeugt den Theken-Schlüssel und zeigt ihn als Ergebnis an.
-  writeFileSync(HIER + 'supabase-einrichten.sql', readFileSync(HIER + 'schema.sql', 'utf8') + '
-' + karteSql()
-    + '
--- Theken-Schlüssel erzeugen. Das Ergebnis unten kopieren und sicher aufbewahren, es wird nur dieses eine Mal angezeigt.
-'
-    + 'select theke_schluessel_neu() as theken_schluessel;
-');
+  writeFileSync(HIER + 'supabase-einrichten.sql', [readFileSync(HIER + 'schema.sql', 'utf8'), karteSql(),
+    '-- Theken-Schlüssel erzeugen. Das Ergebnis unten kopieren und sicher aufbewahren, es wird nur dieses eine Mal angezeigt.',
+    'select theke_schluessel_neu() as theken_schluessel;', ''].join('\n'));
   const k = karte();
   console.log(`karte.sql geschrieben: ${k.artikel.length} Artikel, ${k.extras.length} Extras`);
 }
