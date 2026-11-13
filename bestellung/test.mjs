@@ -73,9 +73,9 @@ test('Theke: sieht die Bestellung, nimmt an, serviert; der Gast sieht den Stand'
   assert.equal(o.tisch, '1'); assert.equal(o.status, 'neu');
   assert.equal(o.positionen[0].notiz, 'Hafermilch');
   assert.deepEqual(o.positionen[0].extras, [{ name: 'Extra Espresso Shot', preis_cent: 150 }]);
-  assert.deepEqual(await rpc('bestellung_status', { p_ids: [bestellId] }), [{ id: bestellId, status: 'neu' }]);
+  assert.deepEqual(await rpc('bestellung_status', { p_ids: [bestellId] }), [{ id: bestellId, status: 'neu', bezahlt: false }]);
   assert.equal((await rpc('theke_status', { p_key: K, p_id: bestellId, p_status: 'angenommen' })).ok, true);
-  assert.deepEqual(await rpc('bestellung_status', { p_ids: [bestellId] }), [{ id: bestellId, status: 'angenommen' }]);
+  assert.deepEqual(await rpc('bestellung_status', { p_ids: [bestellId] }), [{ id: bestellId, status: 'angenommen', bezahlt: false }]);
   assert.equal((await rpc('theke_status', { p_key: K, p_id: bestellId, p_status: 'kaputt' })).fehler, 'status');
   assert.equal((await rpc('theke_status', { p_key: 'falsch', p_id: bestellId, p_status: 'serviert' })).fehler, 'key');
   assert.equal((await rpc('theke_status', { p_key: K, p_id: bestellId, p_status: 'serviert' })).ok, true);
@@ -86,6 +86,34 @@ test('Bremse: höchstens 3 offene Bestellungen je Tisch, über den Laden-Code mi
   const b = () => rpc('bestellung_aufgeben', { p_code: ladenCode, p_tisch: tischId, p_positionen: [{ name: 'Espresso', menge: 1 }] });
   for (let i = 0; i < 3; i++) assert.equal((await b()).ok, true);
   assert.equal((await b()).fehler, 'zuviele');
+});
+
+test('Bezahlen: Gast meldet sich, Theke rechnet den Tisch ab', async () => {
+  // Tisch 2 hat noch nichts bestellt: kein Zahlwunsch möglich
+  const t2 = (await rpc('theke_tische', { p_key: K })).tische[1];
+  assert.equal((await rpc('zahlen_wuenschen', { p_code: t2.code })).fehler, 'nichts');
+  assert.equal((await rpc('zahlen_wuenschen', { p_code: 'falsch' })).fehler, 'tisch');
+  // Tisch 1 hat 4 offene Bestellungen: 1370 + 3 x 290
+  assert.equal((await rpc('zahlen_wuenschen', { p_code: tischCode })).ok, true);
+  let t = await rpc('theke_bestellungen', { p_key: K });
+  assert.equal(t.zahlen.length, 1);
+  assert.equal(t.zahlen[0].tisch_id, tischId);
+  assert.equal(t.bestellungen.filter(b => b.tisch_id === tischId && !b.bezahlt_at).length, 4);
+  assert.equal((await rpc('theke_bezahlt', { p_key: 'falsch', p_tisch: tischId })).fehler, 'key');
+  const r = await rpc('theke_bezahlt', { p_key: K, p_tisch: tischId });
+  assert.equal(r.ok, true); assert.equal(r.anzahl, 4); assert.equal(r.summe_cent, 1370 + 3 * 290);
+  t = await rpc('theke_bestellungen', { p_key: K });
+  assert.equal(t.zahlen.length, 0);
+  assert.equal(t.bestellungen.filter(b => !b.bezahlt_at).length, 0);
+  assert.deepEqual(await rpc('bestellung_status', { p_ids: [bestellId] }), [{ id: bestellId, status: 'serviert', bezahlt: true }]);
+  // zweites Abrechnen findet nichts mehr
+  assert.equal((await rpc('theke_bezahlt', { p_key: K, p_tisch: tischId })).anzahl, 0);
+});
+
+test('Aufräumen: alte bezahlte Bestellungen werden gelöscht', async () => {
+  await s.db.exec("update bestellungen set created_at = now() - interval '4 days' where nr = 1");
+  await s.db.exec('select _aufraeumen()');
+  assert.equal((await s.db.query('select count(*)::int as n from bestellungen')).rows[0].n, 3);
 });
 
 test('Pausieren und Codes erneuern', async () => {
@@ -102,6 +130,6 @@ test('Pausieren und Codes erneuern', async () => {
 test('Tisch löschen: alte Bestellungen bleiben lesbar', async () => {
   assert.equal((await rpc('theke_tisch_loeschen', { p_key: K, p_id: tischId })).ok, true);
   const t = await rpc('theke_bestellungen', { p_key: K });
-  assert.equal(t.bestellungen.length, 4);
+  assert.equal(t.bestellungen.length, 3);
   assert.equal(t.bestellungen[0].tisch, '1');
 });

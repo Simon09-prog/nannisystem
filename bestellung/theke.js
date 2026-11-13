@@ -91,6 +91,8 @@
 
   // ------------------------------------------------------------ Zustand
   let bestellungen = [], aktiv = true;
+  let zahlen = [];              // Tische, die zahlen möchten: [{tisch_id, seit}]
+  const zahlenGesehen = new Set();
   let uhrFehler = 0;            // Unterschied zwischen der Uhr dieses Geräts und der Datenbank
   const gesehen = new Set();    // IDs, für die schon gegongt wurde
   let ersterAbruf = true, letzterGong = 0, fehlversuche = 0;
@@ -100,13 +102,22 @@
 
   function uebernehmen(antwort) {
     uhrFehler = new Date(antwort.jetzt) - Date.now();
-    bestellungen = antwort.bestellungen; aktiv = antwort.aktiv;
+    bestellungen = antwort.bestellungen; aktiv = antwort.aktiv; zahlen = antwort.zahlen || [];
     const neue = bestellungen.filter(b => b.status === 'neu');
     const frisch = neue.filter(b => !gesehen.has(b.id));
     bestellungen.forEach(b => gesehen.add(b.id));
     // Gong bei jeder neuen Bestellung, danach alle 20 Sekunden, solange etwas unangenommen wartet
     if ((frisch.length && !ersterAbruf) || (neue.length && Date.now() - letzterGong > 20e3)) { gong(); letzterGong = Date.now(); }
-    if (frisch.length && !ersterAbruf) melden(frisch);
+    if (frisch.length && !ersterAbruf) melden(frisch.length > 1 ? frisch.length + ' neue Bestellungen' : 'Neue Bestellung',
+      frisch.map(b => 'Tisch ' + b.tisch + (b.bereich ? ' ' + b.bereich : '')).join(', '));
+    // Zahlwünsche: Gong und Einblendung, sobald ein Tisch neu dazukommt
+    const zahlNeu = zahlen.filter(z => !zahlenGesehen.has(z.tisch_id));
+    for (const id of [...zahlenGesehen]) if (!zahlen.some(z => z.tisch_id === id)) zahlenGesehen.delete(id);
+    zahlen.forEach(z => zahlenGesehen.add(z.tisch_id));
+    if (zahlNeu.length && !ersterAbruf) {
+      gong();
+      melden('Zahlen bitte', zahlNeu.map(z => { const b = bestellungen.find(x => x.tisch_id === z.tisch_id); return b ? 'Tisch ' + b.tisch + (b.bereich ? ' ' + b.bereich : '') : 'ein Tisch'; }).join(', '));
+    }
     ersterAbruf = false;
     zeichnen();
   }
@@ -142,10 +153,9 @@
 
   // Einblendung oben: "Neue Bestellung · Tisch 3", verschwindet nach 8 Sekunden oder per Tipp
   let meldungWeg = null;
-  function melden(frisch) {
+  function melden(titel, text) {
     const m = $('meldung');
-    m.replaceChildren(h('b', {}, frisch.length > 1 ? frisch.length + ' neue Bestellungen' : 'Neue Bestellung'),
-      ' · ' + frisch.map(b => 'Tisch ' + b.tisch + (b.bereich ? ' ' + b.bereich : '')).join(', '));
+    m.replaceChildren(h('b', {}, titel), ' · ' + text);
     m.hidden = false;
     clearTimeout(meldungWeg); meldungWeg = setTimeout(() => { m.hidden = true; }, 8000);
   }
@@ -170,6 +180,7 @@
       : b.status === 'angenommen'
         ? [h('button', { type: 'button', onclick: () => statusSetzen(b, 'serviert') }, 'Serviert'),
            h('button', { type: 'button', class: 'zweit', onclick: () => statusSetzen(b, 'neu') }, 'Zurück')]
+        : b.bezahlt_at ? [h('span', { class: 'bezahlt' }, 'Bezahlt')]
         : [h('button', { type: 'button', class: 'zweit', onclick: () => statusSetzen(b, 'angenommen') }, b.status === 'abgelehnt' ? 'Doch annehmen' : 'Zurückholen')];
     return h('article', { class: 'karte' + (b.status === 'neu' && m >= 3 ? ' spaet' : ''), 'data-stand': b.status },
       h('div', { class: 'karte-kopf' },
@@ -185,6 +196,65 @@
       h('div', { class: 'knoepfe' }, knoepfe));
   }
 
+  // ------------------------------------------------------------ Offene Tische und Rechnung
+  // Alles, was an einem Tisch bestellt und noch nicht bezahlt ist, zählt zu seiner Rechnung.
+  function offeneTische() {
+    const tische = new Map();
+    for (const b of bestellungen) {
+      if (b.bezahlt_at || b.status === 'abgelehnt' || b.tisch_id == null) continue;
+      const t = tische.get(b.tisch_id) || { id: b.tisch_id, name: b.tisch, bereich: b.bereich, summe: 0, bestellungen: [] };
+      t.summe += b.summe_cent; t.bestellungen.push(b);
+      tische.set(b.tisch_id, t);
+    }
+    return [...tische.values()].map(t => ({ ...t, zahlen: zahlen.some(z => z.tisch_id === t.id) }))
+      .sort((a, b) => b.zahlen - a.zahlen || a.name.localeCompare(b.name, 'de', { numeric: true }) || a.bereich.localeCompare(b.bereich, 'de'));
+  }
+
+  function tischeZeichnen() {
+    const liste = offeneTische();
+    $('tische').hidden = !liste.length;
+    $('tische-liste').replaceChildren(...liste.map(t => h('button', { type: 'button', class: t.zahlen && 'zahlen', onclick: () => rechnungZeigen(t.id) },
+      h('b', {}, 'Tisch ' + t.name), t.bereich && h('small', {}, t.bereich), h('span', {}, euro(t.summe)), t.zahlen && h('em', {}, 'möchte zahlen'))));
+  }
+
+  const datum = d => d.toLocaleString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) + ' Uhr';
+
+  function rechnungZeigen(tischId) {
+    const t = offeneTische().find(x => x.id === tischId);
+    if (!t) return;
+    const d = $('rechnung');
+    const zeilen = t.bestellungen.flatMap(b => b.positionen.map(p => ({ ...p, cent: (p.preis_cent + p.extras.reduce((s, x) => s + x.preis_cent, 0)) * p.menge })));
+    const zu = () => h('button', { type: 'button', class: 'zweit', onclick: () => d.close() }, 'Schließen');
+    let sicher = false;
+    // Bezahlt braucht zwei Tipps, damit kein Tisch aus Versehen abgerechnet wird
+    const bezahlt = h('button', { type: 'button', onclick: async () => {
+      if (!sicher) { sicher = true; bezahlt.textContent = 'Wirklich bezahlt?'; bezahlt.classList.add('warn'); return; }
+      bezahlt.disabled = true;
+      try {
+        const r = await NANNI.rpc('theke_bezahlt', { p_key: KEY, p_tisch: t.id });
+        if (!r.ok) throw new Error('abgelehnt');
+        d.replaceChildren(
+          h('header', {}, h('h2', {}, 'Bezahlt'), h('span', { class: 'ort' }, 'Tisch ' + t.name + (t.bereich ? ' · ' + t.bereich : ''))),
+          h('p', { class: 'betrag' }, euro(r.summe_cent)),
+          h('p', { class: 'datum' }, datum(new Date(r.bezahlt_at))),
+          h('div', { class: 'knoepfe' }, zu()));
+        abfragen();
+      } catch { bezahlt.disabled = false; bezahlt.textContent = 'Hat nicht geklappt. Noch einmal?'; }
+    } }, 'Bezahlt');
+    d.replaceChildren(
+      h('header', {}, h('h2', {}, 'Rechnung Tisch ' + t.name), t.bereich && h('span', { class: 'ort' }, t.bereich)),
+      h('p', { class: 'datum' }, datum(new Date(Date.now() + uhrFehler))),
+      h('ul', { class: 'posten' }, zeilen.map(p => h('li', {},
+        h('span', { class: 'menge' }, p.menge + ' ×'),
+        h('span', { class: 'name' }, p.name, p.extras.length > 0 && h('span', { class: 'extra' }, '+ ' + p.extras.map(x => x.name).join(', '))),
+        h('span', { class: 'preis' }, euro(p.cent))))),
+      h('div', { class: 'summe' }, h('span', {}, 'Summe'), h('b', {}, euro(t.summe))),
+      h('p', { class: 'klein' }, 'Übersicht zum Kassieren. Den Kassenbon gibt es wie gewohnt aus eurer Kasse.'),
+      h('div', { class: 'knoepfe' }, bezahlt, zu()));
+    if (!d.open) d.showModal();
+  }
+  $('rechnung').addEventListener('click', ev => { if (ev.target === $('rechnung')) $('rechnung').close(); });
+
   function zeichnen() {
     const spalten = {
       'spalte-neu': [bestellungen.filter(b => b.status === 'neu'), 'Keine neuen Bestellungen.'],
@@ -198,6 +268,7 @@
       s.querySelector('header span').textContent = liste.length;
       s.querySelector('.karten').replaceChildren(...(liste.length ? liste.map(karte) : [h('p', { class: 'leer' }, leer)]));
     }
+    tischeZeichnen();
     const n = spalten['spalte-neu'][0].length;
     document.title = (n ? '(' + n + ') ' : '') + 'Theke – NANNI';
     $('schalter').setAttribute('aria-checked', aktiv);

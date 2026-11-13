@@ -53,6 +53,10 @@ create table if not exists bestellungen (
 );
 create index if not exists bestellungen_zeit on bestellungen (created_at);
 
+-- Spätere Erweiterung "Bezahlen" (bei einer schon bestehenden Datenbank werden die Spalten ergänzt)
+alter table bestellungen add column if not exists bezahlt_at timestamptz;   -- gesetzt, sobald der Tisch abgerechnet ist
+alter table tische       add column if not exists zahlen_at  timestamptz;   -- Gast hat "Wir möchten zahlen" getippt
+
 -- Zeilenschutz an und keine einzige Regel: Direkter Zugriff auf die Tabellen ist damit für alle gesperrt.
 alter table einstellungen enable row level security;
 alter table tische        enable row level security;
@@ -72,6 +76,14 @@ insert into einstellungen (id, laden_code) values (1, _code(10)) on conflict (id
 create or replace function _theke_ok(p_key text) returns boolean
 language sql stable security definer set search_path = public as $$
   select coalesce((select theke_hash = sha256(convert_to(p_key, 'UTF8')) from einstellungen), false)
+$$;
+
+-- Speicher sparen: Bezahlte und abgelehnte Bestellungen verschwinden nach 3 Tagen, alles andere nach 30 Tagen.
+create or replace function _aufraeumen() returns void
+language sql security definer set search_path = public as $$
+  delete from bestellungen
+  where (created_at < now() - interval '3 days' and (bezahlt_at is not null or status = 'abgelehnt'))
+     or created_at < now() - interval '30 days'
 $$;
 
 -- Einmal bei der Einrichtung im SQL-Editor ausführen:  select theke_schluessel_neu();
@@ -169,22 +181,45 @@ end $$;
 -- Stand der eigenen Bestellungen. Die IDs sind zufällig und nicht erratbar; nur wer bestellt hat, kennt sie.
 create or replace function bestellung_status(p_ids uuid[]) returns jsonb
 language sql stable security definer set search_path = public as $$
-  select coalesce(jsonb_agg(jsonb_build_object('id', id, 'status', status)), '[]'::jsonb)
+  select coalesce(jsonb_agg(jsonb_build_object('id', id, 'status', status, 'bezahlt', bezahlt_at is not null)), '[]'::jsonb)
   from bestellungen where id = any (p_ids[1:20])
 $$;
 
+-- "Wir möchten zahlen": merkt am Tisch vor, dass die Gäste zahlen wollen. Die Theke sieht das sofort.
+create or replace function zahlen_wuenschen(p_code text, p_tisch bigint default null) returns jsonb
+language plpgsql security definer set search_path = public as $$
+declare e einstellungen; t tische;
+begin
+  select * into e from einstellungen;
+  if p_code = e.laden_code then
+    select * into t from tische where id = p_tisch;
+  else
+    select * into t from tische where code = p_code;
+  end if;
+  if t.id is null then return jsonb_build_object('ok', false, 'fehler', 'tisch'); end if;
+  if not exists (select 1 from bestellungen where tisch_id = t.id and bezahlt_at is null and status <> 'abgelehnt') then
+    return jsonb_build_object('ok', false, 'fehler', 'nichts');
+  end if;
+  update tische set zahlen_at = coalesce(zahlen_at, now()) where id = t.id;
+  return jsonb_build_object('ok', true);
+end $$;
+
 -- ---------------------------------------------------------------- Für die Theke (alles nur mit Schlüssel)
 
--- Offene Bestellungen und alles von heute
+-- Alles, was die Theke braucht: offene Bestellungen, noch nicht bezahlte (höchstens 18 Stunden alt),
+-- alles von heute und die Tische, die zahlen möchten
 create or replace function theke_bestellungen(p_key text) returns jsonb
 language plpgsql stable security definer set search_path = public as $$
 begin
   if not _theke_ok(p_key) then return jsonb_build_object('ok', false, 'fehler', 'key'); end if;
-  return jsonb_build_object('ok', true, 'jetzt', now(), 'aktiv', (select aktiv from einstellungen), 'bestellungen', coalesce(
-    (select jsonb_agg(jsonb_build_object('id', id, 'nr', nr, 'tisch', tisch, 'bereich', bereich, 'status', status,
-        'summe_cent', summe_cent, 'positionen', positionen, 'created_at', created_at, 'updated_at', updated_at) order by created_at)
+  return jsonb_build_object('ok', true, 'jetzt', now(), 'aktiv', (select aktiv from einstellungen),
+    'zahlen', coalesce((select jsonb_agg(jsonb_build_object('tisch_id', id, 'seit', zahlen_at)) from tische where zahlen_at is not null), '[]'::jsonb),
+    'bestellungen', coalesce(
+    (select jsonb_agg(jsonb_build_object('id', id, 'nr', nr, 'tisch_id', tisch_id, 'tisch', tisch, 'bereich', bereich, 'status', status,
+        'summe_cent', summe_cent, 'positionen', positionen, 'created_at', created_at, 'updated_at', updated_at, 'bezahlt_at', bezahlt_at) order by created_at)
       from bestellungen
       where status in ('neu', 'angenommen')
+         or (bezahlt_at is null and status <> 'abgelehnt' and created_at > now() - interval '18 hours')
          or created_at >= date_trunc('day', now() at time zone 'Europe/Berlin') at time zone 'Europe/Berlin'),
     '[]'::jsonb));
 end $$;
@@ -195,7 +230,28 @@ begin
   if not _theke_ok(p_key) then return jsonb_build_object('ok', false, 'fehler', 'key'); end if;
   if p_status not in ('neu', 'angenommen', 'serviert', 'abgelehnt') then return jsonb_build_object('ok', false, 'fehler', 'status'); end if;
   update bestellungen set status = p_status, updated_at = now() where id = p_id;
-  return jsonb_build_object('ok', found);
+  if not found then return jsonb_build_object('ok', false); end if;
+  perform _aufraeumen();
+  return jsonb_build_object('ok', true);
+end $$;
+
+-- Tisch abrechnen: alle offenen Bestellungen des Tisches gelten als bezahlt, der Zahlwunsch ist erledigt.
+-- Das ist eine Übersicht zum Kassieren. Den Kassenbon erzeugt weiterhin die Kasse des Cafés.
+create or replace function theke_bezahlt(p_key text, p_tisch bigint) returns jsonb
+language plpgsql security definer set search_path = public as $$
+declare v_summe int; v_anzahl int;
+begin
+  if not _theke_ok(p_key) then return jsonb_build_object('ok', false, 'fehler', 'key'); end if;
+  with fertig as (
+    update bestellungen
+      set bezahlt_at = now(), updated_at = now(),
+          status = case when status in ('neu', 'angenommen') then 'serviert' else status end
+      where tisch_id = p_tisch and bezahlt_at is null and status <> 'abgelehnt'
+      returning summe_cent)
+  select coalesce(sum(summe_cent), 0), count(*) into v_summe, v_anzahl from fertig;
+  update tische set zahlen_at = null where id = p_tisch;
+  perform _aufraeumen();
+  return jsonb_build_object('ok', true, 'summe_cent', v_summe, 'anzahl', v_anzahl, 'bezahlt_at', now());
 end $$;
 
 create or replace function theke_aktiv(p_key text, p_aktiv boolean) returns jsonb
@@ -253,7 +309,7 @@ begin
 end $$;
 
 -- ---------------------------------------------------------------- Rechte
--- Erst allen alles wegnehmen, dann dem Browser (Rolle "anon" bei Supabase) genau die 11 Funktionen erlauben.
+-- Erst allen alles wegnehmen, dann dem Browser (Rolle "anon" bei Supabase) genau die 13 Funktionen erlauben.
 revoke execute on all functions in schema public from public;
 do $$
 begin
@@ -261,8 +317,8 @@ begin
     revoke all on all tables in schema public from anon, authenticated;
     revoke execute on all functions in schema public from anon, authenticated;
     grant execute on function
-      tisch_info(text), bestellung_aufgeben(text, jsonb, bigint), bestellung_status(uuid[]),
-      theke_bestellungen(text), theke_status(text, uuid, text), theke_aktiv(text, boolean),
+      tisch_info(text), bestellung_aufgeben(text, jsonb, bigint), bestellung_status(uuid[]), zahlen_wuenschen(text, bigint),
+      theke_bestellungen(text), theke_status(text, uuid, text), theke_bezahlt(text, bigint), theke_aktiv(text, boolean),
       theke_tische(text), theke_tisch_anlegen(text, text, text), theke_tisch_loeschen(text, bigint),
       theke_tisch_neuer_code(text, bigint), theke_laden_code_neu(text)
     to anon;

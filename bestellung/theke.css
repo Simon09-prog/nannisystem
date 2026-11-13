@@ -47,6 +47,32 @@ h1, h2, p { margin: 0; }
 .band.rot { background: var(--rose); color: #fff; }
 .band.gelb { background: var(--amber); color: #3a2a08; }
 
+/* Offene Tische: Streifen über dem Brett */
+.tische { display: flex; align-items: center; gap: 14px; padding: 12px 20px 0; }
+.tische h2 { flex: none; font: 600 .78rem/1 var(--sans); letter-spacing: .2em; text-transform: uppercase; color: var(--muted); }
+.tische-liste { display: flex; gap: 10px; overflow-x: auto; padding: 4px 2px 6px; }
+.tische-liste button { flex: none; display: inline-flex; align-items: baseline; gap: 8px; min-height: 48px; padding: 0 16px; border: 1px solid var(--line); border-radius: 999px; background: var(--paper); }
+.tische-liste b { font: 500 1.15rem/1 var(--serif); }
+.tische-liste small { color: var(--muted); font-size: .8rem; }
+.tische-liste span { font-variant-numeric: tabular-nums; color: var(--sage-deep); font-weight: 500; }
+.tische-liste em { font-style: normal; font-weight: 600; font-size: .8rem; }
+.tische-liste button.zahlen { border-color: var(--amber); background: var(--amber); color: #2b1e05; }
+.tische-liste button.zahlen small, .tische-liste button.zahlen span { color: inherit; }
+
+/* Rechnung */
+.rechnung { width: min(460px, calc(100% - 24px)); max-height: calc(100dvh - 24px); padding: 22px; border: 0; border-radius: 24px; background: var(--paper); color: var(--espresso); overflow-y: auto; }
+.rechnung::backdrop { background: rgba(51, 38, 31, .5); }
+.rechnung header { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+.rechnung h2 { font: 450 1.7rem/1.1 var(--serif); }
+.rechnung .ort { padding: 5px 9px; border-radius: 999px; background: var(--sage-soft); color: var(--sage-deep); font: 600 .68rem/1 var(--sans); letter-spacing: .14em; text-transform: uppercase; }
+.rechnung .datum { margin-top: 4px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.rechnung .preis { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.rechnung .summe { display: flex; justify-content: space-between; align-items: baseline; margin-top: 8px; padding-top: 12px; border-top: 2px solid var(--espresso); font-size: 1.1rem; }
+.rechnung .summe b { font: 500 1.7rem/1 var(--serif); font-variant-numeric: tabular-nums; }
+.rechnung .betrag { margin-top: 14px; font: 500 3rem/1 var(--serif); font-variant-numeric: tabular-nums; color: var(--sage-deep); }
+.rechnung .klein { margin-top: 8px; color: var(--muted); font-size: .88rem; }
+.rechnung .knoepfe { margin-top: 18px; }
+
 /* Brett */
 .brett { flex: 1; min-height: 0; display: grid; grid-template-columns: 1.15fr 1fr .8fr; gap: 16px; padding: 16px 20px calc(16px + env(safe-area-inset-bottom)); }
 .spalte { min-height: 0; display: flex; flex-direction: column; border: 1px solid var(--line); border-radius: 22px; background: rgba(255, 250, 243, .55); overflow: hidden; }
@@ -92,3 +118,4 @@ h1, h2, p { margin: 0; }
   .brett { grid-template-columns: 1fr; }
   .spalte, .karten { overflow: visible; }
 }
+.knoepfe .bezahlt { padding: 6px 12px; border-radius: 999px; background: var(--sage-soft); color: var(--sage-deep); font-weight: 600; font-size: .85rem; }

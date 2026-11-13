@@ -75,6 +75,9 @@ button.nb-tisch span { text-decoration: underline; text-underline-offset: 3px; }
 .nb-nummer::placeholder { font: 400 1.1rem/1.9 var(--sans); color: var(--muted); }
 .nb-bereiche .nb-reihe { flex-wrap: wrap; gap: 10px; padding-bottom: 8px; }
 
+.nb-bescheid { margin: 0 0 10px; padding: 12px 16px; border-radius: 14px; background: var(--sage-soft); color: var(--sage-deep); font-size: .95rem; }
+.nb-fuss .nb-knopf + .nb-knopf, .nb-fuss .nb-fehler + .nb-knopf { margin-top: 10px; }
+
 /* Stand der Bestellungen */
 .nb-bestellung { margin-bottom: 12px; padding: 14px 16px; border: 1px solid var(--line); border-radius: 16px; background: #fff; }
 .nb-bestellung header { display: flex; align-items: center; gap: 8px; }

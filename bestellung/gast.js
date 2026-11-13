@@ -68,6 +68,7 @@
     const korbAnzahl = () => korb.reduce((s, z) => s + z.menge, 0);
     const zusatz = z => [...z.extras.map(x => x.name), z.notiz].filter(Boolean).join(' · ');
     const fertig = b => b.status === 'serviert' || b.status === 'abgelehnt';
+    const offeneRechnung = () => bestellungen.some(b => !b.bezahlt && b.status !== 'abgelehnt');
     function korbSpeichern() { merken.schreiben('korb', korb); leisteZeichnen(); }
 
     // ---------------------------------------------------------- Tisch-Anzeige im Kopf
@@ -237,11 +238,13 @@
       serviert: ['Serviert', 'Lasst es euch schmecken.'],
       abgelehnt: ['Konnten wir nicht annehmen', 'Kommt bitte kurz zu uns an die Theke.']
     };
+    const BEZAHLT = ['Bezahlt', 'Danke für euren Besuch.'];
+    const stand = b => b.bezahlt ? BEZAHLT : STAND[b.status];
     let standListe = null;   // nur gesetzt, solange das Blatt offen ist
     function standZeichnen() {
       standListe?.replaceChildren(...bestellungen.map(b => h('article', { class: 'nb-bestellung', 'data-stand': b.status },
-        h('header', {}, h('i'), h('b', {}, STAND[b.status][0]), h('small', {}, 'Nr. ' + b.nr + ' · ' + uhr(b.zeit))),
-        h('p', {}, STAND[b.status][1]),
+        h('header', {}, h('i'), h('b', {}, stand(b)[0]), h('small', {}, 'Nr. ' + b.nr + ' · ' + uhr(b.zeit))),
+        h('p', {}, stand(b)[1]),
         h('ul', {}, b.zeilen.map(z => h('li', {}, z.menge + ' × ' + z.name, z.zusatz && h('small', {}, ' · ' + z.zusatz)))),
         h('footer', {}, h('span', {}, b.tisch), h('span', {}, euro(b.summe))))));
     }
@@ -249,25 +252,46 @@
       const b = blatt('Eure Bestellungen', 'Bezahlt wird wie gewohnt bei uns im Café.');
       standListe = b.inhalt; standZeichnen();
       b.d.addEventListener('close', () => { standListe = null; });
+      // "Wir möchten zahlen": sagt der Theke Bescheid. Bezahlt wird beim Personal oder an der Theke.
+      const bescheid = () => h('p', { class: 'nb-bescheid' }, h('b', {}, 'Wir wissen Bescheid.'), ' Wir kommen gleich zu euch, oder ihr zahlt direkt an der Theke.');
+      const zahlFehler = h('p', { class: 'nb-fehler', role: 'alert', hidden: true });
+      const zahlKnopf = h('button', { class: 'nb-knopf mitte', type: 'button', onclick: zahlen }, 'Wir möchten zahlen');
+      async function zahlen() {
+        if (!tisch) return tischWaehlen(zahlen);
+        zahlKnopf.disabled = true; zahlFehler.hidden = true;
+        try {
+          const antwort = await NANNI.rpc('zahlen_wuenschen', { p_code: code, ...(info.wahl && { p_tisch: tisch.id }) });
+          if (antwort.ok) { merken.schreiben('zahlen', Date.now()); return zahlKnopf.replaceWith(bescheid()); }
+          zahlFehler.textContent = antwort.fehler === 'nichts' ? 'An eurem Tisch ist nichts mehr offen.' : 'Das hat nicht geklappt. Kommt bitte kurz zu uns an die Theke.';
+        } catch { zahlFehler.textContent = 'Keine Verbindung. Versucht es noch einmal oder kommt zu uns an die Theke.'; }
+        zahlFehler.hidden = false; zahlKnopf.disabled = false;
+      }
+      if (offeneRechnung()) b.fuss.append(Date.now() - merken.lesen('zahlen', 0) < 3 * STUNDE ? bescheid() : zahlKnopf, zahlFehler);
       b.fuss.append(h('button', { class: 'nb-knopf hell mitte', type: 'button', onclick: () => b.d.close() }, 'Weiter in der Karte'));
     }
 
-    // Alle 5 Sekunden nachfragen, solange etwas offen ist und die Seite sichtbar ist
+    // Regelmäßig nachfragen, solange etwas offen ist und die Seite sichtbar ist
     let wecker = null;
     async function standAbfragen() {
       clearTimeout(wecker);
-      const offen = bestellungen.filter(b => !fertig(b));
+      // Nachfragen, bis alles bezahlt oder abgelehnt ist: zügig, solange noch etwas in Arbeit ist, sonst gemächlich
+      const offen = bestellungen.filter(b => !b.bezahlt && b.status !== 'abgelehnt');
+      if (!offen.length) merken.schreiben('zahlen', 0);
       if (!offen.length || document.hidden) return;
       try {
         const antwort = await NANNI.rpc('bestellung_status', { p_ids: offen.map(b => b.id) });
         let neu = false;
         for (const a of antwort) {
           const b = bestellungen.find(x => x.id === a.id);
-          if (b && b.status !== a.status && STAND[a.status]) { b.status = a.status; if (fertig(b)) b.fertigUm = Date.now(); neu = true; }
+          if (b && STAND[a.status] && (b.status !== a.status || !!b.bezahlt !== !!a.bezahlt)) {
+            b.status = a.status; b.bezahlt = !!a.bezahlt;
+            if (fertig(b) && !b.fertigUm) b.fertigUm = Date.now();
+            neu = true;
+          }
         }
         if (neu) { merken.schreiben('bestellungen', bestellungen); leisteZeichnen(); standZeichnen(); }
       } catch { /* beim nächsten Mal wieder versuchen */ }
-      wecker = setTimeout(standAbfragen, 5000);
+      wecker = setTimeout(standAbfragen, offen.some(b => !fertig(b)) ? 5000 : 15000);
     }
     document.addEventListener('visibilitychange', standAbfragen);
 
@@ -281,7 +305,7 @@
       if (letzte && !(fertig(letzte) && Date.now() - (letzte.fertigUm || letzte.zeit) > 15 * 60e3)) {
         const offen = bestellungen.filter(b => !fertig(b)).length;
         leiste.append(h('button', { class: 'nb-stand', type: 'button', 'data-stand': letzte.status, onclick: standBlatt },
-          h('i'), h('span', { class: 'text' }, h('b', {}, 'Bestellung Nr. ' + letzte.nr), ' · ' + STAND[letzte.status][0]),
+          h('i'), h('span', { class: 'text' }, h('b', {}, 'Bestellung Nr. ' + letzte.nr), ' · ' + stand(letzte)[0]),
           h('span', { class: 'mehr' }, offen > 1 ? offen + ' offen' : 'ansehen')));
       }
       if (korb.length && info.aktiv) {
