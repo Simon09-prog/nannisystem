@@ -11,8 +11,10 @@
   if (!code || !window.NANNI) return;
 
   // ------------------------------------------------------------ Helfer
+  // T übersetzt einen Text ins Englische, wenn der Gast Englisch gewählt hat (siehe sprache.js); sonst bleibt er deutsch
+  const T = window.NANNI_T || (text => text);
   const euro = c => (c / 100).toFixed(2).replace('.', ',') + ' €';
-  const uhr = ms => new Date(ms).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' }) + ' Uhr';
+  const uhr = ms => new Date(ms).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' }) + ' Uhr';   // T macht daraus auf Englisch "15:53"
   const STUNDE = 3600e3;
 
   // h('button', { class: 'x', onclick: fn }, 'Text', kind) baut ein Element. Text wird nie als HTML gelesen.
@@ -22,9 +24,10 @@
       if (v == null || v === false) continue;
       if (k === 'class') n.className = v;
       else if (k.startsWith('on')) n.addEventListener(k.slice(2), v);
-      else n.setAttribute(k, v === true ? '' : v);
+      else n.setAttribute(k, v === true ? '' : (k === 'placeholder' || k === 'aria-label') ? T(v) : v);
     }
-    n.append(...kinder.flat().filter(k => k != null && k !== false));
+    // Jeder Text, der auf die Seite kommt, läuft durch T
+    n.append(...kinder.flat().filter(k => k != null && k !== false).map(k => typeof k === 'string' ? T(k) : k));
     return n;
   }
   const zeichen = pfad => {
@@ -54,7 +57,7 @@
     .catch(() => hinweis('Bestellen am Handy ist gerade nicht erreichbar. Bestellt bitte direkt bei uns.'));
 
   function starten(info) {
-    document.head.append(h('link', { rel: 'stylesheet', href: 'bestellung/gast.css?v=5' }));
+    document.head.append(h('link', { rel: 'stylesheet', href: 'bestellung/gast.css?v=6' }));
     // Bestellt werden kann nur, wenn die Theke es nicht pausiert hat und das Café geöffnet ist
     const bestellbar = info.aktiv && info.offen !== false;
 
@@ -146,7 +149,7 @@
     function zaehler(start, min, beiAenderung) {
       let wert = start;
       const zahl = h('output', {}, String(wert));
-      const schritt = n => { wert = Math.max(min, Math.min(20, wert + n)); zahl.textContent = wert; beiAenderung(wert); };
+      const schritt = n => { wert = Math.max(min, Math.min(20, wert + n)); zahl.textContent = T(wert); beiAenderung(wert); };
       return h('div', { class: 'nb-zaehler' },
         h('button', { type: 'button', 'aria-label': 'Weniger', onclick: () => schritt(-1) }, zeichen(MINUS)), zahl,
         h('button', { type: 'button', 'aria-label': 'Mehr', onclick: () => schritt(1) }, zeichen(PLUS)));
@@ -200,8 +203,8 @@
         const eingabe = feld.value.trim().toLowerCase();
         const treffer = info.tische.filter(t => t.name.toLowerCase() === eingabe);
         bereiche.replaceChildren(); fehler.hidden = true;
-        if (!eingabe) { fehler.textContent = 'Tragt bitte eure Tischnummer ein.'; fehler.hidden = false; return feld.focus(); }
-        if (!treffer.length) { fehler.textContent = 'Diesen Tisch gibt es bei uns nicht. Schaut bitte noch einmal auf die Nummer am Tisch.'; fehler.hidden = false; return feld.focus(); }
+        if (!eingabe) { fehler.textContent = T('Tragt bitte eure Tischnummer ein.'); fehler.hidden = false; return feld.focus(); }
+        if (!treffer.length) { fehler.textContent = T('Diesen Tisch gibt es bei uns nicht. Schaut bitte noch einmal auf die Nummer am Tisch.'); fehler.hidden = false; return feld.focus(); }
         if (treffer.length === 1) return nehmen(treffer[0]);
         bereiche.append(h('h4', {}, 'Wo sitzt ihr?'), h('div', { class: 'nb-reihe' },
           treffer.map(t => h('button', { class: 'nb-knopf hell mitte', type: 'button', onclick: () => nehmen(t) }, t.bereich || 'Tisch ' + t.name))));
@@ -228,13 +231,13 @@
           zaehler(z.menge, 0, m => { if (m === 0) korb = korb.filter(x => x !== z); else z.menge = m; korbSpeichern(); zeichnen(); }),
           h('div', { class: 'was' }, h('b', {}, z.name), zusatz(z) && h('small', {}, zusatz(z))),
           h('span', { class: 'preis' }, euro(zeilenPreis(z))))));
-        summe.textContent = euro(korbSumme());
+        summe.textContent = T(euro(korbSumme()));
       }
 
       async function abschicken() {
         if (!tisch) return tischWaehlen(() => { tischZeileZeichnen(); abschicken(); });
-        senden.disabled = true; senden.textContent = 'Wird gesendet …'; fehler.hidden = true;
-        const scheitern = text => { fehler.textContent = text; fehler.hidden = false; senden.disabled = false; senden.textContent = 'Bestellung abschicken'; };
+        senden.disabled = true; senden.textContent = T('Wird gesendet …'); fehler.hidden = true;
+        const scheitern = text => { fehler.textContent = T(text); fehler.hidden = false; senden.disabled = false; senden.textContent = T('Bestellung abschicken'); };
         let antwort;
         try {
           antwort = await NANNI.rpc('bestellung_aufgeben', {
@@ -279,8 +282,8 @@
         try {
           const antwort = await NANNI.rpc('kellner_rufen', { p_code: code, ...(info.wahl && { p_tisch: tisch.id }) });
           if (antwort.ok) return knopf.replaceWith(h('p', { class: 'nb-bescheid' }, h('b', {}, 'Wir wissen Bescheid.'), ' Jemand kommt gleich zu euch.'));
-          fehler.textContent = 'Das hat nicht geklappt. Kommt bitte kurz zu uns an die Theke.';
-        } catch { fehler.textContent = 'Keine Verbindung. Versucht es noch einmal oder kommt zu uns an die Theke.'; }
+          fehler.textContent = T('Das hat nicht geklappt. Kommt bitte kurz zu uns an die Theke.');
+        } catch { fehler.textContent = T('Keine Verbindung. Versucht es noch einmal oder kommt zu uns an die Theke.'); }
         fehler.hidden = false; knopf.disabled = false;
       } }, 'Ja, bitte kommen');
       b.inhalt.append(h('p', {}, 'Habt ihr eine Frage oder braucht ihr etwas? Wir kommen gern vorbei.'));
@@ -319,8 +322,8 @@
         try {
           const antwort = await NANNI.rpc('zahlen_wuenschen', { p_code: code, ...(info.wahl && { p_tisch: tisch.id }) });
           if (antwort.ok) { merken.schreiben('zahlen', Date.now()); return zahlKnopf.replaceWith(bescheid()); }
-          zahlFehler.textContent = antwort.fehler === 'nichts' ? 'An eurem Tisch ist nichts mehr offen.' : 'Das hat nicht geklappt. Kommt bitte kurz zu uns an die Theke.';
-        } catch { zahlFehler.textContent = 'Keine Verbindung. Versucht es noch einmal oder kommt zu uns an die Theke.'; }
+          zahlFehler.textContent = T(antwort.fehler === 'nichts' ? 'An eurem Tisch ist nichts mehr offen.' : 'Das hat nicht geklappt. Kommt bitte kurz zu uns an die Theke.');
+        } catch { zahlFehler.textContent = T('Keine Verbindung. Versucht es noch einmal oder kommt zu uns an die Theke.'); }
         zahlFehler.hidden = false; zahlKnopf.disabled = false;
       }
       if (offeneRechnung()) b.fuss.append(Date.now() - merken.lesen('zahlen', 0) < 3 * STUNDE ? bescheid() : zahlKnopf, zahlFehler);

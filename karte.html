@@ -911,6 +911,9 @@ h1, h2, h4, p { margin: 0; }
 .k-top a { text-decoration: none; display: inline-flex; align-items: center; gap: 6px; color: var(--muted); }
 .k-top a:hover { color: var(--espresso); }
 .k-top svg { width: 16px; height: 16px; }
+.sprache { display: inline-flex; align-items: center; gap: 2px; min-height: 40px; padding: 0 6px; border: 1px solid var(--line); border-radius: 999px; background: var(--paper); color: var(--muted); font: 500 .8rem/1 var(--sans); letter-spacing: .08em; cursor: pointer; -webkit-appearance: none; appearance: none; }
+.sprache b, .sprache span { padding: 7px 9px; border-radius: 999px; }
+.sprache b { background: var(--espresso); color: var(--paper); font-weight: 600; }
 .k-logo { width: 92px; height: 92px; margin: 0 auto; }
 .k-kicker { display: block; margin-top: 18px; font: 500 .74rem/1 var(--sans); letter-spacing: .26em; text-transform: uppercase; color: var(--sage-deep); }
 .k-hero h1 { font: 420 clamp(2.6rem, 11vw, 4rem)/1 var(--serif); margin-top: 12px; letter-spacing: -.01em; }
@@ -1138,7 +1141,10 @@ h1, h2, h4, p { margin: 0; }
 })();
 </script>
 <!-- Bestellen am Tisch: wird nur aktiv, wenn die Karte mit einem Tisch-Code (?t=...) geöffnet wird -->
-<script src="bestellung/config.js?v=5" defer></script>
-<script src="bestellung/gast.js?v=5" defer></script>
+<!-- Sprache: englische Texte und Umschalter. Muss vor gast.js stehen. -->
+<script src="bestellung/karte.en.js?v=6" defer></script>
+<script src="bestellung/sprache.js?v=6" defer></script>
+<script src="bestellung/config.js?v=6" defer></script>
+<script src="bestellung/gast.js?v=6" defer></script>
 </body>
 </html>
