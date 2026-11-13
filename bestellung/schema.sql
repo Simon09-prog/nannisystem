@@ -57,6 +57,19 @@ create index if not exists bestellungen_zeit on bestellungen (created_at);
 alter table bestellungen add column if not exists bezahlt_at timestamptz;   -- gesetzt, sobald der Tisch abgerechnet ist
 alter table tische       add column if not exists zahlen_at  timestamptz;   -- Gast hat "Wir möchten zahlen" getippt
 
+-- Spätere Erweiterung "Öffnungszeiten": bestellt werden kann nur, wenn das Café geöffnet hat.
+alter table einstellungen add column if not exists immer_offen boolean not null default false;   -- true = Zeiten nicht prüfen (zum Testen)
+create table if not exists oeffnungszeiten (
+  tag  int primary key check (tag between 1 and 7),   -- 1 = Montag ... 7 = Sonntag
+  von  time not null,
+  bis  time not null
+);
+insert into oeffnungszeiten (tag, von, bis)
+  select * from (values (1, time '10:00', time '18:00'), (2, '10:00', '18:00'), (3, '10:00', '18:00'), (4, '10:00', '18:00'),
+                        (5, '10:00', '18:00'), (6, '09:00', '18:00'), (7, '09:00', '17:00')) v
+  where not exists (select 1 from oeffnungszeiten);
+alter table oeffnungszeiten enable row level security;
+
 -- Zeilenschutz an und keine einzige Regel: Direkter Zugriff auf die Tabellen ist damit für alle gesperrt.
 alter table einstellungen enable row level security;
 alter table tische        enable row level security;
@@ -72,6 +85,15 @@ language sql volatile as $$
 $$;
 
 insert into einstellungen (id, laden_code) values (1, _code(10)) on conflict (id) do nothing;
+
+-- Hat das Café jetzt geöffnet? Gerechnet wird in deutscher Zeit, egal wo der Server steht.
+create or replace function _offen() returns boolean
+language sql stable security definer set search_path = public as $$
+  select (select immer_offen from einstellungen) or exists (
+    select 1 from oeffnungszeiten
+    where tag = extract(isodow from now() at time zone 'Europe/Berlin')
+      and (now() at time zone 'Europe/Berlin')::time between von and bis)
+$$;
 
 create or replace function _theke_ok(p_key text) returns boolean
 language sql stable security definer set search_path = public as $$
@@ -105,13 +127,13 @@ declare e einstellungen; t tische;
 begin
   select * into e from einstellungen;
   if p_code = e.laden_code then
-    return jsonb_build_object('ok', true, 'wahl', true, 'aktiv', e.aktiv, 'tische', coalesce(
+    return jsonb_build_object('ok', true, 'wahl', true, 'aktiv', e.aktiv, 'offen', _offen(), 'tische', coalesce(
       (select jsonb_agg(jsonb_build_object('id', id, 'name', name, 'bereich', bereich) order by bereich, length(name), name) from tische),
       '[]'::jsonb));
   end if;
   select * into t from tische where code = p_code;
   if not found then return jsonb_build_object('ok', false); end if;
-  return jsonb_build_object('ok', true, 'wahl', false, 'aktiv', e.aktiv, 'tisch', t.name, 'bereich', t.bereich);
+  return jsonb_build_object('ok', true, 'wahl', false, 'aktiv', e.aktiv, 'offen', _offen(), 'tisch', t.name, 'bereich', t.bereich);
 end $$;
 
 -- Bestellung abschicken. Preise, die der Browser mitschickt, werden ignoriert:
@@ -131,6 +153,7 @@ begin
   end if;
   if t.id is null then return jsonb_build_object('ok', false, 'fehler', 'tisch'); end if;
   if not e.aktiv then return jsonb_build_object('ok', false, 'fehler', 'pausiert'); end if;
+  if not _offen() then return jsonb_build_object('ok', false, 'fehler', 'geschlossen'); end if;
 
   -- Bremse gegen Unfug: höchstens 3 noch nicht angenommene Bestellungen je Tisch
   if (select count(*) from bestellungen where tisch_id = t.id and status = 'neu') >= 3 then

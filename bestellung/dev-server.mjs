@@ -26,6 +26,8 @@ export async function start({ port = 8787, memory = false } = {}) {
   const db = new PGlite(memory ? undefined : join(ordner, 'db'));
   await db.exec(readFileSync(join(HIER, 'schema.sql'), 'utf8'));
   await db.exec(karteSql());
+  // Auf dem eigenen Rechner soll man zu jeder Uhrzeit testen können
+  if (!memory) await db.exec('update einstellungen set immer_offen = true');
 
   // Zum Ausprobieren ein paar Tische anlegen, solange es noch keine gibt
   if (!memory) await db.exec(`insert into tische (name, bereich, code)

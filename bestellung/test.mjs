@@ -9,6 +9,8 @@ const K = s.thekeKey;
 // wie der Browser: echter HTTP-Aufruf an /rest/v1/rpc/...
 const rpc = async (fn, args = {}) => (await fetch(`${s.basis}/rest/v1/rpc/${fn}`, { method: 'POST', body: JSON.stringify(args) })).json();
 test.after(() => s.stop());
+// Die Tests laufen zu jeder Uhrzeit; die Öffnungszeiten prüft ein eigener Test weiter unten
+await s.db.exec('update einstellungen set immer_offen = true');
 
 let tischCode, tischId, ladenCode, bestellId;
 
@@ -36,7 +38,7 @@ test('Theke: Tische anlegen, doppelte werden abgelehnt', async () => {
 test('Gast: Link-Arten', async () => {
   assert.deepEqual(await rpc('tisch_info', { p_code: 'gibtsnicht' }), { ok: false });
   const fest = await rpc('tisch_info', { p_code: tischCode });
-  assert.deepEqual(fest, { ok: true, wahl: false, aktiv: true, tisch: '1', bereich: 'Drinnen' });
+  assert.deepEqual(fest, { ok: true, wahl: false, aktiv: true, offen: true, tisch: '1', bereich: 'Drinnen' });
   const laden = await rpc('tisch_info', { p_code: ladenCode });
   assert.equal(laden.wahl, true);
   assert.equal(laden.tische.length, 2);
@@ -116,6 +118,20 @@ test('Aufräumen: alte bezahlte Bestellungen werden gelöscht', async () => {
   assert.equal((await s.db.query('select count(*)::int as n from bestellungen')).rows[0].n, 3);
 });
 
+test('Öffnungszeiten: außerhalb wird nicht bestellt', async () => {
+  const b = () => rpc('bestellung_aufgeben', { p_code: t2Code, p_positionen: [{ name: 'Espresso', menge: 1 }] });
+  const t2Code = (await rpc('theke_tische', { p_key: K })).tische[1].code;
+  // heute geschlossen
+  await s.db.exec("update einstellungen set immer_offen = false; update oeffnungszeiten set von = '00:00', bis = '00:00'");
+  assert.equal((await rpc('tisch_info', { p_code: t2Code })).offen, false);
+  assert.equal((await b()).fehler, 'geschlossen');
+  // heute den ganzen Tag geöffnet
+  await s.db.exec("update oeffnungszeiten set von = '00:00', bis = '23:59:59'");
+  assert.equal((await rpc('tisch_info', { p_code: t2Code })).offen, true);
+  assert.equal((await b()).ok, true);
+  await s.db.exec('update einstellungen set immer_offen = true');
+});
+
 test('Pausieren und Codes erneuern', async () => {
   await rpc('theke_aktiv', { p_key: K, p_aktiv: false });
   assert.equal((await rpc('tisch_info', { p_code: tischCode })).aktiv, false);
@@ -130,6 +146,6 @@ test('Pausieren und Codes erneuern', async () => {
 test('Tisch löschen: alte Bestellungen bleiben lesbar', async () => {
   assert.equal((await rpc('theke_tisch_loeschen', { p_key: K, p_id: tischId })).ok, true);
   const t = await rpc('theke_bestellungen', { p_key: K });
-  assert.equal(t.bestellungen.length, 3);
+  assert.equal(t.bestellungen.length, 4);
   assert.equal(t.bestellungen[0].tisch, '1');
 });

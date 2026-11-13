@@ -52,6 +52,8 @@
 
   function starten(info) {
     document.head.append(h('link', { rel: 'stylesheet', href: 'bestellung/gast.css' }));
+    // Bestellt werden kann nur, wenn die Theke es nicht pausiert hat und das Café geöffnet ist
+    const bestellbar = info.aktiv && info.offen !== false;
 
     // ---------------------------------------------------------- Zustand
     let korb = merken.lesen('korb', []);
@@ -72,17 +74,17 @@
     function korbSpeichern() { merken.schreiben('korb', korb); leisteZeichnen(); }
 
     // ---------------------------------------------------------- Tisch-Anzeige im Kopf
-    const tischKnopf = h(info.wahl ? 'button' : 'span', { class: 'nb-tisch', type: info.wahl && 'button', onclick: () => info.wahl && info.aktiv && tischWaehlen() });
+    const tischKnopf = h(info.wahl ? 'button' : 'span', { class: 'nb-tisch', type: info.wahl && 'button', onclick: () => info.wahl && bestellbar && tischWaehlen() });
     function tischZeichnen() {
       tischKnopf.replaceChildren(h('b', {}, tisch ? tischName(tisch) : 'Tischnummer eintragen'),
-        info.aktiv && h('span', {}, info.wahl && tisch ? 'ändern' : 'Bestellt direkt hier am Handy'));
+        bestellbar && h('span', {}, info.wahl && tisch ? 'ändern' : 'Bestellt direkt hier am Handy'));
     }
     tischZeichnen();
     document.getElementById('status').after(h('br'), tischKnopf);
 
     // ---------------------------------------------------------- Plus-Knöpfe in der Karte
     const knoepfe = new Map();   // Artikelname -> Knopf, damit er die Menge im Korb zeigen kann
-    if (info.aktiv) {
+    if (bestellbar) {
       for (const bereich of document.querySelectorAll('.kcat')) {
         const extras = [...bereich.querySelectorAll('.extras li[data-n]')].map(li => ({ name: li.dataset.n, cent: +li.dataset.p }));
         for (const li of bereich.querySelectorAll('.mi[data-n]')) {
@@ -93,7 +95,9 @@
         }
       }
     } else {
-      document.querySelector('.k-hero').append(h('p', { class: 'nb-pause' }, h('b', {}, 'Bestellen am Handy ist gerade pausiert.'), ' Bestellt bitte direkt bei uns an der Theke.'));
+      document.querySelector('.k-hero').append(h('p', { class: 'nb-pause' }, info.offen === false
+        ? [h('b', {}, 'Wir haben gerade geschlossen.'), ' Bestellen am Handy geht während unserer Öffnungszeiten.']
+        : [h('b', {}, 'Bestellen am Handy ist gerade pausiert.'), ' Bestellt bitte direkt bei uns an der Theke.']));
     }
 
     // ---------------------------------------------------------- Bausteine
@@ -211,6 +215,7 @@
         if (!antwort.ok) {
           return scheitern({
             pausiert: 'Bestellen am Handy ist gerade pausiert. Bestellt bitte an der Theke.',
+            geschlossen: 'Wir haben gerade geschlossen. Bestellen am Handy geht während unserer Öffnungszeiten.',
             zuviele: 'Von eurem Tisch warten schon Bestellungen bei uns. Einen Moment, wir sind gleich so weit.',
             tisch: 'Dieser Tisch-Link gilt nicht mehr. Scannt den Code am Tisch bitte noch einmal.',
             artikel: 'Unsere Karte hat sich gerade geändert. Ladet die Seite bitte neu und bestellt noch einmal.'
@@ -308,7 +313,7 @@
           h('i'), h('span', { class: 'text' }, h('b', {}, 'Bestellung Nr. ' + letzte.nr), ' · ' + stand(letzte)[0]),
           h('span', { class: 'mehr' }, offen > 1 ? offen + ' offen' : 'ansehen')));
       }
-      if (korb.length && info.aktiv) {
+      if (korb.length && bestellbar) {
         leiste.append(h('button', { class: 'nb-korb', type: 'button', onclick: korbBlatt },
           h('span', { class: 'anzahl' }, String(korbAnzahl())), h('span', { class: 'text' }, 'Bestellung ansehen'), h('span', {}, euro(korbSumme()))));
       }
