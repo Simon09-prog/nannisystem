@@ -1,0 +1,13 @@
+{
+  "name": "nanni-bestellung",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node bestellung/dev-server.mjs",
+    "test": "node --test bestellung/test.mjs",
+    "karte": "python build_menu.py && node bestellung/karte.mjs"
+  },
+  "devDependencies": {
+    "@electric-sql/pglite": "^0.3.0"
+  }
+}
