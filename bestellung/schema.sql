@@ -81,10 +81,11 @@ alter table ruhetage enable row level security;
 alter table artikel add column if not exists getraenk boolean not null default false;
 
 -- Spätere Erweiterung "Tische öffnen": Ein Tisch ist zunächst geschlossen. Die Theke öffnet ihn, indem sie
--- seine erste Bestellung annimmt; nach dem Bezahlen schließt er sich wieder. Lehnt die Theke die erste
--- Bestellung eines geschlossenen Tisches ab (dort sitzt niemand), ist der Tisch für 10 Minuten gesperrt.
+-- seine erste Bestellung annimmt; nach dem Bezahlen schließt er sich wieder.
+-- (Die Spalte gesperrt_bis stammt von einer früheren Zeitsperre und wird nicht mehr gesetzt.)
 alter table tische add column if not exists offen_seit   timestamptz;
 alter table tische add column if not exists gesperrt_bis timestamptz;
+update tische set gesperrt_bis = null where gesperrt_bis is not null;
 
 -- Zeilenschutz an und keine einzige Regel: Direkter Zugriff auf die Tabellen ist damit für alle gesperrt.
 alter table einstellungen enable row level security;
@@ -323,13 +324,10 @@ begin
         else positionen end
     where id = p_id;
   if not found then return jsonb_build_object('ok', false); end if;
-  -- Tische öffnen: Annehmen öffnet den Tisch. Wird die Bestellung eines geschlossenen Tisches abgelehnt, ist er 10 Minuten gesperrt.
+  -- Tische öffnen: Annehmen öffnet den Tisch
   if p_status = 'angenommen' then
     update tische set offen_seit = coalesce(offen_seit, now()), gesperrt_bis = null
       where id = (select tisch_id from bestellungen where id = p_id);
-  elsif p_status = 'abgelehnt' then
-    update tische set gesperrt_bis = now() + interval '10 minutes'
-      where id = (select tisch_id from bestellungen where id = p_id) and offen_seit is null;
   end if;
   perform _aufraeumen();
   return jsonb_build_object('ok', true);

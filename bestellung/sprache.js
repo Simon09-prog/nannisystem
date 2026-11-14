@@ -27,7 +27,7 @@
     [/^öffnet morgen um (\d\d:\d\d) Uhr$/, m => 'opens tomorrow at ' + m[1]],
     [/^Stand: ([^·]+)$/, m => 'As of ' + m[1].replace(/^[A-Za-zä]+/, monat => MONATE[monat] || monat)],
     [/^Preise in Euro inkl\. MwSt\.$/, () => 'Prices in euros incl. VAT'],
-    [/^Allergene und Zusatzstoffe:$/, () => 'Allergens and additives:']
+    [/^Allergene und Zusatzstoffe: Bitte fragt unser Team, wir geben gern Auskunft\.$/, () => 'Allergens and additives: please ask our team, we are happy to help.']
   ];
 
   // Übersetzt einen Text. Auf Deutsch (oder ohne Treffer) kommt er unverändert zurück.

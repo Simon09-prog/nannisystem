@@ -439,7 +439,8 @@ dialog.lightbox button { position: fixed; top: 16px; right: 16px; background: va
 .legal details[open] summary::after { content: "–"; }
 .legal .txt { padding: 14px 0 6px; color: #cdbfb2; display: grid; gap: 10px; max-width: 70ch; font-size: .92rem; }
 .legal .txt h4 { color: #fff; font: 500 1rem/1.3 var(--sans); margin: 8px 0 0; }
-.legal .fill { color: #6b5300; }
+.legal .txt ul { margin: 0; padding-left: 1.2em; display: grid; gap: 4px; }
+.legal .txt a { color: #fff; }
 .copy { margin-top: 40px; font-size: .82rem; color: #a8998b; display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
 
 /* Mobile-Aktionsleiste */
@@ -688,7 +689,7 @@ dialog.lightbox button { position: fixed; top: 16px; right: 16px; background: va
         <a class="btn btn-primary" href="karte.html">Karte als eigene Seite <svg class="icon" aria-hidden="true"><use href="#i-arrow"/></svg></a>
       </div>
       <div class="karte-photo"><img src="bilder/club-sandwich.webp" alt="Club Sandwich mit Rucola, daneben die NANNI-Karte" loading="lazy" width="1167" height="1400"></div>
-      <p class="karte-stand">Stand: Oktober 2026 · Allergene und Zusatzstoffe: <em class="fill">[bitte ergänzen]</em></p>
+      <p class="karte-stand">Stand: Oktober 2026 · Allergene und Zusatzstoffe: Bitte fragt unser Team, wir geben gern Auskunft.</p>
     </div>
     <div class="menu-acc reveal d1">
 <!-- MENU:START -->
@@ -920,40 +921,95 @@ dialog.lightbox button { position: fixed; top: 16px; right: 16px; background: va
         <summary>Impressum</summary>
         <div class="txt">
           <h4>Angaben gemäß § 5 DDG</h4>
-          <p>NANNI Coffee &amp; Bar<br>Inhaberin: Valeria Dangler (Einzelunternehmen)<br>Redlingerstraße 11<br>49074 Osnabrück</p>
+          <p>NANNI Coffee &amp; Bar<br>Inhaberin: Valeria Dangler (Einzelunternehmen)<br>Redlingerstraße 11<br>49074 Osnabrück<br>Deutschland</p>
           <h4>Kontakt</h4>
           <p>Telefon: 0541 33574411<br>E-Mail: <a href="mailto:info@nannicoffeebar.de">info@nannicoffeebar.de</a></p>
-          <h4>Verantwortlich für den Inhalt</h4>
+          <h4>Verantwortlich für den Inhalt nach § 18 Abs. 2 MStV</h4>
           <p>Valeria Dangler, Anschrift wie oben</p>
           <h4>Verbraucherstreitbeilegung</h4>
-          <p>Wir sind nicht bereit oder verpflichtet, an Streitbeilegungsverfahren vor einer Verbraucherschlichtungsstelle teilzunehmen.</p>
+          <p>Wir sind nicht bereit und nicht verpflichtet, an Streitbeilegungsverfahren vor einer Verbraucherschlichtungsstelle teilzunehmen.</p>
+          <h4>Bestellen am Tisch</h4>
+          <p>Die Bestellfunktion auf dieser Website richtet sich ausschließlich an Gäste, die sich in unserem Café befinden. Mit dem Abschicken gebt ihr eine Bestellung an unser Team weiter; sie gilt als angenommen, sobald wir sie an der Theke bestätigen. Bezahlt wird vor Ort im Café. Es gelten die Preise der Karte am Tag der Bestellung, alle Preise in Euro einschließlich der gesetzlichen Mehrwertsteuer.</p>
+          <h4>Haftung für Inhalte</h4>
+          <p>Die Inhalte dieser Website haben wir mit Sorgfalt erstellt. Für die Richtigkeit, Vollständigkeit und Aktualität können wir jedoch keine Gewähr übernehmen. Als Diensteanbieter sind wir nach den allgemeinen Gesetzen für eigene Inhalte verantwortlich. Wir sind nicht verpflichtet, übermittelte oder gespeicherte fremde Informationen zu überwachen. Sobald uns eine konkrete Rechtsverletzung bekannt wird, entfernen wir die betreffenden Inhalte umgehend.</p>
+          <h4>Haftung für Links</h4>
+          <p>Diese Website enthält Links zu Angeboten anderer Anbieter, etwa zu Instagram, Google Maps, zur Tischreservierung und zum Gutschein-Shop. Auf deren Inhalte haben wir keinen Einfluss; verantwortlich ist jeweils der Anbieter der verlinkten Seite. Zum Zeitpunkt der Verlinkung waren keine Rechtsverstöße erkennbar. Werden uns solche bekannt, entfernen wir den Link umgehend.</p>
+          <h4>Urheberrecht</h4>
+          <p>Texte, Fotos, Videos und die Gestaltung dieser Website sind urheberrechtlich geschützt. Jede Verwendung außerhalb der Grenzen des Urheberrechts braucht unsere vorherige schriftliche Zustimmung.</p>
         </div>
       </details>
       <details id="datenschutz">
         <summary>Datenschutz</summary>
         <div class="txt">
-          <h4>Verantwortliche Stelle</h4>
+          <p>Der Schutz eurer Daten ist uns wichtig. Hier erklären wir, welche Daten beim Besuch dieser Website und beim Bestellen am Tisch verarbeitet werden, wozu das geschieht und welche Rechte ihr habt.</p>
+
+          <h4>1. Verantwortliche Stelle</h4>
           <p>NANNI Coffee &amp; Bar, Inhaberin Valeria Dangler, Redlingerstraße 11, 49074 Osnabrück, Telefon 0541 33574411, E-Mail <a href="mailto:info@nannicoffeebar.de">info@nannicoffeebar.de</a>.</p>
-          <h4>Hosting und Server-Logfiles</h4>
-          <p>Beim Aufruf dieser Seite verarbeitet der Hoster technisch notwendige Daten (IP-Adresse, Datum und Uhrzeit, aufgerufene Seite, Browsertyp), um die Seite auszuliefern und die Sicherheit zu gewährleisten (Art. 6 Abs. 1 lit. f DSGVO). Hoster ist GitHub Pages, ein Dienst der GitHub Inc., 88 Colin P. Kelly Jr. Street, San Francisco, CA 94107, USA. Dabei können Daten in die USA übertragen werden; GitHub ist nach dem EU-US Data Privacy Framework zertifiziert.</p>
-          <h4>Keine Cookies, kein Tracking</h4>
-          <p>Diese Website setzt keine Cookies und verwendet keine Analyse- oder Werbedienste. Schriften und Videos liegen auf unserem eigenen Server; es werden beim Aufruf keine Daten an Google oder andere Dritte übertragen.</p>
-          <h4>Bestellen am Tisch</h4>
-          <p>Wenn du im Café über den QR-Code am Handy bestellst, verarbeiten wir deine Tischnummer, die bestellten Artikel, deinen Wunschtext, die Summe und den Zeitpunkt, um die Bestellung zuzubereiten, zu servieren und abzurechnen (Art. 6 Abs. 1 lit. b DSGVO). Einen Namen, eine E-Mail-Adresse oder Zahlungsdaten fragen wir dabei nicht ab; bezahlt wird im Café. Schreib bitte keine persönlichen Angaben in das Wunschfeld.</p>
-          <p>Die Bestellungen werden in einer Datenbank des Dienstleisters Supabase Inc. gespeichert, der sie in unserem Auftrag verarbeitet. Der Server steht in der EU (Irland). Beim Abruf fallen dort technisch notwendige Verbindungsdaten wie die IP-Adresse an. Bezahlte und abgelehnte Bestellungen löschen wir automatisch nach 3 Tagen, alle übrigen spätestens nach 30 Tagen.</p>
-          <p>Damit dein Warenkorb und der Stand deiner Bestellung beim Neuladen erhalten bleiben, speichert die Karte diese Angaben im lokalen Speicher deines Browsers. Das ist für die Bestellfunktion technisch erforderlich (§ 25 Abs. 2 Nr. 2 TDDDG). Die Angaben bleiben auf deinem Gerät und lassen sich über die Browser-Einstellungen löschen.</p>
-          <h4>Karte (OpenStreetMap)</h4>
-          <p>Die Karte im Bereich „Besuch“ wird erst geladen, wenn du auf „Karte anzeigen“ klickst. Dann wird deine IP-Adresse an die OpenStreetMap Foundation übertragen (Art. 6 Abs. 1 lit. a DSGVO).</p>
-          <h4>Externe Links</h4>
-          <p>Links zu Instagram, Google Maps, zur Tischreservierung (teburio) und zum Gutschein-Shop (SumUp) führen auf Angebote anderer Anbieter. Erst beim Anklicken gelten deren Datenschutzbestimmungen.</p>
-          <h4>Deine Rechte</h4>
-          <p>Du hast das Recht auf Auskunft, Berichtigung, Löschung, Einschränkung der Verarbeitung, Datenübertragbarkeit und Widerspruch sowie das Recht auf Beschwerde bei einer Aufsichtsbehörde, etwa der Landesbeauftragten für den Datenschutz Niedersachsen.</p>
+          <p>Ein Datenschutzbeauftragter ist nicht bestellt, weil dafür keine gesetzliche Pflicht besteht. Bei Fragen zum Datenschutz erreicht ihr uns über die genannten Kontaktdaten.</p>
+
+          <h4>2. Aufruf der Website (Hosting und Server-Logfiles)</h4>
+          <p>Diese Website wird bei Netlify, Inc. (San Francisco, USA) gehostet. Beim Aufruf verarbeitet der Hoster technisch notwendige Daten: IP-Adresse, Datum und Uhrzeit des Zugriffs, aufgerufene Seite, übertragene Datenmenge, Browsertyp und Betriebssystem. Das ist nötig, um die Seite auszuliefern und ihre Sicherheit und Stabilität zu gewährleisten. Rechtsgrundlage ist unser berechtigtes Interesse an einem sicheren und zuverlässigen Betrieb (Art. 6 Abs. 1 lit. f DSGVO).</p>
+          <p>Netlify verarbeitet diese Daten in unserem Auftrag auf Grundlage eines Vertrags zur Auftragsverarbeitung (Art. 28 DSGVO). Dabei können Daten in die USA übertragen werden. Die Übertragung stützt sich auf die Zertifizierung des Anbieters nach dem EU-US Data Privacy Framework beziehungsweise auf die Standardvertragsklauseln der EU-Kommission.</p>
+
+          <h4>3. Keine Cookies, kein Tracking</h4>
+          <p>Diese Website setzt keine Cookies und verwendet keine Analyse-, Werbe- oder Tracking-Dienste. Schriften, Bilder und Videos liegen bei unserem Hoster; beim Aufruf werden dafür keine Daten an Google oder andere Dritte übertragen.</p>
+
+          <h4>4. Lokaler Speicher im Browser</h4>
+          <p>Damit die Karte und die Bestellfunktion funktionieren, speichert die Seite einige Angaben im lokalen Speicher eures Browsers: die gewählte Sprache, euren Warenkorb, die Tischnummer für die Dauer des Besuchs und den Stand eurer Bestellungen (höchstens 12 Stunden). Diese Angaben bleiben auf eurem Gerät und werden nicht zu Werbe- oder Analysezwecken genutzt. Sie sind für die von euch gewünschte Funktion technisch erforderlich (§ 25 Abs. 2 Nr. 2 TDDDG). Ihr könnt sie jederzeit über die Einstellungen eures Browsers löschen.</p>
+
+          <h4>5. Bestellen am Tisch</h4>
+          <p>Wenn ihr im Café über den QR-Code oder NFC-Chip am Handy bestellt, verarbeiten wir folgende Daten:</p>
+          <ul>
+            <li>die Tischnummer,</li>
+            <li>die bestellten Artikel mit Extras, Menge und Preis,</li>
+            <li>euren freiwilligen Wunschtext,</li>
+            <li>Datum und Uhrzeit der Bestellung und ihren Bearbeitungsstand,</li>
+            <li>ob ihr über die Seite einen Kellner gerufen oder den Wunsch zu zahlen gemeldet habt.</li>
+          </ul>
+          <p>Einen Namen, eine E-Mail-Adresse, eine Telefonnummer oder Zahlungsdaten fragen wir dabei nicht ab. Bezahlt wird im Café. Schreibt bitte keine persönlichen Angaben und keine Gesundheitsdaten in das Wunschfeld; sprecht uns bei Allergien direkt an.</p>
+          <p>Zweck der Verarbeitung ist es, eure Bestellung zuzubereiten, an den richtigen Tisch zu bringen und abzurechnen. Rechtsgrundlage ist die Durchführung des Bewirtungsvertrags (Art. 6 Abs. 1 lit. b DSGVO). Ohne diese Angaben können wir eine Bestellung am Handy nicht annehmen; ihr könnt aber jederzeit direkt bei unserem Team bestellen.</p>
+          <p>Die Bestellungen werden in einer Datenbank des Dienstleisters Supabase, Inc. gespeichert, der sie in unserem Auftrag verarbeitet (Art. 28 DSGVO). Die Datenbank liegt in einem Rechenzentrum in der Europäischen Union (Irland). Beim Abruf fallen dort technisch notwendige Verbindungsdaten wie die IP-Adresse an. Soweit der Anbieter im Einzelfall, etwa für Wartung und Support, von außerhalb der EU auf Daten zugreift, geschieht das auf Grundlage der Standardvertragsklauseln der EU-Kommission.</p>
+          <p>Speicherdauer: Bezahlte und abgelehnte Bestellungen löschen wir automatisch nach 3 Tagen, alle übrigen spätestens nach 30 Tagen. Unabhängig davon bewahren wir die Kassenbelege unserer Kasse so lange auf, wie es das Steuer- und Handelsrecht vorschreibt (Art. 6 Abs. 1 lit. c DSGVO); diese Belege enthalten keine Angaben zu eurer Person.</p>
+
+          <h4>6. Kontakt per E-Mail oder Telefon</h4>
+          <p>Wenn ihr uns schreibt oder anruft, verarbeiten wir eure Angaben (zum Beispiel Name, E-Mail-Adresse, Telefonnummer und euer Anliegen), um die Anfrage zu beantworten. Rechtsgrundlage ist Art. 6 Abs. 1 lit. b DSGVO, soweit es um einen Vertrag oder dessen Anbahnung geht, sonst unser berechtigtes Interesse an der Beantwortung von Anfragen (Art. 6 Abs. 1 lit. f DSGVO). Wir löschen die Anfrage, sobald sie erledigt ist und keine gesetzlichen Aufbewahrungspflichten entgegenstehen.</p>
+
+          <h4>7. Karte (OpenStreetMap)</h4>
+          <p>Die Karte im Bereich „Besuch“ wird erst geladen, wenn ihr auf „Karte anzeigen“ klickt. Erst dann wird eure IP-Adresse an die OpenStreetMap Foundation (Vereinigtes Königreich) übertragen. Rechtsgrundlage ist eure Einwilligung (Art. 6 Abs. 1 lit. a DSGVO), die ihr für die Zukunft widerrufen könnt, indem ihr die Karte nicht erneut ladet.</p>
+
+          <h4>8. Externe Links</h4>
+          <p>Links zu Instagram, Google Maps und den Google-Bewertungen, zur Tischreservierung (teburio) und zum Gutschein-Shop (SumUp) führen auf Angebote anderer Anbieter. Daten werden erst übertragen, wenn ihr einen solchen Link anklickt. Dann gelten die Datenschutzbestimmungen des jeweiligen Anbieters, auf die wir keinen Einfluss haben.</p>
+
+          <h4>9. Empfänger der Daten</h4>
+          <p>Eure Daten erhalten nur unser Team und die oben genannten Dienstleister, die für uns als Auftragsverarbeiter tätig sind: der Hoster dieser Website, der Betreiber der Bestell-Datenbank und der technische Dienstleister, der die Website und die Bestellfunktion für uns betreut. Eine Weitergabe zu Werbezwecken findet nicht statt.</p>
+
+          <h4>10. Sicherheit</h4>
+          <p>Die Website und die Bestellfunktion werden ausschließlich verschlüsselt (HTTPS/TLS) übertragen. Der Zugang zu den Bestellungen ist auf unser Team beschränkt und durch einen geheimen Schlüssel geschützt.</p>
+
+          <h4>11. Eure Rechte</h4>
+          <p>Ihr habt nach der DSGVO folgende Rechte:</p>
+          <ul>
+            <li>Auskunft über die zu euch gespeicherten Daten (Art. 15),</li>
+            <li>Berichtigung unrichtiger Daten (Art. 16),</li>
+            <li>Löschung (Art. 17) und Einschränkung der Verarbeitung (Art. 18),</li>
+            <li>Datenübertragbarkeit (Art. 20),</li>
+            <li>Widerspruch gegen Verarbeitungen, die auf einem berechtigten Interesse beruhen (Art. 21),</li>
+            <li>Widerruf einer erteilten Einwilligung mit Wirkung für die Zukunft (Art. 7 Abs. 3).</li>
+          </ul>
+          <p>Schreibt uns dafür einfach an <a href="mailto:info@nannicoffeebar.de">info@nannicoffeebar.de</a>. Weil wir bei Bestellungen keinen Namen speichern, nennt uns bitte Tisch, Datum und Uhrzeit, damit wir die Bestellung zuordnen können.</p>
+          <p>Ihr habt außerdem das Recht, euch bei einer Datenschutz-Aufsichtsbehörde zu beschweren (Art. 77 DSGVO). Für uns zuständig ist: Der Landesbeauftragte für den Datenschutz Niedersachsen, Prinzenstraße 5, 30159 Hannover.</p>
+
+          <h4>12. Keine automatisierte Entscheidung</h4>
+          <p>Eine automatisierte Entscheidungsfindung oder ein Profiling findet nicht statt.</p>
+
+          <h4>13. Stand und Änderungen</h4>
+          <p>Stand: November 2026. Wir passen diese Erklärung an, wenn sich die Website, die Bestellfunktion oder die Rechtslage ändern. Es gilt die jeweils hier veröffentlichte Fassung.</p>
         </div>
       </details>
     </div>
 
     <div class="copy">
-      <span>© <span id="year">2026</span> NANNI Coffee &amp; Bar, Osnabrück · Designentwurf, keine offizielle Website</span>
+      <span>© <span id="year">2026</span> NANNI Coffee &amp; Bar, Osnabrück</span>
       <span><a href="#impressum" data-open="impressum">Impressum</a> · <a href="#datenschutz" data-open="datenschutz">Datenschutz</a></span>
     </div>
   </div>

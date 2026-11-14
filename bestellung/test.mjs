@@ -172,19 +172,21 @@ test('Bestellung zurückziehen: nur solange sie nicht angenommen ist', async () 
   await rpc('theke_bezahlt', { p_key: K, p_tisch: t2.id });
 });
 
-test('Tische öffnen: Annehmen öffnet, Bezahlen schließt, ein Nein sperrt für 10 Minuten', async () => {
+test('Tische öffnen: Annehmen öffnet, Bezahlen schließt, ein Nein sperrt nicht', async () => {
   await rpc('theke_tisch_anlegen', { p_key: K, p_name: '9', p_bereich: 'Drinnen' });
   const t9 = (await rpc('theke_tische', { p_key: K })).tische.find(t => t.name === '9');
   const offen = async () => (await rpc('theke_bestellungen', { p_key: K })).tische_offen.includes(t9.id);
   const b = () => rpc('bestellung_aufgeben', { p_code: t9.code, p_positionen: [{ name: 'Americano', menge: 1 }] });
-  // geschlossener Tisch, Theke sagt Nein: gesperrt
+  // geschlossener Tisch, Theke sagt Nein: der Tisch bleibt zu, es gibt aber keine Zeitsperre
   const a = await b();
   assert.equal(await offen(), false);
   await rpc('theke_status', { p_key: K, p_id: a.id, p_status: 'abgelehnt' });
-  assert.equal((await b()).fehler, 'gesperrt');
-  assert.equal((await rpc('kellner_rufen', { p_code: t9.code })).fehler, 'gesperrt');
-  // "Doch annehmen" hebt die Sperre auf und öffnet den Tisch
-  await rpc('theke_status', { p_key: K, p_id: a.id, p_status: 'angenommen' });
+  assert.equal(await offen(), false);
+  assert.equal((await rpc('kellner_rufen', { p_code: t9.code })).ok, true);
+  const a2 = await b();
+  assert.equal(a2.ok, true);
+  // Annehmen öffnet den Tisch
+  await rpc('theke_status', { p_key: K, p_id: a2.id, p_status: 'angenommen' });
   assert.equal(await offen(), true);
   // am offenen Tisch sperrt eine Ablehnung nicht
   const c = await b();

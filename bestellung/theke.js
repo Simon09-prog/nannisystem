@@ -267,7 +267,7 @@
       gruppe.forEach(b => statusSetzen(b, 'angenommen'));
     };
     const knoepfe = zu
-      ? [h('button', { type: 'button', onclick: annehmen }, 'Ja, Tisch öffnen'), ablehnKnopf(gruppe, 'Nein, niemand da', 'Ablehnen und 10 Min sperren?')]
+      ? [h('button', { type: 'button', onclick: annehmen }, 'Ja, Tisch öffnen'), ablehnKnopf(gruppe, 'Nein, niemand da', 'Wirklich ablehnen?')]
       : neu
       ? [h('button', { type: 'button', onclick: annehmen }, 'Annehmen'), ablehnKnopf(gruppe)]
       : [offen.some(p => p.getraenk) && offen.some(p => !p.getraenk) && h('button', { type: 'button', class: 'halb', onclick: () => servieren(gruppe, true) }, 'Getränke serviert'),
