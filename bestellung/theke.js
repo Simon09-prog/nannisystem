@@ -102,6 +102,9 @@
   let bestellungen = [], aktiv = true;
   let zahlen = [];              // Tische, die zahlen möchten: [{tisch_id, tisch, bereich, seit}]
   let rufe = [];                // Tische, die einen Kellner rufen
+  let tischeOffen = null;       // IDs der geöffneten Tische (null = die Datenbank kennt das noch nicht)
+  // Ein Tisch gilt als geschlossen, bis die Theke seine erste Bestellung annimmt
+  const geschlossen = b => tischeOffen !== null && b.tisch_id != null && !tischeOffen.has(b.tisch_id);
   const zahlenGesehen = new Set(), rufeGesehen = new Set();
   const tischText = t => 'Tisch ' + t.tisch + (t.bereich ? ' ' + t.bereich : '');
   let uhrFehler = 0;            // Unterschied zwischen der Uhr dieses Geräts und der Datenbank
@@ -115,6 +118,7 @@
   function uebernehmen(antwort) {
     uhrFehler = new Date(antwort.jetzt) - Date.now();
     bestellungen = antwort.bestellungen; aktiv = antwort.aktiv; zahlen = antwort.zahlen || []; rufe = antwort.rufe || [];
+    tischeOffen = antwort.tische_offen ? new Set(antwort.tische_offen) : null;
     const neue = bestellungen.filter(b => b.status === 'neu');
     const frisch = neue.filter(b => !gesehen.has(b.id));
     bestellungen.forEach(b => gesehen.add(b.id));
@@ -127,7 +131,7 @@
       erinnern(); letzteErinnerung = Date.now();
       melden('Wartet noch', wartend.map(tischText).join(', '));
     }
-    if (frisch.length && !ersterAbruf) melden(frisch.length > 1 ? frisch.length + ' neue Bestellungen' : 'Neue Bestellung',
+    if (frisch.length && !ersterAbruf) melden(frisch.some(geschlossen) ? 'Neuer Tisch möchte bestellen' : frisch.length > 1 ? frisch.length + ' neue Bestellungen' : 'Neue Bestellung',
       [...new Set(frisch.map(tischText))].join(', '));
     // Zahlwünsche: Gong und Einblendung, sobald ein Tisch neu dazukommt
     const zahlNeu = zahlen.filter(z => !zahlenGesehen.has(z.tisch_id));
@@ -187,13 +191,13 @@
   $('ton-test').addEventListener('click', gong);
 
   // Ablehnen braucht zwei Tipps: der Knopf fragt erst nach, statt ein Fenster zu öffnen
-  function ablehnKnopf(liste) {
+  function ablehnKnopf(liste, text = 'Ablehnen', frage = 'Wirklich ablehnen?') {
     let sicher = false, zurueck = null;
     const knopf = h('button', { type: 'button', class: 'zweit', onclick: () => {
       if (sicher) return [].concat(liste).forEach(b => statusSetzen(b, 'abgelehnt'));
-      sicher = true; knopf.textContent = 'Wirklich ablehnen?'; knopf.classList.add('warn');
-      zurueck = setTimeout(() => { sicher = false; knopf.textContent = 'Ablehnen'; knopf.classList.remove('warn'); }, 4000);
-    } }, 'Ablehnen');
+      sicher = true; knopf.textContent = frage; knopf.classList.add('warn');
+      zurueck = setTimeout(() => { sicher = false; knopf.textContent = text; knopf.classList.remove('warn'); }, 4000);
+    } }, text);
     return knopf;
   }
 
@@ -256,16 +260,25 @@
     const offen = alle.filter(p => !p.serviert);
     const getraenke = alle.filter(p => p.getraenk), essen = alle.filter(p => !p.getraenk);
     const beides = getraenke.length > 0 && essen.length > 0;
-    const knoepfe = neu
-      ? [h('button', { type: 'button', onclick: () => gruppe.forEach(b => statusSetzen(b, 'angenommen')) }, 'Annehmen'), ablehnKnopf(gruppe)]
+    // Erste Bestellung eines geschlossenen Tisches: Die Theke bestätigt, dass dort wirklich jemand sitzt
+    const zu = neu && geschlossen(erste);
+    const annehmen = () => {
+      if (tischeOffen && erste.tisch_id != null) tischeOffen.add(erste.tisch_id);
+      gruppe.forEach(b => statusSetzen(b, 'angenommen'));
+    };
+    const knoepfe = zu
+      ? [h('button', { type: 'button', onclick: annehmen }, 'Ja, Tisch öffnen'), ablehnKnopf(gruppe, 'Nein, niemand da', 'Ablehnen und 10 Min sperren?')]
+      : neu
+      ? [h('button', { type: 'button', onclick: annehmen }, 'Annehmen'), ablehnKnopf(gruppe)]
       : [offen.some(p => p.getraenk) && offen.some(p => !p.getraenk) && h('button', { type: 'button', class: 'halb', onclick: () => servieren(gruppe, true) }, 'Getränke serviert'),
          h('button', { type: 'button', onclick: () => servieren(gruppe, false) }, offen.length < alle.length ? 'Rest serviert' : 'Alles serviert'),
          h('button', { type: 'button', class: 'zweit', onclick: () => gruppe.forEach(b => statusSetzen(b, 'neu')) }, 'Zurück')];
-    return h('article', { class: 'karte' + (neu && m >= 3 ? ' spaet' : ''), 'data-stand': erste.status },
+    return h('article', { class: 'karte' + (neu && m >= 3 ? ' spaet' : '') + (zu ? ' neuer-tisch' : ''), 'data-stand': erste.status },
       h('div', { class: 'karte-kopf' },
         h('b', {}, 'Tisch ' + erste.tisch),
         h('span', { class: 'ort' }, erste.bereich && h('span', { class: /drau/i.test(erste.bereich) && 'aussen' }, erste.bereich)),
         h('time', {}, m < 1 ? 'gerade eben' : 'vor ' + m + ' Min')),
+      zu && h('p', { class: 'frage' }, h('b', {}, 'Neuer Tisch.'), ' Sitzt dort jemand?'),
       beides
         ? [h('h3', { class: 'art' }, 'Getränke'), h('ul', { class: 'posten' }, getraenke.map(posten)),
            h('h3', { class: 'art' }, 'Essen'), h('ul', { class: 'posten' }, essen.map(posten))]

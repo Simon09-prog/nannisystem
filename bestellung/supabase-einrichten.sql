@@ -80,6 +80,12 @@ alter table ruhetage enable row level security;
 -- Spätere Erweiterung "Getränke zuerst": Die Karte weiß, was ein Getränk ist, damit die Theke Getränke vor dem Essen servieren kann.
 alter table artikel add column if not exists getraenk boolean not null default false;
 
+-- Spätere Erweiterung "Tische öffnen": Ein Tisch ist zunächst geschlossen. Die Theke öffnet ihn, indem sie
+-- seine erste Bestellung annimmt; nach dem Bezahlen schließt er sich wieder. Lehnt die Theke die erste
+-- Bestellung eines geschlossenen Tisches ab (dort sitzt niemand), ist der Tisch für 10 Minuten gesperrt.
+alter table tische add column if not exists offen_seit   timestamptz;
+alter table tische add column if not exists gesperrt_bis timestamptz;
+
 -- Zeilenschutz an und keine einzige Regel: Direkter Zugriff auf die Tabellen ist damit für alle gesperrt.
 alter table einstellungen enable row level security;
 alter table tische        enable row level security;
@@ -133,6 +139,7 @@ $$;
 -- Speicher sparen: Bezahlte und abgelehnte Bestellungen verschwinden nach 3 Tagen, alles andere nach 30 Tagen.
 create or replace function _aufraeumen() returns void
 language sql security definer set search_path = public as $$
+  update tische set offen_seit = null where offen_seit < now() - interval '12 hours';   -- vergessene Tische schließen
   delete from bestellungen
   where (created_at < now() - interval '3 days' and (bezahlt_at is not null or status = 'abgelehnt'))
      or created_at < now() - interval '30 days'
@@ -184,6 +191,7 @@ begin
   if t.id is null then return jsonb_build_object('ok', false, 'fehler', 'tisch'); end if;
   if not e.aktiv then return jsonb_build_object('ok', false, 'fehler', 'pausiert'); end if;
   if not _offen() then return jsonb_build_object('ok', false, 'fehler', 'geschlossen'); end if;
+  if t.gesperrt_bis > now() then return jsonb_build_object('ok', false, 'fehler', 'gesperrt'); end if;
 
   -- Bremse gegen Unfug: höchstens 3 noch nicht angenommene Bestellungen je Tisch
   if (select count(*) from bestellungen where tisch_id = t.id and status = 'neu') >= 3 then
@@ -276,6 +284,7 @@ begin
   select * into t from _tisch(p_code, p_tisch);
   if t.id is null then return jsonb_build_object('ok', false, 'fehler', 'tisch'); end if;
   if not _offen() then return jsonb_build_object('ok', false, 'fehler', 'geschlossen'); end if;
+  if t.gesperrt_bis > now() then return jsonb_build_object('ok', false, 'fehler', 'gesperrt'); end if;
   update tische set ruf_at = coalesce(ruf_at, now()) where id = t.id;
   return jsonb_build_object('ok', true);
 end $$;
@@ -289,6 +298,7 @@ language plpgsql stable security definer set search_path = public as $$
 begin
   if not _theke_ok(p_key) then return jsonb_build_object('ok', false, 'fehler', 'key'); end if;
   return jsonb_build_object('ok', true, 'jetzt', now(), 'aktiv', (select aktiv from einstellungen),
+    'tische_offen', coalesce((select jsonb_agg(id) from tische where offen_seit is not null), '[]'::jsonb),
     'zahlen', coalesce((select jsonb_agg(jsonb_build_object('tisch_id', id, 'tisch', name, 'bereich', bereich, 'seit', zahlen_at)) from tische where zahlen_at is not null), '[]'::jsonb),
     'rufe', coalesce((select jsonb_agg(jsonb_build_object('tisch_id', id, 'tisch', name, 'bereich', bereich, 'seit', ruf_at) order by ruf_at) from tische where ruf_at is not null), '[]'::jsonb),
     'bestellungen', coalesce(
@@ -313,6 +323,14 @@ begin
         else positionen end
     where id = p_id;
   if not found then return jsonb_build_object('ok', false); end if;
+  -- Tische öffnen: Annehmen öffnet den Tisch. Wird die Bestellung eines geschlossenen Tisches abgelehnt, ist er 10 Minuten gesperrt.
+  if p_status = 'angenommen' then
+    update tische set offen_seit = coalesce(offen_seit, now()), gesperrt_bis = null
+      where id = (select tisch_id from bestellungen where id = p_id);
+  elsif p_status = 'abgelehnt' then
+    update tische set gesperrt_bis = now() + interval '10 minutes'
+      where id = (select tisch_id from bestellungen where id = p_id) and offen_seit is null;
+  end if;
   perform _aufraeumen();
   return jsonb_build_object('ok', true);
 end $$;
@@ -356,7 +374,8 @@ begin
       where id = b.id;
   end loop;
   v_rest_da := exists (select 1 from bestellungen where tisch_id = p_tisch and bezahlt_at is null and status <> 'abgelehnt');
-  if not v_rest_da then update tische set zahlen_at = null where id = p_tisch; end if;
+  -- Alles bezahlt: Zahlwunsch erledigt, der Tisch schließt sich wieder
+  if not v_rest_da then update tische set zahlen_at = null, offen_seit = null where id = p_tisch; end if;
   perform _aufraeumen();
   return jsonb_build_object('ok', true, 'summe_cent', v_summe, 'rest', v_rest_da, 'bezahlt_at', now());
 exception when invalid_text_representation or numeric_value_out_of_range then
@@ -378,6 +397,7 @@ begin
     update bestellungen set positionen = v_pos, updated_at = now(),
         status = case when v_alle then 'serviert' else 'angenommen' end
       where id = b.id;
+    update tische set offen_seit = coalesce(offen_seit, now()), gesperrt_bis = null where id = b.tisch_id;
   end loop;
   perform _aufraeumen();
   return jsonb_build_object('ok', true);

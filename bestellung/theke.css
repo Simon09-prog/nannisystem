@@ -141,3 +141,8 @@ h1, h2, p { margin: 0; }
 .knoepfe button.halb { background: var(--sage); color: var(--espresso); }
 .karte-kopf { flex-wrap: wrap; }
 .karte-kopf b { white-space: nowrap; overflow-wrap: normal; }
+
+/* Erste Bestellung eines geschlossenen Tisches */
+.karte .frage { margin: 10px 0 0; padding: 10px 14px; border-radius: 12px; background: var(--amber); color: #2b1e05; }
+.karte.neuer-tisch .knoepfe button.zweit { flex: 1 1 auto; }
+.karte.neuer-tisch .knoepfe button { flex: 1 1 100%; }
