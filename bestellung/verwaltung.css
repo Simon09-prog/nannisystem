@@ -75,3 +75,9 @@ dialog.schluessel h2 { margin-bottom: 12px; }
 .artikel-dialog input:not([type="checkbox"]), .artikel-dialog textarea { display: block; width: 100%; margin-top: 4px; padding: 10px 12px; min-height: 46px; border: 1px solid var(--line); border-radius: 12px; background: #fff; color: var(--espresso); font: inherit; resize: vertical; }
 .artikel-dialog label.haken { display: flex; align-items: center; gap: 10px; min-height: 46px; color: var(--espresso); font-size: 1rem; }
 .artikel-dialog label.haken input { width: 22px; height: 22px; accent-color: var(--sage-deep); }
+
+/* Chef-Bereich: Merken-Haken und Abmelden-Leiste */
+.merken { display: flex; align-items: center; gap: 10px; min-height: 44px; margin-top: 10px; color: var(--muted); font-size: .95rem; }
+.merken input { width: 22px; height: 22px; min-height: 0; padding: 0; accent-color: var(--sage-deep); }
+.band.gruen { background: var(--sage-soft); color: var(--sage-deep); display: flex; justify-content: center; align-items: center; gap: 12px; flex-wrap: wrap; }
+.band.gruen button { min-height: 36px; padding: 0 14px; border: 0; border-radius: 999px; background: var(--sage-deep); color: #fff; font-weight: 500; }

@@ -24,11 +24,10 @@
   };
 
   let KEY = merken.lesen('nanni:theke-key');     // Theken-Schlüssel dieses Geräts
-  // Das Chef-Passwort wird bewusst NICHT auf dem Gerät gespeichert. Es gilt nur, solange diese Seite offen ist,
-  // und muss bei jedem Öffnen der Einstellungen neu eingegeben werden. So kommt an einem Theken-Gerät niemand
-  // in den Chef-Bereich, nur weil die Chefin dort einmal angemeldet war.
-  let CHEF = null;
-  merken.schreiben('nanni:chef-key', null);   // früher gespeicherte Chef-Zugänge von diesem Gerät entfernen
+  // Das Chef-Passwort merkt sich das Gerät nur, wenn beim Entsperren der Haken "Auf diesem Gerät merken" gesetzt ist.
+  // Auf einem Theken-Gerät lässt man ihn weg oder tippt danach auf "Chef-Bereich auf diesem Gerät abmelden".
+  let CHEF = merken.lesen('nanni:chef-key');
+  const chefMerken = () => merken.schreiben('nanni:chef-key', $('chef-merken').checked ? CHEF : null);
   const sperren = text => { $('sperre').textContent = text; $('sperre').hidden = false; $('felder').hidden = true; };
   if (!window.NANNI) return sperren('Die Verbindung zur Datenbank ist noch nicht eingerichtet.');
 
@@ -57,6 +56,7 @@
   function chefZu(text) {
     chefBereiche().forEach(f => { f.hidden = true; });
     $('chef-erst').hidden = true;
+    $('chef-leiste').hidden = true;
     $('chef-tor').hidden = false;
     $('chef-fehler').textContent = text || ''; $('chef-fehler').hidden = !text;
   }
@@ -79,19 +79,22 @@
     try {
       const antwort = await NANNI.rpc('theke_einstellungen', { p_key: probe });
       if (!antwort.ok) return chefZu('Dieser Schlüssel passt nicht zum Chef-Bereich.');
-      CHEF = probe;
+      CHEF = probe; chefMerken();
       $('chef-key').value = '';
       // Kannte das Gerät vorher gar keinen Schlüssel, wird jetzt auch "Ausverkauft" sichtbar
       if ($('feld-ausverkauft').hidden) { $('feld-ausverkauft').hidden = false; artikelLaden(); }
       chefAuf();
     } catch { chefZu('Keine Verbindung. Versucht es gleich noch einmal.'); }
   });
-  $('chef-abmelden').addEventListener('click', () => { CHEF = null; chefZu(); });
+  const abmelden = () => { CHEF = null; merken.schreiben('nanni:chef-key', null); chefZu(); };
+  $('chef-abmelden').addEventListener('click', abmelden);
+  $('chef-abmelden-oben').addEventListener('click', abmelden);
 
   async function chefAuf() {
     const e = await chef('theke_einstellungen');
     if (!e.ok) return;
     $('chef-tor').hidden = true;
+    $('chef-leiste').hidden = false;
     chefBereiche().forEach(f => { f.hidden = false; });
     einstellungenZeigen(e);
     tagLaden(); tischeLaden(); karteLaden();
@@ -307,14 +310,14 @@
     const alt = CHEF || KEY;
     const r = await chef('schluessel_neu', { p_art: art });
     if (!r.ok) return hinweis('Das hat nicht geklappt.');
-    if (art === 'chef') CHEF = r.schluessel;
+    if (art === 'chef') { CHEF = r.schluessel; if (merken.lesen('nanni:chef-key')) merken.schreiben('nanni:chef-key', CHEF); }
     // Hat dieses Gerät den alten Theken-Schlüssel benutzt, merkt es sich gleich den neuen
     if (art === 'theke' && KEY) { KEY = r.schluessel; merken.schreiben('nanni:theke-key', KEY); }
     if (art === 'theke' && !KEY && alt === CHEF) { /* Chef-Gerät ohne Theken-Schlüssel: nichts zu merken */ }
     $('schluessel-titel').textContent = art === 'chef' ? 'Neuer Chef-Schlüssel' : 'Neuer Theken-Schlüssel';
     $('schluessel-wert').textContent = r.schluessel;
     $('schluessel-text').textContent = art === 'chef'
-      ? 'Schreibt ihn jetzt ab oder speichert ihn sicher. Er wird nicht noch einmal angezeigt und muss bei jedem Öffnen der Einstellungen eingegeben werden.'
+      ? 'Schreibt ihn jetzt ab oder speichert ihn sicher. Er wird nicht noch einmal angezeigt.'
       : 'Schreibt ihn jetzt ab. Er wird nicht noch einmal angezeigt. Der alte Theken-Schlüssel gilt ab sofort nicht mehr; an jedem Theken-Gerät muss der neue einmal eingegeben werden.';
     $('schluessel-kopieren').textContent = 'Kopieren';
     $('schluessel-neu').showModal();   // als Fenster in der Mitte, damit man ihn nicht übersieht
@@ -326,7 +329,7 @@
     if (neu.length < 8) return hinweis('Das Passwort braucht mindestens 8 Zeichen.');
     const r = await chef('schluessel_setzen', { p_art: art, p_neu: neu });
     if (!r.ok) return hinweis(r.fehler === 'kurz' ? 'Das Passwort braucht mindestens 8 Zeichen.' : 'Das hat nicht geklappt.');
-    if (art === 'chef') CHEF = neu;
+    if (art === 'chef') { CHEF = neu; if (merken.lesen('nanni:chef-key')) merken.schreiben('nanni:chef-key', CHEF); }
     if (art === 'theke' && KEY) { KEY = neu; merken.schreiben('nanni:theke-key', KEY); }
     feld.value = '';
     hinweis(art === 'chef' ? 'Chef-Passwort festgelegt.' : 'Theken-Passwort festgelegt. An jedem Theken-Gerät muss es einmal neu eingegeben werden.');
