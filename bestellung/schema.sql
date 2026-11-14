@@ -5,6 +5,9 @@
 -- ob der Aufrufer das darf (Tisch-Code beim Gast, Theken-Schlüssel beim Personal).
 --
 -- Die Datei kann beliebig oft ausgeführt werden; vorhandene Daten bleiben erhalten.
+--
+-- Wichtig bei Supabase: Aufrufe von der Website dürfen kein UPDATE oder DELETE ohne WHERE ausführen
+-- (Schutz "safeupdate"). Darum steht auch bei Tabellen mit nur einer Zeile immer ein WHERE dabei.
 
 -- ---------------------------------------------------------------- Tabellen
 
@@ -202,7 +205,7 @@ create or replace function theke_schluessel_neu() returns text
 language plpgsql security definer set search_path = public as $$
 declare v_key text := _code(40);
 begin
-  update einstellungen set theke_hash = sha256(convert_to(v_key, 'UTF8'));
+  update einstellungen set theke_hash = sha256(convert_to(v_key, 'UTF8')) where id = 1;
   return v_key;
 end $$;
 
@@ -516,7 +519,7 @@ language plpgsql security definer set search_path = public as $$
 begin
   if not _chef_ok(p_key) then return jsonb_build_object('ok', false, 'fehler', 'key'); end if;
   if jsonb_typeof(p_zeiten) is distinct from 'array' then return jsonb_build_object('ok', false, 'fehler', 'ungueltig'); end if;
-  delete from oeffnungszeiten;
+  delete from oeffnungszeiten where true;
   insert into oeffnungszeiten (tag, von, bis)
     select (z->>'tag')::int, (z->>'von')::time, (z->>'bis')::time from jsonb_array_elements(p_zeiten) z;
   delete from ruhetage where datum < _heute() - 7;
@@ -541,7 +544,7 @@ declare v_url text := btrim(coalesce(p_url, ''));
 begin
   if not _chef_ok(p_key) then return jsonb_build_object('ok', false, 'fehler', 'key'); end if;
   if v_url <> '' and (v_url !~ '^https://[^\s"<>]+$' or length(v_url) > 300) then return jsonb_build_object('ok', false, 'fehler', 'ungueltig'); end if;
-  update einstellungen set bewertung_url = v_url;
+  update einstellungen set bewertung_url = v_url where id = 1;
   return jsonb_build_object('ok', true);
 end $$;
 
@@ -637,8 +640,8 @@ language plpgsql security definer set search_path = public as $$
 declare v_neu text := _code(40);
 begin
   if not _chef_ok(p_key) then return jsonb_build_object('ok', false, 'fehler', 'key'); end if;
-  if p_art = 'chef' then update einstellungen set chef_hash = sha256(convert_to(v_neu, 'UTF8'));
-  elsif p_art = 'theke' then update einstellungen set theke_hash = sha256(convert_to(v_neu, 'UTF8'));
+  if p_art = 'chef' then update einstellungen set chef_hash = sha256(convert_to(v_neu, 'UTF8')) where id = 1;
+  elsif p_art = 'theke' then update einstellungen set theke_hash = sha256(convert_to(v_neu, 'UTF8')) where id = 1;
   else return jsonb_build_object('ok', false, 'fehler', 'ungueltig');
   end if;
   return jsonb_build_object('ok', true, 'schluessel', v_neu);
@@ -651,8 +654,8 @@ declare v_neu text := btrim(coalesce(p_neu, ''));
 begin
   if not _chef_ok(p_key) then return jsonb_build_object('ok', false, 'fehler', 'key'); end if;
   if length(v_neu) not between 8 and 100 then return jsonb_build_object('ok', false, 'fehler', 'kurz'); end if;
-  if p_art = 'chef' then update einstellungen set chef_hash = sha256(convert_to(v_neu, 'UTF8'));
-  elsif p_art = 'theke' then update einstellungen set theke_hash = sha256(convert_to(v_neu, 'UTF8'));
+  if p_art = 'chef' then update einstellungen set chef_hash = sha256(convert_to(v_neu, 'UTF8')) where id = 1;
+  elsif p_art = 'theke' then update einstellungen set theke_hash = sha256(convert_to(v_neu, 'UTF8')) where id = 1;
   else return jsonb_build_object('ok', false, 'fehler', 'ungueltig');
   end if;
   return jsonb_build_object('ok', true);
@@ -666,14 +669,14 @@ create or replace function chef_passwort_setzen(p_neu text) returns text
 language plpgsql security definer set search_path = public as $$
 begin
   if length(btrim(coalesce(p_neu, ''))) < 8 then return 'Zu kurz: mindestens 8 Zeichen.'; end if;
-  update einstellungen set chef_hash = sha256(convert_to(btrim(p_neu), 'UTF8'));
+  update einstellungen set chef_hash = sha256(convert_to(btrim(p_neu), 'UTF8')) where id = 1;
   return 'Chef-Passwort gesetzt.';
 end $$;
 create or replace function theke_passwort_setzen(p_neu text) returns text
 language plpgsql security definer set search_path = public as $$
 begin
   if length(btrim(coalesce(p_neu, ''))) < 8 then return 'Zu kurz: mindestens 8 Zeichen.'; end if;
-  update einstellungen set theke_hash = sha256(convert_to(btrim(p_neu), 'UTF8'));
+  update einstellungen set theke_hash = sha256(convert_to(btrim(p_neu), 'UTF8')) where id = 1;
   return 'Theken-Passwort gesetzt.';
 end $$;
 
@@ -699,7 +702,7 @@ create or replace function theke_aktiv(p_key text, p_aktiv boolean) returns json
 language plpgsql security definer set search_path = public as $$
 begin
   if not _theke_ok(p_key) then return jsonb_build_object('ok', false, 'fehler', 'key'); end if;
-  update einstellungen set aktiv = coalesce(p_aktiv, true);
+  update einstellungen set aktiv = coalesce(p_aktiv, true) where id = 1;
   return jsonb_build_object('ok', true);
 end $$;
 
@@ -745,7 +748,7 @@ create or replace function theke_laden_code_neu(p_key text) returns jsonb
 language plpgsql security definer set search_path = public as $$
 begin
   if not _chef_ok(p_key) then return jsonb_build_object('ok', false, 'fehler', 'key'); end if;
-  update einstellungen set laden_code = _code(10);
+  update einstellungen set laden_code = _code(10) where id = 1;
   return jsonb_build_object('ok', true);
 end $$;
 
