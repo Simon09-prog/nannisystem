@@ -67,9 +67,9 @@
   // Der Gong wird hier im Browser als kleine Tondatei errechnet, es braucht keine mp3.
   // Er läuft über ein normales <audio>-Element: das klingt auf dem iPad auch dann,
   // wenn das Gerät auf "lautlos" steht (nur die Lautstärke muss aufgedreht sein).
-  function gongDatei() {
+  function tonDatei(noten) {
     const rate = 22050, laenge = 1.5, daten = new Int16Array(rate * laenge);
-    for (const [hz, ab] of [[880, 0], [1175, .18], [880, .7], [1175, .88]]) {
+    for (const [hz, ab] of noten) {
       for (let i = 0; i < rate * .6; i++) {
         const t = i / rate, ort = Math.floor(ab * rate) + i;
         if (ort >= daten.length) break;
@@ -84,10 +84,16 @@
     text(36, 'data'); kopf.setUint32(40, daten.byteLength, true);
     return URL.createObjectURL(new Blob([kopf, daten], { type: 'audio/wav' }));
   }
-  const ton = new Audio(gongDatei());
-  ton.preload = 'auto';
+  // Zwei verschiedene Töne, damit man sie auseinanderhalten kann:
+  // der helle Doppel-Gong für etwas Neues, ein einzelner tiefer Ton als Erinnerung an Wartendes
+  const ton = new Audio(tonDatei([[880, 0], [1175, .18], [880, .7], [1175, .88]]));
+  const erinnerTon = new Audio(tonDatei([[523, 0], [523, .35]]));
+  ton.preload = erinnerTon.preload = 'auto';
   // Browser erlauben Ton erst nach einem Tipp. Darum wird er beim Tipp auf "Starten" einmal freigeschaltet.
-  function tonAn() { ton.muted = true; ton.play().then(() => { ton.pause(); ton.currentTime = 0; ton.muted = false; }).catch(() => { ton.muted = false; }); }
+  function tonAn() {
+    for (const t of [ton, erinnerTon]) { t.muted = true; t.play().then(() => { t.pause(); t.currentTime = 0; t.muted = false; }).catch(() => { t.muted = false; }); }
+  }
+  function erinnern() { erinnerTon.muted = false; erinnerTon.currentTime = 0; erinnerTon.play().catch(() => { /* noch nicht freigeschaltet */ }); }
   function gong() { ton.muted = false; ton.currentTime = 0; ton.play().catch(() => { /* noch nicht freigeschaltet */ }); }
   async function wachBleiben() { try { await navigator.wakeLock?.request('screen'); } catch { /* nicht unterstützt */ } }
   document.addEventListener('visibilitychange', () => { if (!document.hidden && KEY && $('tor').hidden) { wachBleiben(); abfragen(); } });
@@ -100,7 +106,8 @@
   const tischText = t => 'Tisch ' + t.tisch + (t.bereich ? ' ' + t.bereich : '');
   let uhrFehler = 0;            // Unterschied zwischen der Uhr dieses Geräts und der Datenbank
   const gesehen = new Set();    // IDs, für die schon gegongt wurde
-  let ersterAbruf = true, letzterGong = 0, fehlversuche = 0;
+  let ersterAbruf = true, letzteErinnerung = 0, fehlversuche = 0;
+  const WARTEN = 2 * 60e3;      // erst nach 2 Minuten ohne Annehmen wird erinnert, dann alle 2 Minuten
 
   const minuten = b => Math.max(0, Math.floor((Date.now() + uhrFehler - new Date(b.created_at)) / 60e3));
   const uhr = b => new Date(b.created_at).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' }) + ' Uhr';
@@ -111,8 +118,15 @@
     const neue = bestellungen.filter(b => b.status === 'neu');
     const frisch = neue.filter(b => !gesehen.has(b.id));
     bestellungen.forEach(b => gesehen.add(b.id));
-    // Gong bei jeder neuen Bestellung, danach alle 20 Sekunden, solange etwas unangenommen wartet
-    if ((frisch.length && !ersterAbruf) || (neue.length && Date.now() - letzterGong > 20e3)) { gong(); letzterGong = Date.now(); }
+    // Gong nur, wenn wirklich eine neue Bestellung dazugekommen ist
+    if (frisch.length && !ersterAbruf) { gong(); letzteErinnerung = Date.now(); }
+    // Erinnerung (anderer, tiefer Ton): nur wenn eine Bestellung schon länger als 2 Minuten unangenommen wartet
+    const wartend = neue.filter(b => Date.now() + uhrFehler - new Date(b.created_at) > WARTEN);
+    if (ersterAbruf) letzteErinnerung = Date.now();   // beim Öffnen der Theke klingt nur der Start-Gong
+    if (wartend.length && !frisch.length && Date.now() - letzteErinnerung > WARTEN) {
+      erinnern(); letzteErinnerung = Date.now();
+      melden('Wartet noch', wartend.map(tischText).join(', '));
+    }
     if (frisch.length && !ersterAbruf) melden(frisch.length > 1 ? frisch.length + ' neue Bestellungen' : 'Neue Bestellung',
       frisch.map(b => 'Tisch ' + b.tisch + (b.bereich ? ' ' + b.bereich : '')).join(', '));
     // Zahlwünsche: Gong und Einblendung, sobald ein Tisch neu dazukommt
