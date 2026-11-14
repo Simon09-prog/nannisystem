@@ -1,0 +1,20 @@
+# Netlify: reine statische Seite, es wird nichts gebaut.
+[build]
+  publish = "."
+  command = ""
+
+# Skripte und Styles der Bestellfunktion nur kurz zwischenspeichern, damit Änderungen schnell ankommen
+[[headers]]
+  for = "/bestellung/*"
+  [headers.values]
+    Cache-Control = "public, max-age=300"
+
+# Theke und Einstellungen gehören nicht in Suchmaschinen
+[[headers]]
+  for = "/theke.html"
+  [headers.values]
+    X-Robots-Tag = "noindex, nofollow"
+[[headers]]
+  for = "/verwaltung.html"
+  [headers.values]
+    X-Robots-Tag = "noindex, nofollow"
