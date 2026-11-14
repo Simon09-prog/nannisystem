@@ -10,8 +10,8 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; media-src 'self' blob:; font-src 'self'; connect-src 'self' https://kpgabhgmstwbackbilcu.supabase.co; object-src 'none'; base-uri 'none'; form-action 'self'">
 <meta name="theme-color" content="#33261f">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ccircle cx='32' cy='32' r='32' fill='%239aae93'/%3E%3Ctext x='32' y='41' font-family='sans-serif' font-size='26' text-anchor='middle' fill='%23fbf7f1'%3EN%3C/text%3E%3C/svg%3E">
-<link rel="stylesheet" href="bestellung/theke.css?v=10">
-<link rel="stylesheet" href="bestellung/verwaltung.css?v=10">
+<link rel="stylesheet" href="bestellung/theke.css?v=11">
+<link rel="stylesheet" href="bestellung/verwaltung.css?v=11">
 </head>
 <body class="verwaltung">
 
@@ -24,20 +24,30 @@
 
 <main class="felder" id="felder" hidden>
 
-  <section class="feld breit">
+  <section class="feld breit" id="chef-tor" hidden>
+    <header><h2>Chef-Bereich</h2></header>
+    <p class="erklaer">Umsatz, Öffnungszeiten, Tische und Schlüssel sind nur mit dem Chef-Schlüssel zugänglich.</p>
+    <form class="zeile" id="chef-form">
+      <input type="password" id="chef-key" placeholder="Chef-Schlüssel" aria-label="Chef-Schlüssel" autocomplete="off" autocapitalize="off" spellcheck="false">
+      <button type="submit">Entsperren</button>
+    </form>
+    <p class="band rot rund" id="chef-fehler" role="alert" hidden></p>
+  </section>
+
+  <section class="feld breit chef" hidden>
     <header><h2>Heute</h2><button type="button" class="klein-knopf" id="tag-neu">Aktualisieren</button></header>
     <div class="kacheln" id="tag-kacheln"></div>
     <h3>Am meisten bestellt</h3>
     <ol class="top" id="tag-top"></ol>
   </section>
 
-  <section class="feld breit">
+  <section class="feld breit" id="feld-ausverkauft">
     <header><h2>Ausverkauft</h2><input type="search" id="artikel-suche" placeholder="Artikel suchen" aria-label="Artikel suchen"></header>
     <p class="erklaer">Tippt einen Artikel an, um ihn für heute zu sperren. Morgen ist er automatisch wieder bestellbar.</p>
     <div id="artikel"></div>
   </section>
 
-  <section class="feld">
+  <section class="feld chef" hidden>
     <header><h2>Öffnungszeiten</h2></header>
     <p class="erklaer">Nur in diesen Zeiten können Gäste am Handy bestellen.</p>
     <form id="zeiten-form">
@@ -46,7 +56,7 @@
     </form>
   </section>
 
-  <section class="feld">
+  <section class="feld chef" hidden>
     <header><h2>Geschlossene Tage</h2></header>
     <p class="erklaer">Feiertage oder Betriebsferien. An diesen Tagen ist das Bestellen gesperrt.</p>
     <form class="zeile" id="ruhetag-form">
@@ -56,7 +66,7 @@
     <ul class="liste" id="ruhetage"></ul>
   </section>
 
-  <section class="feld">
+  <section class="feld chef" hidden>
     <header><h2>Tische</h2></header>
     <p class="erklaer">Gäste können nur Nummern eintragen, die hier stehen.</p>
     <form class="zeile" id="tisch-form">
@@ -68,7 +78,7 @@
     <div id="tische"></div>
   </section>
 
-  <section class="feld">
+  <section class="feld chef" hidden>
     <header><h2>Bewertungslink</h2></header>
     <p class="erklaer">Nach dem Bezahlen sehen Gäste einen Knopf „Bewertet uns“. Tragt hier den Link zu eurer Bewertungsseite ein, zum Beispiel von Google. Leer lassen, wenn ihr keinen Knopf wollt.</p>
     <form class="zeile" id="bewertung-form">
@@ -77,9 +87,24 @@
     </form>
   </section>
 
+  <section class="feld breit chef" hidden>
+    <header><h2>Zugänge</h2><button type="button" class="klein-knopf" id="chef-abmelden" hidden>Chef-Bereich auf diesem Gerät sperren</button></header>
+    <p class="erklaer" id="zugang-stand"></p>
+    <div class="zeile">
+      <button type="button" id="neu-chef">Chef-Schlüssel neu erzeugen</button>
+      <button type="button" id="neu-theke">Theken-Schlüssel neu erzeugen</button>
+    </div>
+    <div class="schluessel" id="schluessel-neu" hidden>
+      <h3 id="schluessel-titel"></h3>
+      <code id="schluessel-wert"></code>
+      <p class="erklaer" id="schluessel-text"></p>
+      <button type="button" class="klein-knopf" id="schluessel-weg">Ich habe ihn gespeichert</button>
+    </div>
+  </section>
+
 </main>
 
-<script src="bestellung/config.js?v=10"></script>
-<script src="bestellung/verwaltung.js?v=10"></script>
+<script src="bestellung/config.js?v=11"></script>
+<script src="bestellung/verwaltung.js?v=11"></script>
 </body>
 </html>

@@ -266,6 +266,40 @@ test('Öffnungszeiten: außerhalb wird nicht bestellt', async () => {
   await s.db.exec('update einstellungen set immer_offen = true');
 });
 
+test('Bremse bei übermäßiger Nutzung', async () => {
+  const b = async () => (await s.db.query("select _bremse('test', 2, 10) as ok")).rows[0].ok;
+  assert.equal(await b(), true); assert.equal(await b(), true); assert.equal(await b(), false);
+  // nach einem erledigten Ruf ist der Tisch eine Minute still
+  const t2 = (await rpc('theke_tische', { p_key: K })).tische[1];
+  await s.db.exec('update tische set ruf_erledigt_at = null');   // ein früherer Test hat an diesem Tisch schon gerufen
+  assert.equal((await rpc('kellner_rufen', { p_code: t2.code })).ok, true);
+  await rpc('theke_ruf_erledigt', { p_key: K, p_tisch: t2.id });
+  assert.equal((await rpc('kellner_rufen', { p_code: t2.code })).fehler, 'bremse');
+  await s.db.exec('update tische set ruf_erledigt_at = null; delete from zugriffe');
+});
+
+test('Getrennte Zugänge: Theken-Schlüssel reicht nicht für die Einstellungen', async () => {
+  assert.equal((await rpc('theke_einstellungen', { p_key: K })).chef_gesetzt, false);
+  assert.equal((await rpc('schluessel_neu', { p_key: 'falsch', p_art: 'chef' })).fehler, 'key');
+  const chef = (await rpc('schluessel_neu', { p_key: K, p_art: 'chef' })).schluessel;
+  assert.equal(chef.length, 40);
+  // Theke darf weiter Bestellungen sehen und Artikel sperren, aber keine Einstellungen mehr
+  assert.equal((await rpc('theke_bestellungen', { p_key: K })).ok, true);
+  assert.equal((await rpc('theke_artikel', { p_key: K })).ok, true);
+  for (const fn of ['theke_einstellungen', 'theke_tag', 'theke_tische', 'theke_laden_code_neu'])
+    assert.equal((await rpc(fn, { p_key: K })).fehler, 'key', fn);
+  assert.equal((await rpc('schluessel_neu', { p_key: K, p_art: 'theke' })).fehler, 'key');
+  // Chefin darf alles, auch die Theke
+  assert.equal((await rpc('theke_einstellungen', { p_key: chef })).chef_gesetzt, true);
+  assert.equal((await rpc('theke_bestellungen', { p_key: chef })).ok, true);
+  // Theken-Schlüssel wechseln: der alte gilt nicht mehr
+  const neu = (await rpc('schluessel_neu', { p_key: chef, p_art: 'theke' })).schluessel;
+  assert.equal((await rpc('theke_bestellungen', { p_key: K })).fehler, 'key');
+  assert.equal((await rpc('theke_bestellungen', { p_key: neu })).ok, true);
+  // für die übrigen Tests: alter Theken-Schlüssel wieder gültig, kein Chef-Schlüssel
+  await s.db.query("update einstellungen set chef_hash = null, theke_hash = sha256(convert_to($1, 'UTF8'))", [K]);
+});
+
 test('Pausieren und Codes erneuern', async () => {
   await rpc('theke_aktiv', { p_key: K, p_aktiv: false });
   assert.equal((await rpc('tisch_info', { p_code: tischCode })).aktiv, false);

@@ -218,6 +218,7 @@ window.NANNI_EN = {
   'Das hat nicht geklappt. Kommt bitte kurz zu uns an die Theke.': 'That didn’t work. Please come to the counter for a moment.',
   'Keine Verbindung. Versucht es noch einmal oder kommt zu uns an die Theke.': 'No connection. Please try again or come to the counter.',
   'Von diesem Tisch kann gerade nicht am Handy bestellt werden. Kommt bitte kurz zu uns an die Theke.': 'Ordering by phone is not available for this table right now. Please come to the counter for a moment.',
+  'Gerade kommen sehr viele Bestellungen. Wartet bitte einen Moment oder bestellt direkt an der Theke.': 'We are receiving a lot of orders right now. Please wait a moment or order at the counter.',
   'Bestellung ändern': 'Change order',
   'Wir bereiten das schon zu. Tippt auf „Kellner rufen“, wenn ihr noch etwas ändern möchtet.': 'We’re already preparing this. Tap “Call a waiter” if you’d like to change something.',
   'Keine Verbindung. Noch einmal versuchen': 'No connection. Try again',

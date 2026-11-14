@@ -49,3 +49,9 @@ body.verwaltung { display: block; }
   .felder { grid-template-columns: minmax(0, 1fr); padding-inline: 12px; }
   .top { columns: 1; }
 }
+
+/* Chef-Bereich und Schlüssel */
+.band.rund { margin-top: 12px; border-radius: 12px; }
+.schluessel { margin-top: 16px; padding: 16px; border: 2px solid var(--amber); border-radius: 16px; background: #fff; }
+.schluessel h3 { margin: 0 0 8px; }
+.schluessel code { display: block; padding: 12px 14px; border-radius: 10px; background: var(--cream); font: 600 1.05rem/1.4 ui-monospace, Consolas, monospace; overflow-wrap: anywhere; user-select: all; }

@@ -57,7 +57,7 @@
     .catch(() => hinweis('Bestellen am Handy ist gerade nicht erreichbar. Bestellt bitte direkt bei uns.'));
 
   function starten(info) {
-    document.head.append(h('link', { rel: 'stylesheet', href: 'bestellung/gast.css?v=10' }));
+    document.head.append(h('link', { rel: 'stylesheet', href: 'bestellung/gast.css?v=11' }));
     // Bestellt werden kann nur, wenn die Theke es nicht pausiert hat und das Café geöffnet ist
     const bestellbar = info.aktiv && info.offen !== false;
 
@@ -253,6 +253,7 @@
             pausiert: 'Bestellen am Handy ist gerade pausiert. Bestellt bitte an der Theke.',
             geschlossen: 'Wir haben gerade geschlossen. Bestellen am Handy geht während unserer Öffnungszeiten.',
             gesperrt: 'Von diesem Tisch kann gerade nicht am Handy bestellt werden. Kommt bitte kurz zu uns an die Theke.',
+            bremse: 'Gerade kommen sehr viele Bestellungen. Wartet bitte einen Moment oder bestellt direkt an der Theke.',
             zuviele: 'Von eurem Tisch warten schon Bestellungen bei uns. Einen Moment, wir sind gleich so weit.',
             tisch: 'Dieser Tisch-Link gilt nicht mehr. Scannt den Code am Tisch bitte noch einmal.',
             artikel: 'Unsere Karte hat sich gerade geändert. Ladet die Seite bitte neu und bestellt noch einmal.'
