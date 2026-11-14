@@ -5,6 +5,8 @@ import { readFileSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 
 const HIER = fileURLToPath(new URL('.', import.meta.url));
+// Diese Kategorien sind Getränke. Die Theke kann sie getrennt vom Essen servieren.
+const GETRAENKE = new Set(['kaffee', 'tee-matcha', 'favourites', 'limo', 'fresh', 'soft']);
 const cent = p => Math.round(parseFloat(p.replace(',', '.')) * 100);
 
 export function karte() {
@@ -12,7 +14,7 @@ export function karte() {
   const artikel = [], extras = [];
   for (const k of menu.kategorien) {
     const gruppen = k.groups ? k.groups.map(g => g.items) : [k.items];
-    for (const it of gruppen.flat()) artikel.push({ name: it.name, kategorie: k.id, preis_cent: cent(it.price) });
+    for (const it of gruppen.flat()) artikel.push({ name: it.name, kategorie: k.id, preis_cent: cent(it.price), getraenk: GETRAENKE.has(k.id) });
     const bloecke = (k.extras || []).flatMap(b => b.items).concat(k.addons ? menu.addons || [] : []);
     for (const [name, preis] of bloecke) {
       // Steht ein Extra doppelt in einer Kategorie (Omelett-Extras und Add-ons), muss der Preis gleich sein
@@ -32,9 +34,9 @@ export function karteSql() {
     'begin;',
     'delete from extras;',
     `delete from artikel where name not in (${artikel.map(a => q(a.name)).join(', ')});`,
-    'insert into artikel (name, kategorie, preis_cent) values',
-    artikel.map(a => `  (${q(a.name)}, ${q(a.kategorie)}, ${a.preis_cent})`).join(',\n'),
-    '  on conflict (name) do update set kategorie = excluded.kategorie, preis_cent = excluded.preis_cent;',
+    'insert into artikel (name, kategorie, preis_cent, getraenk) values',
+    artikel.map(a => `  (${q(a.name)}, ${q(a.kategorie)}, ${a.preis_cent}, ${a.getraenk})`).join(',\n'),
+    '  on conflict (name) do update set kategorie = excluded.kategorie, preis_cent = excluded.preis_cent, getraenk = excluded.getraenk;',
     ...(extras.length ? ['insert into extras (kategorie, name, preis_cent) values',
       extras.map(x => `  (${q(x.kategorie)}, ${q(x.name)}, ${x.preis_cent})`).join(',\n') + ';'] : []),
     'commit;', ''

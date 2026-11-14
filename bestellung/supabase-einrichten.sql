@@ -77,6 +77,9 @@ alter table einstellungen add column if not exists bewertung_url text not null d
 create table if not exists ruhetage (datum date primary key);                     -- einzelne geschlossene Tage (Feiertag, Betriebsferien)
 alter table ruhetage enable row level security;
 
+-- Spätere Erweiterung "Getränke zuerst": Die Karte weiß, was ein Getränk ist, damit die Theke Getränke vor dem Essen servieren kann.
+alter table artikel add column if not exists getraenk boolean not null default false;
+
 -- Zeilenschutz an und keine einzige Regel: Direkter Zugriff auf die Tabellen ist damit für alle gesperrt.
 alter table einstellungen enable row level security;
 alter table tische        enable row level security;
@@ -213,12 +216,12 @@ begin
     if jsonb_array_length(v_extras) <> v_gewollt then return jsonb_build_object('ok', false, 'fehler', 'artikel'); end if;
 
     v_summe := v_summe + (a.preis_cent + v_extra_cent) * v_menge;
-    v_zeilen := v_zeilen || jsonb_build_object('name', a.name, 'menge', v_menge, 'preis_cent', a.preis_cent, 'notiz', v_notiz, 'extras', v_extras);
+    v_zeilen := v_zeilen || jsonb_build_object('name', a.name, 'menge', v_menge, 'preis_cent', a.preis_cent, 'notiz', v_notiz, 'extras', v_extras, 'getraenk', a.getraenk);
   end loop;
 
   -- Laufende Nummer des Tages; die Sperre verhindert doppelte Nummern bei gleichzeitigen Bestellungen
   perform pg_advisory_xact_lock(7726641);
-  select count(*) + 1 into v_nr from bestellungen
+  select coalesce(max(nr), 0) + 1 into v_nr from bestellungen
     where created_at >= date_trunc('day', now() at time zone 'Europe/Berlin') at time zone 'Europe/Berlin';
 
   insert into bestellungen (nr, tisch_id, tisch, bereich, summe_cent, positionen)
@@ -235,6 +238,16 @@ language sql stable security definer set search_path = public as $$
   select coalesce(jsonb_agg(jsonb_build_object('id', id, 'status', status, 'bezahlt', bezahlt_at is not null)), '[]'::jsonb)
   from bestellungen where id = any (p_ids[1:20])
 $$;
+
+-- Bestellung zurückziehen, um sie zu ändern. Geht nur, solange die Theke sie noch nicht angenommen hat.
+create or replace function bestellung_zurueckziehen(p_id uuid) returns jsonb
+language plpgsql security definer set search_path = public as $$
+begin
+  delete from bestellungen where id = p_id and status = 'neu';
+  if found then return jsonb_build_object('ok', true); end if;
+  if exists (select 1 from bestellungen where id = p_id) then return jsonb_build_object('ok', false, 'fehler', 'zu_spaet'); end if;
+  return jsonb_build_object('ok', false, 'fehler', 'weg');
+end $$;
 
 -- "Wir möchten zahlen": merkt am Tisch vor, dass die Gäste zahlen wollen. Die Theke sieht das sofort.
 create or replace function zahlen_wuenschen(p_code text, p_tisch bigint default null) returns jsonb
@@ -293,7 +306,12 @@ language plpgsql security definer set search_path = public as $$
 begin
   if not _theke_ok(p_key) then return jsonb_build_object('ok', false, 'fehler', 'key'); end if;
   if p_status not in ('neu', 'angenommen', 'serviert', 'abgelehnt') then return jsonb_build_object('ok', false, 'fehler', 'status'); end if;
-  update bestellungen set status = p_status, updated_at = now() where id = p_id;
+  -- Geht eine Bestellung zurück auf "neu" oder "in Arbeit", gilt auch nichts mehr als schon serviert
+  update bestellungen set status = p_status, updated_at = now(),
+      positionen = case when p_status in ('neu', 'angenommen')
+        then (select jsonb_agg(p - 'serviert' order by o) from jsonb_array_elements(positionen) with ordinality x(p, o))
+        else positionen end
+    where id = p_id;
   if not found then return jsonb_build_object('ok', false); end if;
   perform _aufraeumen();
   return jsonb_build_object('ok', true);
@@ -343,6 +361,26 @@ begin
   return jsonb_build_object('ok', true, 'summe_cent', v_summe, 'rest', v_rest_da, 'bezahlt_at', now());
 exception when invalid_text_representation or numeric_value_out_of_range then
   return jsonb_build_object('ok', false, 'fehler', 'ungueltig');
+end $$;
+
+-- Servieren, auch in zwei Schritten: erst nur die Getränke, später der Rest.
+-- Jede Position merkt sich in "serviert", ob sie schon am Tisch ist. Erst wenn alles serviert ist, gilt die Bestellung als erledigt.
+create or replace function theke_serviert(p_key text, p_ids uuid[], p_nur_getraenke boolean default false) returns jsonb
+language plpgsql security definer set search_path = public as $$
+declare b bestellungen; v_pos jsonb; v_alle boolean; v_nur boolean := coalesce(p_nur_getraenke, false);
+begin
+  if not _theke_ok(p_key) then return jsonb_build_object('ok', false, 'fehler', 'key'); end if;
+  for b in select * from bestellungen where id = any (p_ids[1:50]) and status in ('neu', 'angenommen') for update loop
+    select jsonb_agg(case when not v_nur or coalesce((p->>'getraenk')::boolean, false) then p || '{"serviert": true}'::jsonb else p end order by o),
+           bool_and(not v_nur or coalesce((p->>'getraenk')::boolean, false) or coalesce((p->>'serviert')::boolean, false))
+      into v_pos, v_alle
+      from jsonb_array_elements(b.positionen) with ordinality x(p, o);
+    update bestellungen set positionen = v_pos, updated_at = now(),
+        status = case when v_alle then 'serviert' else 'angenommen' end
+      where id = b.id;
+  end loop;
+  perform _aufraeumen();
+  return jsonb_build_object('ok', true);
 end $$;
 
 create or replace function theke_ruf_erledigt(p_key text, p_tisch bigint) returns jsonb
@@ -497,8 +535,8 @@ begin
     revoke all on all tables in schema public from anon, authenticated;
     revoke execute on all functions in schema public from anon, authenticated;
     grant execute on function
-      tisch_info(text), bestellung_aufgeben(text, jsonb, bigint), bestellung_status(uuid[]), zahlen_wuenschen(text, bigint), kellner_rufen(text, bigint),
-      theke_bestellungen(text), theke_status(text, uuid, text), theke_bezahlt(text, bigint, jsonb), theke_ruf_erledigt(text, bigint), theke_aktiv(text, boolean),
+      tisch_info(text), bestellung_aufgeben(text, jsonb, bigint), bestellung_status(uuid[]), bestellung_zurueckziehen(uuid), zahlen_wuenschen(text, bigint), kellner_rufen(text, bigint),
+      theke_bestellungen(text), theke_status(text, uuid, text), theke_bezahlt(text, bigint, jsonb), theke_serviert(text, uuid[], boolean), theke_ruf_erledigt(text, bigint), theke_aktiv(text, boolean),
       theke_artikel(text), theke_ausverkauft(text, text, boolean), theke_einstellungen(text), theke_zeiten_setzen(text, jsonb),
       theke_ruhetag(text, date, boolean), theke_bewertung(text, text), theke_tag(text),
       theke_tische(text), theke_tisch_anlegen(text, text, text), theke_tisch_loeschen(text, bigint),
@@ -511,85 +549,85 @@ end $$;
 begin;
 delete from extras;
 delete from artikel where name not in ('Café Crema', 'Americano', 'Espresso', 'Espresso Doppio', 'Espresso Macchiato', 'Cappuccino', 'Flat White', 'Milchkaffee', 'Latte Macchiato', 'Kaffee & Kuchen Deal', 'Earl Grey', 'Jasmin-Grüntee', 'Früchtetee Waldbeere', 'Frischer Minztee', 'Frischer Ingwer-Zitronentee', 'Hot Matcha', 'Iced Matcha', 'Strawberry Iced Matcha', 'Mango Iced Matcha', 'Iced Americano', 'Iced Latte', 'Iced Vanilla Latte', 'Iced Chai Latte', 'Chai Latte', 'Pumpkin Spice Latte', 'Hot Chocolate', 'Hot White Chocolate', 'Pfirsich-Limo', 'Zitronen-Minze-Holunder-Limo', 'Himbeer-Minze-Holunder-Limo', 'Maracuja-Limette-Limo', 'Frisch gepresster Orangensaft', 'Beet & Juice', 'Berry Banana', 'Green Glow', 'Mango Sunshine', 'fritz-kola 0,2 l', 'fritz-kola super zero 0,2 l', 'fritz-limo Apfel-Kirsch-Holunder 0,2 l', 'fritz-spritz Bio-Rhabarberschorle 0,2 l', 'Zurück zu den Quellen, still 0,33 l', 'Zurück zu den Quellen, sprudelnd 0,33 l', 'Rührei Genuss', 'Omelett-Bar', 'Nannis Brunch-Favourite', 'Classic Açaí Bowl', 'Lotus Crunch Açaí Bowl', 'Apfel Crunch Porridge', 'Nanni Egg Drop', 'Halloumi-Honey Drop', 'Pastrami New York Style Drop', 'Burrata Italia', 'Kleine Süßkartoffel-Pommes + Dip', 'Süßkartoffel-Pancakes mit Halloumi', 'Süßkartoffel-Pancakes mit Tofu & Avocado', 'Süßkartoffel-Pancakes Vegan Greek', 'Süßkartoffel-Pancakes Apple Lotus', 'Avocado & Poached Egg', 'Smoky Tofu Bagel', 'Sucuk Egg Bagel', 'Egg Bagel', 'Salmon Bagel', 'Golden Goat Club Sandwich', 'Chicken Karaage Burger', 'Avocado-Halloumi Burger', 'Süßkartoffel-Pommes mit Dip', 'Classic French Toast', 'Classy Berry Pancakes', 'Bueno Berry Pancakes', 'Nannis Vegan Banana Bread', 'Classic Vegan', 'Banana Choc', 'Lotus Crunch', 'White Bueno Crunch', 'Heiße Liebe', 'Kirschtraum', 'Oreo Berry Banana');
-insert into artikel (name, kategorie, preis_cent) values
-  ('Café Crema', 'kaffee', 320),
-  ('Americano', 'kaffee', 350),
-  ('Espresso', 'kaffee', 290),
-  ('Espresso Doppio', 'kaffee', 440),
-  ('Espresso Macchiato', 'kaffee', 330),
-  ('Cappuccino', 'kaffee', 390),
-  ('Flat White', 'kaffee', 530),
-  ('Milchkaffee', 'kaffee', 450),
-  ('Latte Macchiato', 'kaffee', 450),
-  ('Kaffee & Kuchen Deal', 'kaffee', 600),
-  ('Earl Grey', 'tee-matcha', 350),
-  ('Jasmin-Grüntee', 'tee-matcha', 350),
-  ('Früchtetee Waldbeere', 'tee-matcha', 350),
-  ('Frischer Minztee', 'tee-matcha', 420),
-  ('Frischer Ingwer-Zitronentee', 'tee-matcha', 420),
-  ('Hot Matcha', 'tee-matcha', 590),
-  ('Iced Matcha', 'tee-matcha', 590),
-  ('Strawberry Iced Matcha', 'tee-matcha', 650),
-  ('Mango Iced Matcha', 'tee-matcha', 650),
-  ('Iced Americano', 'favourites', 390),
-  ('Iced Latte', 'favourites', 450),
-  ('Iced Vanilla Latte', 'favourites', 520),
-  ('Iced Chai Latte', 'favourites', 490),
-  ('Chai Latte', 'favourites', 490),
-  ('Pumpkin Spice Latte', 'favourites', 550),
-  ('Hot Chocolate', 'favourites', 450),
-  ('Hot White Chocolate', 'favourites', 450),
-  ('Pfirsich-Limo', 'limo', 490),
-  ('Zitronen-Minze-Holunder-Limo', 'limo', 650),
-  ('Himbeer-Minze-Holunder-Limo', 'limo', 650),
-  ('Maracuja-Limette-Limo', 'limo', 650),
-  ('Frisch gepresster Orangensaft', 'fresh', 590),
-  ('Beet & Juice', 'fresh', 650),
-  ('Berry Banana', 'fresh', 690),
-  ('Green Glow', 'fresh', 690),
-  ('Mango Sunshine', 'fresh', 690),
-  ('fritz-kola 0,2 l', 'soft', 330),
-  ('fritz-kola super zero 0,2 l', 'soft', 330),
-  ('fritz-limo Apfel-Kirsch-Holunder 0,2 l', 'soft', 330),
-  ('fritz-spritz Bio-Rhabarberschorle 0,2 l', 'soft', 330),
-  ('Zurück zu den Quellen, still 0,33 l', 'soft', 350),
-  ('Zurück zu den Quellen, sprudelnd 0,33 l', 'soft', 350),
-  ('Rührei Genuss', 'fruehstueck', 790),
-  ('Omelett-Bar', 'fruehstueck', 890),
-  ('Nannis Brunch-Favourite', 'fruehstueck', 1490),
-  ('Classic Açaí Bowl', 'bowls', 1190),
-  ('Lotus Crunch Açaí Bowl', 'bowls', 1290),
-  ('Apfel Crunch Porridge', 'bowls', 990),
-  ('Nanni Egg Drop', 'shokupan', 1090),
-  ('Halloumi-Honey Drop', 'shokupan', 1290),
-  ('Pastrami New York Style Drop', 'shokupan', 1390),
-  ('Burrata Italia', 'shokupan', 1390),
-  ('Kleine Süßkartoffel-Pommes + Dip', 'shokupan', 390),
-  ('Süßkartoffel-Pancakes mit Halloumi', 'pancakes', 1290),
-  ('Süßkartoffel-Pancakes mit Tofu & Avocado', 'pancakes', 1290),
-  ('Süßkartoffel-Pancakes Vegan Greek', 'pancakes', 1290),
-  ('Süßkartoffel-Pancakes Apple Lotus', 'pancakes', 1190),
-  ('Avocado & Poached Egg', 'bagels', 990),
-  ('Smoky Tofu Bagel', 'bagels', 990),
-  ('Sucuk Egg Bagel', 'bagels', 990),
-  ('Egg Bagel', 'bagels', 890),
-  ('Salmon Bagel', 'bagels', 1090),
-  ('Golden Goat Club Sandwich', 'lunch', 1490),
-  ('Chicken Karaage Burger', 'lunch', 1550),
-  ('Avocado-Halloumi Burger', 'lunch', 1550),
-  ('Süßkartoffel-Pommes mit Dip', 'lunch', 690),
-  ('Classic French Toast', 'sweets', 1250),
-  ('Classy Berry Pancakes', 'sweets', 1190),
-  ('Bueno Berry Pancakes', 'sweets', 1190),
-  ('Nannis Vegan Banana Bread', 'sweets', 990),
-  ('Classic Vegan', 'waffeln', 390),
-  ('Banana Choc', 'waffeln', 690),
-  ('Lotus Crunch', 'waffeln', 750),
-  ('White Bueno Crunch', 'waffeln', 790),
-  ('Heiße Liebe', 'waffeln', 590),
-  ('Kirschtraum', 'waffeln', 690),
-  ('Oreo Berry Banana', 'waffeln', 750)
-  on conflict (name) do update set kategorie = excluded.kategorie, preis_cent = excluded.preis_cent;
+insert into artikel (name, kategorie, preis_cent, getraenk) values
+  ('Café Crema', 'kaffee', 320, true),
+  ('Americano', 'kaffee', 350, true),
+  ('Espresso', 'kaffee', 290, true),
+  ('Espresso Doppio', 'kaffee', 440, true),
+  ('Espresso Macchiato', 'kaffee', 330, true),
+  ('Cappuccino', 'kaffee', 390, true),
+  ('Flat White', 'kaffee', 530, true),
+  ('Milchkaffee', 'kaffee', 450, true),
+  ('Latte Macchiato', 'kaffee', 450, true),
+  ('Kaffee & Kuchen Deal', 'kaffee', 600, true),
+  ('Earl Grey', 'tee-matcha', 350, true),
+  ('Jasmin-Grüntee', 'tee-matcha', 350, true),
+  ('Früchtetee Waldbeere', 'tee-matcha', 350, true),
+  ('Frischer Minztee', 'tee-matcha', 420, true),
+  ('Frischer Ingwer-Zitronentee', 'tee-matcha', 420, true),
+  ('Hot Matcha', 'tee-matcha', 590, true),
+  ('Iced Matcha', 'tee-matcha', 590, true),
+  ('Strawberry Iced Matcha', 'tee-matcha', 650, true),
+  ('Mango Iced Matcha', 'tee-matcha', 650, true),
+  ('Iced Americano', 'favourites', 390, true),
+  ('Iced Latte', 'favourites', 450, true),
+  ('Iced Vanilla Latte', 'favourites', 520, true),
+  ('Iced Chai Latte', 'favourites', 490, true),
+  ('Chai Latte', 'favourites', 490, true),
+  ('Pumpkin Spice Latte', 'favourites', 550, true),
+  ('Hot Chocolate', 'favourites', 450, true),
+  ('Hot White Chocolate', 'favourites', 450, true),
+  ('Pfirsich-Limo', 'limo', 490, true),
+  ('Zitronen-Minze-Holunder-Limo', 'limo', 650, true),
+  ('Himbeer-Minze-Holunder-Limo', 'limo', 650, true),
+  ('Maracuja-Limette-Limo', 'limo', 650, true),
+  ('Frisch gepresster Orangensaft', 'fresh', 590, true),
+  ('Beet & Juice', 'fresh', 650, true),
+  ('Berry Banana', 'fresh', 690, true),
+  ('Green Glow', 'fresh', 690, true),
+  ('Mango Sunshine', 'fresh', 690, true),
+  ('fritz-kola 0,2 l', 'soft', 330, true),
+  ('fritz-kola super zero 0,2 l', 'soft', 330, true),
+  ('fritz-limo Apfel-Kirsch-Holunder 0,2 l', 'soft', 330, true),
+  ('fritz-spritz Bio-Rhabarberschorle 0,2 l', 'soft', 330, true),
+  ('Zurück zu den Quellen, still 0,33 l', 'soft', 350, true),
+  ('Zurück zu den Quellen, sprudelnd 0,33 l', 'soft', 350, true),
+  ('Rührei Genuss', 'fruehstueck', 790, false),
+  ('Omelett-Bar', 'fruehstueck', 890, false),
+  ('Nannis Brunch-Favourite', 'fruehstueck', 1490, false),
+  ('Classic Açaí Bowl', 'bowls', 1190, false),
+  ('Lotus Crunch Açaí Bowl', 'bowls', 1290, false),
+  ('Apfel Crunch Porridge', 'bowls', 990, false),
+  ('Nanni Egg Drop', 'shokupan', 1090, false),
+  ('Halloumi-Honey Drop', 'shokupan', 1290, false),
+  ('Pastrami New York Style Drop', 'shokupan', 1390, false),
+  ('Burrata Italia', 'shokupan', 1390, false),
+  ('Kleine Süßkartoffel-Pommes + Dip', 'shokupan', 390, false),
+  ('Süßkartoffel-Pancakes mit Halloumi', 'pancakes', 1290, false),
+  ('Süßkartoffel-Pancakes mit Tofu & Avocado', 'pancakes', 1290, false),
+  ('Süßkartoffel-Pancakes Vegan Greek', 'pancakes', 1290, false),
+  ('Süßkartoffel-Pancakes Apple Lotus', 'pancakes', 1190, false),
+  ('Avocado & Poached Egg', 'bagels', 990, false),
+  ('Smoky Tofu Bagel', 'bagels', 990, false),
+  ('Sucuk Egg Bagel', 'bagels', 990, false),
+  ('Egg Bagel', 'bagels', 890, false),
+  ('Salmon Bagel', 'bagels', 1090, false),
+  ('Golden Goat Club Sandwich', 'lunch', 1490, false),
+  ('Chicken Karaage Burger', 'lunch', 1550, false),
+  ('Avocado-Halloumi Burger', 'lunch', 1550, false),
+  ('Süßkartoffel-Pommes mit Dip', 'lunch', 690, false),
+  ('Classic French Toast', 'sweets', 1250, false),
+  ('Classy Berry Pancakes', 'sweets', 1190, false),
+  ('Bueno Berry Pancakes', 'sweets', 1190, false),
+  ('Nannis Vegan Banana Bread', 'sweets', 990, false),
+  ('Classic Vegan', 'waffeln', 390, false),
+  ('Banana Choc', 'waffeln', 690, false),
+  ('Lotus Crunch', 'waffeln', 750, false),
+  ('White Bueno Crunch', 'waffeln', 790, false),
+  ('Heiße Liebe', 'waffeln', 590, false),
+  ('Kirschtraum', 'waffeln', 690, false),
+  ('Oreo Berry Banana', 'waffeln', 750, false)
+  on conflict (name) do update set kategorie = excluded.kategorie, preis_cent = excluded.preis_cent, getraenk = excluded.getraenk;
 insert into extras (kategorie, name, preis_cent) values
   ('kaffee', 'Extra Espresso Shot', 150),
   ('kaffee', 'Sahne', 80),

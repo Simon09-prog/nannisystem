@@ -77,6 +77,9 @@ alter table einstellungen add column if not exists bewertung_url text not null d
 create table if not exists ruhetage (datum date primary key);                     -- einzelne geschlossene Tage (Feiertag, Betriebsferien)
 alter table ruhetage enable row level security;
 
+-- Spätere Erweiterung "Getränke zuerst": Die Karte weiß, was ein Getränk ist, damit die Theke Getränke vor dem Essen servieren kann.
+alter table artikel add column if not exists getraenk boolean not null default false;
+
 -- Zeilenschutz an und keine einzige Regel: Direkter Zugriff auf die Tabellen ist damit für alle gesperrt.
 alter table einstellungen enable row level security;
 alter table tische        enable row level security;
@@ -213,12 +216,12 @@ begin
     if jsonb_array_length(v_extras) <> v_gewollt then return jsonb_build_object('ok', false, 'fehler', 'artikel'); end if;
 
     v_summe := v_summe + (a.preis_cent + v_extra_cent) * v_menge;
-    v_zeilen := v_zeilen || jsonb_build_object('name', a.name, 'menge', v_menge, 'preis_cent', a.preis_cent, 'notiz', v_notiz, 'extras', v_extras);
+    v_zeilen := v_zeilen || jsonb_build_object('name', a.name, 'menge', v_menge, 'preis_cent', a.preis_cent, 'notiz', v_notiz, 'extras', v_extras, 'getraenk', a.getraenk);
   end loop;
 
   -- Laufende Nummer des Tages; die Sperre verhindert doppelte Nummern bei gleichzeitigen Bestellungen
   perform pg_advisory_xact_lock(7726641);
-  select count(*) + 1 into v_nr from bestellungen
+  select coalesce(max(nr), 0) + 1 into v_nr from bestellungen
     where created_at >= date_trunc('day', now() at time zone 'Europe/Berlin') at time zone 'Europe/Berlin';
 
   insert into bestellungen (nr, tisch_id, tisch, bereich, summe_cent, positionen)
@@ -235,6 +238,16 @@ language sql stable security definer set search_path = public as $$
   select coalesce(jsonb_agg(jsonb_build_object('id', id, 'status', status, 'bezahlt', bezahlt_at is not null)), '[]'::jsonb)
   from bestellungen where id = any (p_ids[1:20])
 $$;
+
+-- Bestellung zurückziehen, um sie zu ändern. Geht nur, solange die Theke sie noch nicht angenommen hat.
+create or replace function bestellung_zurueckziehen(p_id uuid) returns jsonb
+language plpgsql security definer set search_path = public as $$
+begin
+  delete from bestellungen where id = p_id and status = 'neu';
+  if found then return jsonb_build_object('ok', true); end if;
+  if exists (select 1 from bestellungen where id = p_id) then return jsonb_build_object('ok', false, 'fehler', 'zu_spaet'); end if;
+  return jsonb_build_object('ok', false, 'fehler', 'weg');
+end $$;
 
 -- "Wir möchten zahlen": merkt am Tisch vor, dass die Gäste zahlen wollen. Die Theke sieht das sofort.
 create or replace function zahlen_wuenschen(p_code text, p_tisch bigint default null) returns jsonb
@@ -293,7 +306,12 @@ language plpgsql security definer set search_path = public as $$
 begin
   if not _theke_ok(p_key) then return jsonb_build_object('ok', false, 'fehler', 'key'); end if;
   if p_status not in ('neu', 'angenommen', 'serviert', 'abgelehnt') then return jsonb_build_object('ok', false, 'fehler', 'status'); end if;
-  update bestellungen set status = p_status, updated_at = now() where id = p_id;
+  -- Geht eine Bestellung zurück auf "neu" oder "in Arbeit", gilt auch nichts mehr als schon serviert
+  update bestellungen set status = p_status, updated_at = now(),
+      positionen = case when p_status in ('neu', 'angenommen')
+        then (select jsonb_agg(p - 'serviert' order by o) from jsonb_array_elements(positionen) with ordinality x(p, o))
+        else positionen end
+    where id = p_id;
   if not found then return jsonb_build_object('ok', false); end if;
   perform _aufraeumen();
   return jsonb_build_object('ok', true);
@@ -343,6 +361,26 @@ begin
   return jsonb_build_object('ok', true, 'summe_cent', v_summe, 'rest', v_rest_da, 'bezahlt_at', now());
 exception when invalid_text_representation or numeric_value_out_of_range then
   return jsonb_build_object('ok', false, 'fehler', 'ungueltig');
+end $$;
+
+-- Servieren, auch in zwei Schritten: erst nur die Getränke, später der Rest.
+-- Jede Position merkt sich in "serviert", ob sie schon am Tisch ist. Erst wenn alles serviert ist, gilt die Bestellung als erledigt.
+create or replace function theke_serviert(p_key text, p_ids uuid[], p_nur_getraenke boolean default false) returns jsonb
+language plpgsql security definer set search_path = public as $$
+declare b bestellungen; v_pos jsonb; v_alle boolean; v_nur boolean := coalesce(p_nur_getraenke, false);
+begin
+  if not _theke_ok(p_key) then return jsonb_build_object('ok', false, 'fehler', 'key'); end if;
+  for b in select * from bestellungen where id = any (p_ids[1:50]) and status in ('neu', 'angenommen') for update loop
+    select jsonb_agg(case when not v_nur or coalesce((p->>'getraenk')::boolean, false) then p || '{"serviert": true}'::jsonb else p end order by o),
+           bool_and(not v_nur or coalesce((p->>'getraenk')::boolean, false) or coalesce((p->>'serviert')::boolean, false))
+      into v_pos, v_alle
+      from jsonb_array_elements(b.positionen) with ordinality x(p, o);
+    update bestellungen set positionen = v_pos, updated_at = now(),
+        status = case when v_alle then 'serviert' else 'angenommen' end
+      where id = b.id;
+  end loop;
+  perform _aufraeumen();
+  return jsonb_build_object('ok', true);
 end $$;
 
 create or replace function theke_ruf_erledigt(p_key text, p_tisch bigint) returns jsonb
@@ -497,8 +535,8 @@ begin
     revoke all on all tables in schema public from anon, authenticated;
     revoke execute on all functions in schema public from anon, authenticated;
     grant execute on function
-      tisch_info(text), bestellung_aufgeben(text, jsonb, bigint), bestellung_status(uuid[]), zahlen_wuenschen(text, bigint), kellner_rufen(text, bigint),
-      theke_bestellungen(text), theke_status(text, uuid, text), theke_bezahlt(text, bigint, jsonb), theke_ruf_erledigt(text, bigint), theke_aktiv(text, boolean),
+      tisch_info(text), bestellung_aufgeben(text, jsonb, bigint), bestellung_status(uuid[]), bestellung_zurueckziehen(uuid), zahlen_wuenschen(text, bigint), kellner_rufen(text, bigint),
+      theke_bestellungen(text), theke_status(text, uuid, text), theke_bezahlt(text, bigint, jsonb), theke_serviert(text, uuid[], boolean), theke_ruf_erledigt(text, bigint), theke_aktiv(text, boolean),
       theke_artikel(text), theke_ausverkauft(text, text, boolean), theke_einstellungen(text), theke_zeiten_setzen(text, jsonb),
       theke_ruhetag(text, date, boolean), theke_bewertung(text, text), theke_tag(text),
       theke_tische(text), theke_tisch_anlegen(text, text, text), theke_tisch_loeschen(text, bigint),

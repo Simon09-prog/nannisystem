@@ -128,7 +128,7 @@
       melden('Wartet noch', wartend.map(tischText).join(', '));
     }
     if (frisch.length && !ersterAbruf) melden(frisch.length > 1 ? frisch.length + ' neue Bestellungen' : 'Neue Bestellung',
-      frisch.map(b => 'Tisch ' + b.tisch + (b.bereich ? ' ' + b.bereich : '')).join(', '));
+      [...new Set(frisch.map(tischText))].join(', '));
     // Zahlwünsche: Gong und Einblendung, sobald ein Tisch neu dazukommt
     const zahlNeu = zahlen.filter(z => !zahlenGesehen.has(z.tisch_id));
     for (const id of [...zahlenGesehen]) if (!zahlen.some(z => z.tisch_id === id)) zahlenGesehen.delete(id);
@@ -187,10 +187,10 @@
   $('ton-test').addEventListener('click', gong);
 
   // Ablehnen braucht zwei Tipps: der Knopf fragt erst nach, statt ein Fenster zu öffnen
-  function ablehnKnopf(b) {
+  function ablehnKnopf(liste) {
     let sicher = false, zurueck = null;
     const knopf = h('button', { type: 'button', class: 'zweit', onclick: () => {
-      if (sicher) return statusSetzen(b, 'abgelehnt');
+      if (sicher) return [].concat(liste).forEach(b => statusSetzen(b, 'abgelehnt'));
       sicher = true; knopf.textContent = 'Wirklich ablehnen?'; knopf.classList.add('warn');
       zurueck = setTimeout(() => { sicher = false; knopf.textContent = 'Ablehnen'; knopf.classList.remove('warn'); }, 4000);
     } }, 'Ablehnen');
@@ -217,6 +217,62 @@
           p.extras.length > 0 && h('span', { class: 'extra' }, '+ ' + p.extras.map(x => x.name).join(', ')),
           p.notiz && h('span', { class: 'wunsch' }, p.notiz))))),
       h('div', { class: 'fuss' }, h('span', {}, 'Nr. ' + b.nr + ' · ' + uhr(b)), h('span', {}, euro(b.summe_cent))),
+      h('div', { class: 'knoepfe' }, knoepfe));
+  }
+
+  // ------------------------------------------------------------ Eine Karte pro Tisch
+  // Bestellen mehrere Handys am selben Tisch, kommt das an der Theke als EINE Karte an.
+  function gruppen(liste) {
+    const g = new Map();
+    for (const b of liste) {
+      const tisch = b.tisch_id ?? b.tisch + '|' + b.bereich;
+      if (!g.has(tisch)) g.set(tisch, []);
+      g.get(tisch).push(b);
+    }
+    return [...g.values()];
+  }
+  const posten = p => h('li', { class: p.serviert && 'da' },
+    h('span', { class: 'menge' }, p.menge + ' ×'),
+    h('span', { class: 'name' }, p.name,
+      p.extras.length > 0 && h('span', { class: 'extra' }, '+ ' + p.extras.map(x => x.name).join(', ')),
+      p.notiz && h('span', { class: 'wunsch' }, p.notiz)),
+    p.serviert && h('span', { class: 'haken' }, 'serviert'));
+
+  // Servieren: alles oder erst einmal nur die Getränke
+  async function servieren(gruppe, nurGetraenke) {
+    for (const b of gruppe) {
+      b.positionen.forEach(p => { if (!nurGetraenke || p.getraenk) p.serviert = true; });
+      if (b.positionen.every(p => p.serviert)) b.status = 'serviert';
+      b.updated_at = new Date(Date.now() + uhrFehler).toISOString();
+    }
+    zeichnen();
+    try { await NANNI.rpc('theke_serviert', { p_key: KEY, p_ids: gruppe.map(b => b.id), p_nur_getraenke: !!nurGetraenke }); } catch { netz(false); }
+    abfragen();
+  }
+
+  function tischKarte(gruppe) {
+    const erste = gruppe[0], neu = erste.status === 'neu', m = minuten(erste);
+    const alle = gruppe.flatMap(b => b.positionen);
+    const offen = alle.filter(p => !p.serviert);
+    const getraenke = alle.filter(p => p.getraenk), essen = alle.filter(p => !p.getraenk);
+    const beides = getraenke.length > 0 && essen.length > 0;
+    const knoepfe = neu
+      ? [h('button', { type: 'button', onclick: () => gruppe.forEach(b => statusSetzen(b, 'angenommen')) }, 'Annehmen'), ablehnKnopf(gruppe)]
+      : [offen.some(p => p.getraenk) && offen.some(p => !p.getraenk) && h('button', { type: 'button', class: 'halb', onclick: () => servieren(gruppe, true) }, 'Getränke serviert'),
+         h('button', { type: 'button', onclick: () => servieren(gruppe, false) }, offen.length < alle.length ? 'Rest serviert' : 'Alles serviert'),
+         h('button', { type: 'button', class: 'zweit', onclick: () => gruppe.forEach(b => statusSetzen(b, 'neu')) }, 'Zurück')];
+    return h('article', { class: 'karte' + (neu && m >= 3 ? ' spaet' : ''), 'data-stand': erste.status },
+      h('div', { class: 'karte-kopf' },
+        h('b', {}, 'Tisch ' + erste.tisch),
+        h('span', { class: 'ort' }, erste.bereich && h('span', { class: /drau/i.test(erste.bereich) && 'aussen' }, erste.bereich)),
+        h('time', {}, m < 1 ? 'gerade eben' : 'vor ' + m + ' Min')),
+      beides
+        ? [h('h3', { class: 'art' }, 'Getränke'), h('ul', { class: 'posten' }, getraenke.map(posten)),
+           h('h3', { class: 'art' }, 'Essen'), h('ul', { class: 'posten' }, essen.map(posten))]
+        : h('ul', { class: 'posten' }, alle.map(posten)),
+      h('div', { class: 'fuss' },
+        h('span', {}, (gruppe.length > 1 ? gruppe.length + ' Bestellungen · ' : '') + 'Nr. ' + gruppe.map(b => b.nr).join(', ') + ' · ' + uhr(erste)),
+        h('span', {}, euro(gruppe.reduce((s, b) => s + b.summe_cent, 0)))),
       h('div', { class: 'knoepfe' }, knoepfe));
   }
 
@@ -322,7 +378,9 @@
       const s = $(id);
       s.classList.toggle('voll', liste.length > 0);
       s.querySelector('header span').textContent = liste.length;
-      s.querySelector('.karten').replaceChildren(...(liste.length ? liste.map(karte) : [h('p', { class: 'leer' }, leer)]));
+      // Neu und In Arbeit: eine Karte pro Tisch. Erledigt: jede Bestellung einzeln zum Nachsehen.
+      const karten = id === 'spalte-fertig' ? liste.map(karte) : gruppen(liste).map(tischKarte);
+      s.querySelector('.karten').replaceChildren(...(liste.length ? karten : [h('p', { class: 'leer' }, leer)]));
     }
     tischeZeichnen();
     const n = spalten['spalte-neu'][0].length;

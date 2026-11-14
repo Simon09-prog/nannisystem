@@ -57,7 +57,7 @@
     .catch(() => hinweis('Bestellen am Handy ist gerade nicht erreichbar. Bestellt bitte direkt bei uns.'));
 
   function starten(info) {
-    document.head.append(h('link', { rel: 'stylesheet', href: 'bestellung/gast.css?v=6' }));
+    document.head.append(h('link', { rel: 'stylesheet', href: 'bestellung/gast.css?v=8' }));
     // Bestellt werden kann nur, wenn die Theke es nicht pausiert hat und das Café geöffnet ist
     const bestellbar = info.aktiv && info.offen !== false;
 
@@ -259,7 +259,8 @@
         }
         // Summe und Nummer kommen von der Datenbank, nicht aus der eigenen Rechnung
         bestellungen.unshift({ id: antwort.id, nr: antwort.nr, zeit: Date.now(), status: 'neu', summe: antwort.summe_cent, tisch: tischName(tisch),
-          zeilen: korb.map(z => ({ menge: z.menge, name: z.name, zusatz: zusatz(z) })) });
+          zeilen: korb.map(z => ({ menge: z.menge, name: z.name, zusatz: zusatz(z) })),
+          korb: korb.map(z => ({ ...z })) });   // die Zeilen im Original, falls der Gast die Bestellung noch ändern will
         merken.schreiben('bestellungen', bestellungen);
         korb = []; korbSpeichern(); b.d.close();
         standBlatt(); standAbfragen();
@@ -306,8 +307,26 @@
         h('p', {}, stand(b)[1]),
         h('ul', {}, b.zeilen.map(z => h('li', {}, z.menge + ' × ' + z.name, z.zusatz && h('small', {}, ' · ' + z.zusatz)))),
         h('footer', {}, h('span', {}, b.tisch), h('span', {}, euro(b.summe))),
+        b.status === 'neu' && !b.bezahlt && b.korb && bestellbar && h('button', { class: 'nb-aendern', type: 'button', onclick: ev => aendern(b, ev.currentTarget) }, 'Bestellung ändern'),
         b.bezahlt && /^https:\/\//.test(info.bewertung_url || '') && h('a', { class: 'nb-bewerten', href: info.bewertung_url, target: '_blank', rel: 'noopener' }, 'Hat es euch gefallen? Bewertet uns'))));
     }
+    // Bestellung ändern: geht nur, solange die Theke sie noch nicht angenommen hat.
+    // Die Bestellung wird zurückgezogen und liegt wieder im Warenkorb, dort kann der Gast sie anpassen und neu abschicken.
+    async function aendern(b, knopf) {
+      knopf.disabled = true;
+      const zuSpaet = () => knopf.replaceWith(h('p', { class: 'nb-fehler' }, 'Wir bereiten das schon zu. Tippt auf „Kellner rufen“, wenn ihr noch etwas ändern möchtet.'));
+      try {
+        const antwort = await NANNI.rpc('bestellung_zurueckziehen', { p_id: b.id });
+        if (!antwort.ok && antwort.fehler === 'zu_spaet') { zuSpaet(); return standAbfragen(); }
+        if (antwort.ok) for (const z of b.korb) if (!ausverkauft.has(z.name)) korb.push(z);
+        bestellungen = bestellungen.filter(x => x !== b);
+        merken.schreiben('bestellungen', bestellungen);
+        korbSpeichern();
+        standListe?.closest('dialog')?.close();
+        if (korb.length) korbBlatt();
+      } catch { knopf.disabled = false; knopf.textContent = T('Keine Verbindung. Noch einmal versuchen'); }
+    }
+
     function standBlatt() {
       const b = blatt('Eure Bestellungen', 'Bezahlt wird wie gewohnt bei uns im Café.');
       standListe = b.inhalt; standZeichnen();

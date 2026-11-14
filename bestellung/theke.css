@@ -131,3 +131,13 @@ h1, h2, p { margin: 0; }
 .rechnung .teil button { width: 40px; height: 40px; border: 0; border-radius: 50%; background: none; font-size: 1.2rem; line-height: 1; }
 .rechnung .teil output { min-width: 1.4em; text-align: center; font-weight: 600; font-variant-numeric: tabular-nums; }
 .kopf a { min-height: 44px; display: inline-flex; align-items: center; }
+
+/* Eine Karte pro Tisch: Getränke und Essen getrennt, Serviertes ausgegraut */
+.karte .art { margin: 12px 0 0; font: 600 .7rem/1 var(--sans); letter-spacing: .18em; text-transform: uppercase; color: var(--muted); }
+.karte .art + .posten { margin-top: 4px; }
+.posten li.da .menge, .posten li.da .name { opacity: .4; text-decoration: line-through; }
+.posten .haken { flex: none; align-self: center; padding: 3px 8px; border-radius: 999px; background: var(--sage-soft); color: var(--sage-deep); font: 600 .66rem/1 var(--sans); letter-spacing: .08em; text-transform: uppercase; }
+.knoepfe { flex-wrap: wrap; }
+.knoepfe button.halb { background: var(--sage); color: var(--espresso); }
+.karte-kopf { flex-wrap: wrap; }
+.karte-kopf b { white-space: nowrap; overflow-wrap: normal; }
