@@ -10,7 +10,7 @@
     async rpc(funktion, werte) {
       const kopf = { 'content-type': 'application/json' };
       if (key) { kopf.apikey = key; kopf.authorization = 'Bearer ' + key; }
-      const antwort = await fetch(url + '/rest/v1/rpc/' + funktion, { method: 'POST', headers: kopf, body: JSON.stringify(werte || {}), cache: 'no-store' });
+      const antwort = await fetch(url + '/rest/v1/rpc/' + funktion, { method: 'POST', headers: kopf, body: JSON.stringify(werte || {}), cache: 'no-store', credentials: 'omit' });   // omit: es werden keine Cookies gesendet oder angenommen
       if (!antwort.ok) throw new Error(funktion + ' ' + antwort.status);
       return antwort.json();
     }

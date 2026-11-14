@@ -52,9 +52,9 @@ body.verwaltung { display: block; }
 
 /* Chef-Bereich und Schlüssel */
 .band.rund { margin-top: 12px; border-radius: 12px; }
-.schluessel { margin-top: 16px; padding: 16px; border: 2px solid var(--amber); border-radius: 16px; background: #fff; }
-.schluessel h3 { margin: 0 0 8px; }
-.schluessel code { display: block; padding: 12px 14px; border-radius: 10px; background: var(--cream); font: 600 1.05rem/1.4 ui-monospace, Consolas, monospace; overflow-wrap: anywhere; user-select: all; }
+.feld.erst { border: 2px solid var(--amber); }
+dialog.schluessel h2 { margin-bottom: 12px; }
+.schluessel code { display: block; padding: 14px 16px; border-radius: 10px; background: var(--cream); font: 600 1.05rem/1.4 ui-monospace, Consolas, monospace; overflow-wrap: anywhere; user-select: all; }
 
 /* Speisekarte pflegen */
 .feld select { min-height: 46px; padding: 0 14px; border: 1px solid var(--line); border-radius: 12px; background: #fff; font: inherit; color: inherit; max-width: 100%; }

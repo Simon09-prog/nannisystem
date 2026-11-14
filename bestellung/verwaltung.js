@@ -52,6 +52,7 @@
   const chefBereiche = () => document.querySelectorAll('.feld.chef');
   function chefZu(text) {
     chefBereiche().forEach(f => { f.hidden = true; });
+    $('chef-erst').hidden = true;
     $('chef-tor').hidden = false;
     $('chef-fehler').textContent = text || ''; $('chef-fehler').hidden = !text;
   }
@@ -76,6 +77,8 @@
       if (!antwort.ok) return chefZu('Dieser Schlüssel passt nicht zum Chef-Bereich.');
       CHEF = probe; merken.schreiben('nanni:chef-key', CHEF);
       $('chef-key').value = '';
+      // Kannte das Gerät vorher gar keinen Schlüssel, wird jetzt auch "Ausverkauft" sichtbar
+      if ($('feld-ausverkauft').hidden) { $('feld-ausverkauft').hidden = false; artikelLaden(); }
       chefAuf();
     } catch { chefZu('Keine Verbindung. Versucht es gleich noch einmal.'); }
   });
@@ -243,6 +246,7 @@
       ? 'Theke und Chef-Bereich haben getrennte Schlüssel.'
       : 'Im Moment öffnet der Theken-Schlüssel auch den Chef-Bereich. Erzeugt einen Chef-Schlüssel, um beides zu trennen.';
     $('chef-abmelden').hidden = !e.chef_gesetzt;
+    $('chef-erst').hidden = e.chef_gesetzt;   // großer Hinweis ganz oben, solange es noch keinen Chef-Schlüssel gibt
   }
   async function einstellungenLaden() { const e = await chef('theke_einstellungen'); if (e.ok) einstellungenZeigen(e); }
   $('zeiten-form').addEventListener('submit', async ev => {
@@ -308,13 +312,19 @@
     $('schluessel-text').textContent = art === 'chef'
       ? 'Schreibt ihn jetzt ab oder speichert ihn sicher. Er wird nicht noch einmal angezeigt. Dieses Gerät merkt ihn sich.'
       : 'Schreibt ihn jetzt ab. Er wird nicht noch einmal angezeigt. Der alte Theken-Schlüssel gilt ab sofort nicht mehr; an jedem Theken-Gerät muss der neue einmal eingegeben werden.';
-    $('schluessel-neu').hidden = false;
-    $('schluessel-neu').scrollIntoView({ block: 'center' });
+    $('schluessel-kopieren').textContent = 'Kopieren';
+    $('schluessel-neu').showModal();   // als Fenster in der Mitte, damit man ihn nicht übersieht
     einstellungenLaden();
   }
   zweimal($('neu-chef'), 'Wirklich neu erzeugen?', () => schluesselNeu('chef'));
   zweimal($('neu-theke'), 'Wirklich neu erzeugen?', () => schluesselNeu('theke'));
-  $('schluessel-weg').addEventListener('click', () => { $('schluessel-wert').textContent = ''; $('schluessel-neu').hidden = true; });
+  zweimal($('erst-chef'), 'Wirklich erzeugen?', () => schluesselNeu('chef'));
+  $('schluessel-weg').addEventListener('click', () => { $('schluessel-wert').textContent = ''; $('schluessel-neu').close(); });
+  $('schluessel-neu').addEventListener('cancel', ev => ev.preventDefault());   // nicht versehentlich wegdrücken
+  $('schluessel-kopieren').addEventListener('click', async () => {
+    try { await navigator.clipboard.writeText($('schluessel-wert').textContent); $('schluessel-kopieren').textContent = 'Kopiert'; }
+    catch { $('schluessel-kopieren').textContent = 'Bitte von Hand abschreiben'; }
+  });
 
   // ------------------------------------------------------------ Start
   $('felder').hidden = false;
