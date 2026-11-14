@@ -10,8 +10,8 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; media-src 'self' blob:; font-src 'self'; connect-src 'self' https://kpgabhgmstwbackbilcu.supabase.co; object-src 'none'; base-uri 'none'; form-action 'self'">
 <meta name="theme-color" content="#33261f">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ccircle cx='32' cy='32' r='32' fill='%239aae93'/%3E%3Ctext x='32' y='41' font-family='sans-serif' font-size='26' text-anchor='middle' fill='%23fbf7f1'%3EN%3C/text%3E%3C/svg%3E">
-<link rel="stylesheet" href="bestellung/theke.css?v=11">
-<link rel="stylesheet" href="bestellung/verwaltung.css?v=11">
+<link rel="stylesheet" href="bestellung/theke.css?v=12">
+<link rel="stylesheet" href="bestellung/verwaltung.css?v=12">
 </head>
 <body class="verwaltung">
 
@@ -45,6 +45,20 @@
     <header><h2>Ausverkauft</h2><input type="search" id="artikel-suche" placeholder="Artikel suchen" aria-label="Artikel suchen"></header>
     <p class="erklaer">Tippt einen Artikel an, um ihn für heute zu sperren. Morgen ist er automatisch wieder bestellbar.</p>
     <div id="artikel"></div>
+  </section>
+
+  <section class="feld breit chef" hidden>
+    <header><h2>Speisekarte</h2><select id="karte-kat" aria-label="Kategorie"></select></header>
+    <p class="erklaer">Tippt einen Artikel an, um Preis, Namen oder Beschreibung zu ändern oder ihn auszublenden. Änderungen stehen sofort auf der Karte.</p>
+    <ul class="liste karte-liste" id="karte-artikel"></ul>
+    <button type="button" id="karte-neu">Neuer Artikel in dieser Kategorie</button>
+    <h3>Extras dieser Kategorie</h3>
+    <ul class="liste" id="karte-extras"></ul>
+    <form class="zeile" id="extra-form">
+      <input id="extra-name" placeholder="Neues Extra, z. B. Hafermilch" aria-label="Name des Extras" maxlength="60" required>
+      <input id="extra-preis" placeholder="Preis, z. B. 0,50" aria-label="Preis des Extras" inputmode="decimal" required>
+      <button type="submit">Hinzufügen</button>
+    </form>
   </section>
 
   <section class="feld chef" hidden>
@@ -104,7 +118,25 @@
 
 </main>
 
-<script src="bestellung/config.js?v=11"></script>
-<script src="bestellung/verwaltung.js?v=11"></script>
+<dialog class="rechnung artikel-dialog" id="artikel-dialog">
+  <form id="artikel-form">
+    <h2 id="artikel-titel">Artikel</h2>
+    <label>Name<input id="f-name" maxlength="80" required></label>
+    <label>Preis in Euro<input id="f-preis" inputmode="decimal" placeholder="z. B. 3,90" required></label>
+    <label>Beschreibung<textarea id="f-beschreibung" rows="3" maxlength="400"></textarea></label>
+    <label>Name auf Englisch <small>(leer lassen für automatische Übersetzung)</small><input id="f-name-en" maxlength="80"></label>
+    <label>Beschreibung auf Englisch<textarea id="f-beschreibung-en" rows="2" maxlength="400"></textarea></label>
+    <label class="haken"><input type="checkbox" id="f-versteckt"><span>Auf der Karte ausblenden</span></label>
+    <p class="band rot rund" id="artikel-fehler" role="alert" hidden></p>
+    <div class="knoepfe">
+      <button type="submit">Speichern</button>
+      <button type="button" class="zweit" id="artikel-loeschen" hidden>Löschen</button>
+      <button type="button" class="zweit" id="artikel-zu">Abbrechen</button>
+    </div>
+  </form>
+</dialog>
+
+<script src="bestellung/config.js?v=12"></script>
+<script src="bestellung/verwaltung.js?v=12"></script>
 </body>
 </html>

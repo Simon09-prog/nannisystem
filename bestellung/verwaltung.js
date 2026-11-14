@@ -87,7 +87,7 @@
     $('chef-tor').hidden = true;
     chefBereiche().forEach(f => { f.hidden = false; });
     einstellungenZeigen(e);
-    tagLaden(); tischeLaden();
+    tagLaden(); tischeLaden(); karteLaden();
   }
 
   // ------------------------------------------------------------ Heute
@@ -104,10 +104,14 @@
   $('tag-neu').addEventListener('click', tagLaden);
 
   // ------------------------------------------------------------ Ausverkauft (Theken-Zugang)
-  let artikel = [], kategorien = {};
-  async function artikelLaden() {
-    // Die Namen der Kategorien stehen in der Karte (menu.json), die Datenbank kennt nur ihre Kürzel
+  let artikel = [];
+  const kategorien = {};
+  // Die Namen der Kategorien stehen in der Karte (menu.json), die Datenbank kennt nur ihre Kürzel
+  const kategorienGeladen = (async () => {
     try { for (const k of (await (await fetch('menu.json', { cache: 'no-store' })).json()).kategorien) kategorien[k.id] = k.name; } catch { /* dann eben die Kürzel */ }
+  })();
+  async function artikelLaden() {
+    await kategorienGeladen;
     const a = await ruf('theke_artikel');
     if (a.ok) { artikel = a.artikel; artikelZeichnen(); }
   }
@@ -123,9 +127,101 @@
           a.aus = !a.aus; artikelZeichnen();
           const r = await ruf('theke_ausverkauft', { p_name: a.name, p_aus: a.aus });
           if (!r.ok) { a.aus = !a.aus; artikelZeichnen(); }
-        } }, a.name, a.aus && h('em', {}, 'ausverkauft')))))) : [h('p', { class: 'leer' }, 'Kein Artikel gefunden.')]));
+        } }, a.titel || a.name, a.aus && h('em', {}, 'ausverkauft')))))) : [h('p', { class: 'leer' }, 'Kein Artikel gefunden.')]));
   }
   $('artikel-suche').addEventListener('input', artikelZeichnen);
+
+  // ------------------------------------------------------------ Speisekarte pflegen (Chef-Zugang)
+  let karte = { artikel: [], extras: [] };
+  let inArbeit = null;   // der Artikel, der gerade im Dialog bearbeitet wird (null = neuer Artikel)
+  const preisLesen = t => { const roh = String(t).replace('€', '').trim().replace(',', '.'); const z = Number(roh); return roh !== '' && isFinite(z) && z >= 0 ? Math.round(z * 100) : null; };
+  const preisText = cent => (cent / 100).toFixed(2).replace('.', ',');
+  const kat = () => $('karte-kat').value;
+
+  async function karteLaden() {
+    await kategorienGeladen;
+    const k = await chef('chef_karte');
+    if (!k.ok) return;
+    karte = k;
+    const vorher = kat();
+    const ids = [...new Set([...Object.keys(kategorien), ...karte.artikel.map(a => a.kategorie)])].filter(id => karte.artikel.some(a => a.kategorie === id));
+    $('karte-kat').replaceChildren(...ids.map(id => h('option', { value: id }, kategorien[id] || id)));
+    if (ids.includes(vorher)) $('karte-kat').value = vorher;
+    karteZeichnen();
+  }
+  function karteZeichnen() {
+    const liste = karte.artikel.filter(a => a.kategorie === kat());
+    $('karte-artikel').replaceChildren(...liste.map(a => h('li', { class: a.versteckt && 'aus' },
+      h('button', { type: 'button', onclick: () => artikelDialog(a) },
+        h('span', { class: 'name' }, a.titel || a.name, a.versteckt && h('span', { class: 'marke' }, 'ausgeblendet'), a.eigen && h('span', { class: 'marke neu' }, 'eigener Artikel')),
+        h('span', { class: 'preis' }, preisText(a.preis_cent) + ' €')))));
+    const extras = karte.extras.filter(x => x.kategorie === kat());
+    $('karte-extras').replaceChildren(...(extras.length ? extras.map(x => {
+      const feld = h('input', { value: preisText(x.preis_cent), inputmode: 'decimal', 'aria-label': 'Preis für ' + x.name });
+      return h('li', {}, h('span', { class: 'name' }, x.name), feld,
+        h('button', { type: 'button', class: 'klein-knopf', onclick: async () => {
+          const cent = preisLesen(feld.value);
+          if (cent == null) return hinweis('Bitte einen gültigen Preis eingeben, zum Beispiel 0,50.');
+          const r = await chef('chef_extra_speichern', { p_kategorie: x.kategorie, p_name: x.name, p_preis_cent: cent });
+          hinweis(r.ok ? 'Extra gespeichert.' : 'Das hat nicht geklappt.'); karteLaden();
+        } }, 'Speichern'),
+        zweimal(h('button', { type: 'button', class: 'klein-knopf' }, 'Löschen'), 'Wirklich?', async () => {
+          await chef('chef_extra_loeschen', { p_kategorie: x.kategorie, p_name: x.name }); karteLaden();
+        }));
+    }) : [h('li', { class: 'leer' }, 'Diese Kategorie hat keine Extras.')]));
+  }
+  $('karte-kat').addEventListener('change', karteZeichnen);
+  $('extra-form').addEventListener('submit', async ev => {
+    ev.preventDefault();
+    const cent = preisLesen($('extra-preis').value);
+    if (cent == null) return hinweis('Bitte einen gültigen Preis eingeben, zum Beispiel 0,50.');
+    const r = await chef('chef_extra_speichern', { p_kategorie: kat(), p_name: $('extra-name').value.trim(), p_preis_cent: cent });
+    if (r.ok) { $('extra-name').value = ''; $('extra-preis').value = ''; karteLaden(); } else hinweis('Das hat nicht geklappt.');
+  });
+
+  function artikelDialog(a) {
+    inArbeit = a;
+    $('artikel-titel').textContent = a ? 'Artikel ändern' : 'Neuer Artikel · ' + (kategorien[kat()] || kat());
+    $('f-name').value = a ? (a.titel || a.name) : '';
+    $('f-preis').value = a ? preisText(a.preis_cent) : '';
+    $('f-beschreibung').value = a ? a.beschreibung : '';
+    $('f-name-en').value = a ? a.name_en : '';
+    $('f-beschreibung-en').value = a ? a.beschreibung_en : '';
+    $('f-versteckt').checked = !!(a && a.versteckt);
+    $('artikel-loeschen').hidden = !(a && a.eigen);
+    $('artikel-fehler').hidden = true;
+    $('artikel-dialog').showModal();
+  }
+  $('karte-neu').addEventListener('click', () => artikelDialog(null));
+  $('artikel-zu').addEventListener('click', () => $('artikel-dialog').close());
+  $('artikel-dialog').addEventListener('click', ev => { if (ev.target === $('artikel-dialog')) $('artikel-dialog').close(); });
+  zweimal($('artikel-loeschen'), 'Wirklich löschen?', async () => {
+    await chef('chef_artikel_loeschen', { p_name: inArbeit.name });
+    $('artikel-dialog').close(); karteLaden(); artikelLaden();
+  });
+  $('artikel-form').addEventListener('submit', async ev => {
+    ev.preventDefault();
+    const zeigen = t => { $('artikel-fehler').textContent = t; $('artikel-fehler').hidden = false; };
+    const cent = preisLesen($('f-preis').value), name = $('f-name').value.trim();
+    if (cent == null) return zeigen('Bitte einen gültigen Preis eingeben, zum Beispiel 3,90.');
+    if (!name) return zeigen('Bitte einen Namen eingeben.');
+    const daten = { preis_cent: cent, beschreibung: $('f-beschreibung').value, name_en: $('f-name-en').value,
+      beschreibung_en: $('f-beschreibung-en').value, versteckt: $('f-versteckt').checked };
+    let r;
+    if (inArbeit) {
+      // Der ursprüngliche Name bleibt der feste Schlüssel des Artikels; ein geänderter Name wird als Anzeigename gespeichert
+      daten.titel = name === inArbeit.name ? '' : name;
+      r = await chef('chef_artikel_speichern', { p_name: inArbeit.name, p_daten: daten });
+    } else {
+      if (karte.artikel.some(a => a.name.toLowerCase() === name.toLowerCase())) return zeigen('Einen Artikel mit diesem Namen gibt es schon.');
+      daten.kategorie = kat();
+      r = await chef('chef_artikel_speichern', { p_name: name, p_daten: daten });
+    }
+    if (!r.ok) return zeigen('Das hat nicht geklappt. Prüft bitte die Eingaben.');
+    $('artikel-dialog').close();
+    hinweis(inArbeit ? 'Artikel gespeichert.' : 'Artikel angelegt.');
+    karteLaden(); artikelLaden();
+  });
 
   // ------------------------------------------------------------ Öffnungszeiten, Ruhetage, Bewertungslink
   const TAGE = ['Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag', 'Sonntag'];

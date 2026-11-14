@@ -52,12 +52,13 @@
     document.getElementById('status')?.after(h('p', { class: 'nb-hinweis', style: 'margin:14px auto 0;max-width:30em;padding:10px 16px;border-radius:14px;background:#fff3c4;color:#5b4700;font-size:.92rem' }, text));
   }
 
-  NANNI.rpc('tisch_info', { p_code: code })
-    .then(info => info && info.ok ? starten(info) : hinweis('Dieser Bestell-Link gilt nicht mehr. Scannt den Code am Tisch bitte neu oder bestellt direkt bei uns.'))
+  // Erst wenn die Karte ihren aktuellen Stand aus der Datenbank hat (karte-live.js), kommen die Plus-Knöpfe dazu
+  Promise.all([NANNI.rpc('tisch_info', { p_code: code }), window.NANNI_KARTE])
+    .then(([info]) => info && info.ok ? starten(info) : hinweis('Dieser Bestell-Link gilt nicht mehr. Scannt den Code am Tisch bitte neu oder bestellt direkt bei uns.'))
     .catch(() => hinweis('Bestellen am Handy ist gerade nicht erreichbar. Bestellt bitte direkt bei uns.'));
 
   function starten(info) {
-    document.head.append(h('link', { rel: 'stylesheet', href: 'bestellung/gast.css?v=11' }));
+    document.head.append(h('link', { rel: 'stylesheet', href: 'bestellung/gast.css?v=12' }));
     // Bestellt werden kann nur, wenn die Theke es nicht pausiert hat und das Café geöffnet ist
     const bestellbar = info.aktiv && info.offen !== false;
 

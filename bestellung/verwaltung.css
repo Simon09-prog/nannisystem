@@ -55,3 +55,23 @@ body.verwaltung { display: block; }
 .schluessel { margin-top: 16px; padding: 16px; border: 2px solid var(--amber); border-radius: 16px; background: #fff; }
 .schluessel h3 { margin: 0 0 8px; }
 .schluessel code { display: block; padding: 12px 14px; border-radius: 10px; background: var(--cream); font: 600 1.05rem/1.4 ui-monospace, Consolas, monospace; overflow-wrap: anywhere; user-select: all; }
+
+/* Speisekarte pflegen */
+.feld select { min-height: 46px; padding: 0 14px; border: 1px solid var(--line); border-radius: 12px; background: #fff; font: inherit; color: inherit; max-width: 100%; }
+.karte-liste li { padding: 0; }
+.feld .karte-liste button { flex: 1; display: flex; justify-content: space-between; align-items: center; gap: 12px; min-height: 50px; padding: 0 6px; border-radius: 10px; background: none; color: var(--espresso); font-weight: 400; text-align: left; }
+.karte-liste button:hover { background: var(--cream); }
+.karte-liste .preis { font-variant-numeric: tabular-nums; white-space: nowrap; color: var(--sage-deep); font-weight: 500; }
+.karte-liste .marke { margin-left: 8px; padding: 3px 8px; border-radius: 999px; background: var(--blush-soft); color: #7c3138; font: 600 .66rem/1 var(--sans); letter-spacing: .08em; text-transform: uppercase; }
+.karte-liste .marke.neu { background: var(--sage-soft); color: var(--sage-deep); }
+.karte-liste li.aus .name { opacity: .5; text-decoration: line-through; }
+#karte-neu { margin-top: 14px; }
+#karte-extras li { gap: 8px; flex-wrap: wrap; }
+#karte-extras .name { flex: 1 1 140px; }
+#karte-extras input { width: 6.5em; min-height: 40px; }
+.artikel-dialog h2 { margin-bottom: 6px; }
+.artikel-dialog label { display: block; margin-top: 12px; font-size: .9rem; color: var(--muted); }
+.artikel-dialog label small { font-size: .8rem; }
+.artikel-dialog input:not([type="checkbox"]), .artikel-dialog textarea { display: block; width: 100%; margin-top: 4px; padding: 10px 12px; min-height: 46px; border: 1px solid var(--line); border-radius: 12px; background: #fff; color: var(--espresso); font: inherit; resize: vertical; }
+.artikel-dialog label.haken { display: flex; align-items: center; gap: 10px; min-height: 46px; color: var(--espresso); font-size: 1rem; }
+.artikel-dialog label.haken input { width: 22px; height: 22px; accent-color: var(--sage-deep); }

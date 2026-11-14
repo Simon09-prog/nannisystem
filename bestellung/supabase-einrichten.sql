@@ -102,6 +102,16 @@ create table if not exists zugriffe (
 );
 alter table zugriffe enable row level security;
 
+-- Spätere Erweiterung "Karte pflegen": Die Chefin kann Preise, Namen und Beschreibungen ändern, Artikel ausblenden
+-- und neue anlegen. Ab jetzt ist die Datenbank die gültige Karte; die Website zeigt ihren Stand an.
+alter table artikel add column if not exists titel           text not null default '';   -- anderer Anzeigename (leer = name)
+alter table artikel add column if not exists beschreibung    text not null default '';
+alter table artikel add column if not exists name_en         text not null default '';   -- englischer Name (leer = automatische Übersetzung)
+alter table artikel add column if not exists beschreibung_en text not null default '';
+alter table artikel add column if not exists versteckt       boolean not null default false;   -- dauerhaft ausgeblendet
+alter table artikel add column if not exists eigen           boolean not null default false;   -- im Chef-Bereich angelegt, steht nicht fest in der Website
+alter table artikel add column if not exists reihenfolge     int not null default 0;
+
 -- Zeilenschutz an und keine einzige Regel: Direkter Zugriff auf die Tabellen ist damit für alle gesperrt.
 alter table einstellungen enable row level security;
 alter table tische        enable row level security;
@@ -256,6 +266,7 @@ begin
     end if;
     select * into a from artikel where name = pos->>'name';
     if not found then return jsonb_build_object('ok', false, 'fehler', 'artikel'); end if;
+    if a.versteckt then return jsonb_build_object('ok', false, 'fehler', 'artikel'); end if;
     if a.ausverkauft_am = _heute() then return jsonb_build_object('ok', false, 'fehler', 'ausverkauft', 'artikel', a.name); end if;
 
     -- Extras: nur solche, die es in der Kategorie dieses Artikels wirklich gibt
@@ -270,7 +281,7 @@ begin
     if jsonb_array_length(v_extras) <> v_gewollt then return jsonb_build_object('ok', false, 'fehler', 'artikel'); end if;
 
     v_summe := v_summe + (a.preis_cent + v_extra_cent) * v_menge;
-    v_zeilen := v_zeilen || jsonb_build_object('name', a.name, 'menge', v_menge, 'preis_cent', a.preis_cent, 'notiz', v_notiz, 'extras', v_extras, 'getraenk', a.getraenk);
+    v_zeilen := v_zeilen || jsonb_build_object('name', coalesce(nullif(a.titel, ''), a.name), 'menge', v_menge, 'preis_cent', a.preis_cent, 'notiz', v_notiz, 'extras', v_extras, 'getraenk', a.getraenk);
   end loop;
 
   -- Laufende Nummer des Tages; die Sperre verhindert doppelte Nummern bei gleichzeitigen Bestellungen
@@ -291,6 +302,17 @@ create or replace function bestellung_status(p_ids uuid[]) returns jsonb
 language sql stable security definer set search_path = public as $$
   select coalesce(jsonb_agg(jsonb_build_object('id', id, 'status', status, 'bezahlt', bezahlt_at is not null)), '[]'::jsonb)
   from bestellungen where id = any (p_ids[1:20])
+$$;
+
+-- Der aktuelle Stand der Karte für die Website: alle sichtbaren Artikel und Extras mit Preisen und Texten.
+-- Öffentlich lesbar, so wie die Karte selbst.
+create or replace function karte_stand() returns jsonb
+language sql stable security definer set search_path = public as $$
+  select jsonb_build_object(
+    'artikel', coalesce((select jsonb_agg(jsonb_build_object('name', name, 'kategorie', kategorie, 'preis_cent', preis_cent, 'titel', titel,
+        'beschreibung', beschreibung, 'name_en', name_en, 'beschreibung_en', beschreibung_en, 'eigen', eigen) order by reihenfolge, name)
+      from artikel where not versteckt), '[]'::jsonb),
+    'extras', coalesce((select jsonb_agg(jsonb_build_object('kategorie', kategorie, 'name', name, 'preis_cent', preis_cent) order by kategorie, name) from extras), '[]'::jsonb))
 $$;
 
 -- Bestellung zurückziehen, um sie zu ändern. Geht nur, solange die Theke sie noch nicht angenommen hat.
@@ -465,7 +487,7 @@ language plpgsql stable security definer set search_path = public as $$
 begin
   if not _theke_ok(p_key) then return jsonb_build_object('ok', false, 'fehler', 'key'); end if;
   return jsonb_build_object('ok', true, 'artikel', coalesce(
-    (select jsonb_agg(jsonb_build_object('name', name, 'kategorie', kategorie, 'aus', ausverkauft_am is not distinct from _heute()) order by kategorie, name) from artikel),
+    (select jsonb_agg(jsonb_build_object('name', name, 'titel', titel, 'kategorie', kategorie, 'aus', ausverkauft_am is not distinct from _heute()) order by kategorie, name) from artikel where not versteckt),
     '[]'::jsonb));
 end $$;
 
@@ -521,6 +543,91 @@ begin
   if v_url <> '' and (v_url !~ '^https://[^\s"<>]+$' or length(v_url) > 300) then return jsonb_build_object('ok', false, 'fehler', 'ungueltig'); end if;
   update einstellungen set bewertung_url = v_url;
   return jsonb_build_object('ok', true);
+end $$;
+
+-- ---------------------------------------------------------------- Karte pflegen (nur Chef-Zugang)
+
+create or replace function chef_karte(p_key text) returns jsonb
+language plpgsql stable security definer set search_path = public as $$
+begin
+  if not _chef_ok(p_key) then return jsonb_build_object('ok', false, 'fehler', 'key'); end if;
+  return jsonb_build_object('ok', true,
+    'artikel', coalesce((select jsonb_agg(jsonb_build_object('name', name, 'kategorie', kategorie, 'preis_cent', preis_cent, 'titel', titel,
+        'beschreibung', beschreibung, 'name_en', name_en, 'beschreibung_en', beschreibung_en, 'versteckt', versteckt, 'eigen', eigen,
+        'getraenk', getraenk) order by reihenfolge, name) from artikel), '[]'::jsonb),
+    'extras', coalesce((select jsonb_agg(jsonb_build_object('kategorie', kategorie, 'name', name, 'preis_cent', preis_cent) order by kategorie, name) from extras), '[]'::jsonb));
+end $$;
+
+-- Artikel ändern oder neu anlegen. p_daten: preis_cent (Pflicht), titel, beschreibung, name_en, beschreibung_en, versteckt, getraenk
+-- und bei einem neuen Artikel kategorie. Gibt es p_name schon, wird geändert, sonst angelegt.
+create or replace function chef_artikel_speichern(p_key text, p_name text, p_daten jsonb) returns jsonb
+language plpgsql security definer set search_path = public as $$
+declare
+  v_name text := left(btrim(coalesce(p_name, '')), 80);
+  v_preis int; v_kat text;
+  kurz constant int := 80; lang constant int := 400;
+begin
+  if not _chef_ok(p_key) then return jsonb_build_object('ok', false, 'fehler', 'key'); end if;
+  if v_name = '' or jsonb_typeof(p_daten) is distinct from 'object' then return jsonb_build_object('ok', false, 'fehler', 'name'); end if;
+  v_preis := (p_daten->>'preis_cent')::int;
+  if v_preis is null or v_preis not between 0 and 100000 then return jsonb_build_object('ok', false, 'fehler', 'preis'); end if;
+
+  if exists (select 1 from artikel where name = v_name) then
+    update artikel set
+        preis_cent      = v_preis,
+        titel           = left(btrim(coalesce(p_daten->>'titel', titel)), kurz),
+        beschreibung    = left(btrim(coalesce(p_daten->>'beschreibung', beschreibung)), lang),
+        name_en         = left(btrim(coalesce(p_daten->>'name_en', name_en)), kurz),
+        beschreibung_en = left(btrim(coalesce(p_daten->>'beschreibung_en', beschreibung_en)), lang),
+        versteckt       = coalesce((p_daten->>'versteckt')::boolean, versteckt),
+        getraenk        = coalesce((p_daten->>'getraenk')::boolean, getraenk)
+      where name = v_name;
+    return jsonb_build_object('ok', true, 'neu', false);
+  end if;
+
+  v_kat := p_daten->>'kategorie';
+  if v_kat is null or not exists (select 1 from artikel where kategorie = v_kat) then return jsonb_build_object('ok', false, 'fehler', 'kategorie'); end if;
+  if (select count(*) from artikel) >= 500 then return jsonb_build_object('ok', false, 'fehler', 'voll'); end if;
+  insert into artikel (name, kategorie, preis_cent, beschreibung, name_en, beschreibung_en, versteckt, getraenk, eigen, reihenfolge)
+    values (v_name, v_kat, v_preis,
+      left(btrim(coalesce(p_daten->>'beschreibung', '')), lang), left(btrim(coalesce(p_daten->>'name_en', '')), kurz),
+      left(btrim(coalesce(p_daten->>'beschreibung_en', '')), lang), coalesce((p_daten->>'versteckt')::boolean, false),
+      coalesce((p_daten->>'getraenk')::boolean, (select bool_or(getraenk) from artikel where kategorie = v_kat), false),
+      true, (select coalesce(max(reihenfolge), 0) + 1 from artikel));
+  return jsonb_build_object('ok', true, 'neu', true);
+exception when invalid_text_representation or numeric_value_out_of_range then
+  return jsonb_build_object('ok', false, 'fehler', 'ungueltig');
+end $$;
+
+-- Löschen geht nur bei selbst angelegten Artikeln. Die festen Artikel der Website werden ausgeblendet.
+create or replace function chef_artikel_loeschen(p_key text, p_name text) returns jsonb
+language plpgsql security definer set search_path = public as $$
+begin
+  if not _chef_ok(p_key) then return jsonb_build_object('ok', false, 'fehler', 'key'); end if;
+  delete from artikel where name = p_name and eigen;
+  if found then return jsonb_build_object('ok', true); end if;
+  return jsonb_build_object('ok', false, 'fehler', 'fest');
+end $$;
+
+create or replace function chef_extra_speichern(p_key text, p_kategorie text, p_name text, p_preis_cent int) returns jsonb
+language plpgsql security definer set search_path = public as $$
+declare v_name text := left(btrim(coalesce(p_name, '')), 60);
+begin
+  if not _chef_ok(p_key) then return jsonb_build_object('ok', false, 'fehler', 'key'); end if;
+  if v_name = '' then return jsonb_build_object('ok', false, 'fehler', 'name'); end if;
+  if p_preis_cent is null or p_preis_cent not between 0 and 100000 then return jsonb_build_object('ok', false, 'fehler', 'preis'); end if;
+  if not exists (select 1 from artikel where kategorie = p_kategorie) then return jsonb_build_object('ok', false, 'fehler', 'kategorie'); end if;
+  insert into extras (kategorie, name, preis_cent) values (p_kategorie, v_name, p_preis_cent)
+    on conflict (kategorie, name) do update set preis_cent = excluded.preis_cent;
+  return jsonb_build_object('ok', true);
+end $$;
+
+create or replace function chef_extra_loeschen(p_key text, p_kategorie text, p_name text) returns jsonb
+language plpgsql security definer set search_path = public as $$
+begin
+  if not _chef_ok(p_key) then return jsonb_build_object('ok', false, 'fehler', 'key'); end if;
+  delete from extras where kategorie = p_kategorie and name = p_name;
+  return jsonb_build_object('ok', found);
 end $$;
 
 -- Schlüssel neu erzeugen (nur Chef-Zugang). p_art = 'theke' oder 'chef'.
@@ -621,7 +728,8 @@ begin
       tisch_info(text), bestellung_aufgeben(text, jsonb, bigint), bestellung_status(uuid[]), bestellung_zurueckziehen(uuid), zahlen_wuenschen(text, bigint), kellner_rufen(text, bigint),
       theke_bestellungen(text), theke_status(text, uuid, text), theke_bezahlt(text, bigint, jsonb), theke_serviert(text, uuid[], boolean), theke_ruf_erledigt(text, bigint), theke_aktiv(text, boolean),
       theke_artikel(text), theke_ausverkauft(text, text, boolean), theke_einstellungen(text), theke_zeiten_setzen(text, jsonb),
-      theke_ruhetag(text, date, boolean), theke_bewertung(text, text), theke_tag(text), schluessel_neu(text, text),
+      theke_ruhetag(text, date, boolean), theke_bewertung(text, text), theke_tag(text), schluessel_neu(text, text), karte_stand(), chef_karte(text), chef_artikel_speichern(text, text, jsonb),
+      chef_artikel_loeschen(text, text), chef_extra_speichern(text, text, text, int), chef_extra_loeschen(text, text, text),
       theke_tische(text), theke_tisch_anlegen(text, text, text), theke_tisch_loeschen(text, bigint),
       theke_tisch_neuer_code(text, bigint), theke_laden_code_neu(text)
     to anon;
@@ -630,87 +738,85 @@ end $$;
 
 -- Erzeugt aus menu.json mit "npm run karte". Nicht von Hand ändern.
 begin;
-delete from extras;
-delete from artikel where name not in ('Café Crema', 'Americano', 'Espresso', 'Espresso Doppio', 'Espresso Macchiato', 'Cappuccino', 'Flat White', 'Milchkaffee', 'Latte Macchiato', 'Kaffee & Kuchen Deal', 'Earl Grey', 'Jasmin-Grüntee', 'Früchtetee Waldbeere', 'Frischer Minztee', 'Frischer Ingwer-Zitronentee', 'Hot Matcha', 'Iced Matcha', 'Strawberry Iced Matcha', 'Mango Iced Matcha', 'Iced Americano', 'Iced Latte', 'Iced Vanilla Latte', 'Iced Chai Latte', 'Chai Latte', 'Pumpkin Spice Latte', 'Hot Chocolate', 'Hot White Chocolate', 'Pfirsich-Limo', 'Zitronen-Minze-Holunder-Limo', 'Himbeer-Minze-Holunder-Limo', 'Maracuja-Limette-Limo', 'Frisch gepresster Orangensaft', 'Beet & Juice', 'Berry Banana', 'Green Glow', 'Mango Sunshine', 'fritz-kola 0,2 l', 'fritz-kola super zero 0,2 l', 'fritz-limo Apfel-Kirsch-Holunder 0,2 l', 'fritz-spritz Bio-Rhabarberschorle 0,2 l', 'Zurück zu den Quellen, still 0,33 l', 'Zurück zu den Quellen, sprudelnd 0,33 l', 'Rührei Genuss', 'Omelett-Bar', 'Nannis Brunch-Favourite', 'Classic Açaí Bowl', 'Lotus Crunch Açaí Bowl', 'Apfel Crunch Porridge', 'Nanni Egg Drop', 'Halloumi-Honey Drop', 'Pastrami New York Style Drop', 'Burrata Italia', 'Kleine Süßkartoffel-Pommes + Dip', 'Süßkartoffel-Pancakes mit Halloumi', 'Süßkartoffel-Pancakes mit Tofu & Avocado', 'Süßkartoffel-Pancakes Vegan Greek', 'Süßkartoffel-Pancakes Apple Lotus', 'Avocado & Poached Egg', 'Smoky Tofu Bagel', 'Sucuk Egg Bagel', 'Egg Bagel', 'Salmon Bagel', 'Golden Goat Club Sandwich', 'Chicken Karaage Burger', 'Avocado-Halloumi Burger', 'Süßkartoffel-Pommes mit Dip', 'Classic French Toast', 'Classy Berry Pancakes', 'Bueno Berry Pancakes', 'Nannis Vegan Banana Bread', 'Classic Vegan', 'Banana Choc', 'Lotus Crunch', 'White Bueno Crunch', 'Heiße Liebe', 'Kirschtraum', 'Oreo Berry Banana');
-insert into artikel (name, kategorie, preis_cent, getraenk) values
-  ('Café Crema', 'kaffee', 320, true),
-  ('Americano', 'kaffee', 350, true),
-  ('Espresso', 'kaffee', 290, true),
-  ('Espresso Doppio', 'kaffee', 440, true),
-  ('Espresso Macchiato', 'kaffee', 330, true),
-  ('Cappuccino', 'kaffee', 390, true),
-  ('Flat White', 'kaffee', 530, true),
-  ('Milchkaffee', 'kaffee', 450, true),
-  ('Latte Macchiato', 'kaffee', 450, true),
-  ('Kaffee & Kuchen Deal', 'kaffee', 600, true),
-  ('Earl Grey', 'tee-matcha', 350, true),
-  ('Jasmin-Grüntee', 'tee-matcha', 350, true),
-  ('Früchtetee Waldbeere', 'tee-matcha', 350, true),
-  ('Frischer Minztee', 'tee-matcha', 420, true),
-  ('Frischer Ingwer-Zitronentee', 'tee-matcha', 420, true),
-  ('Hot Matcha', 'tee-matcha', 590, true),
-  ('Iced Matcha', 'tee-matcha', 590, true),
-  ('Strawberry Iced Matcha', 'tee-matcha', 650, true),
-  ('Mango Iced Matcha', 'tee-matcha', 650, true),
-  ('Iced Americano', 'favourites', 390, true),
-  ('Iced Latte', 'favourites', 450, true),
-  ('Iced Vanilla Latte', 'favourites', 520, true),
-  ('Iced Chai Latte', 'favourites', 490, true),
-  ('Chai Latte', 'favourites', 490, true),
-  ('Pumpkin Spice Latte', 'favourites', 550, true),
-  ('Hot Chocolate', 'favourites', 450, true),
-  ('Hot White Chocolate', 'favourites', 450, true),
-  ('Pfirsich-Limo', 'limo', 490, true),
-  ('Zitronen-Minze-Holunder-Limo', 'limo', 650, true),
-  ('Himbeer-Minze-Holunder-Limo', 'limo', 650, true),
-  ('Maracuja-Limette-Limo', 'limo', 650, true),
-  ('Frisch gepresster Orangensaft', 'fresh', 590, true),
-  ('Beet & Juice', 'fresh', 650, true),
-  ('Berry Banana', 'fresh', 690, true),
-  ('Green Glow', 'fresh', 690, true),
-  ('Mango Sunshine', 'fresh', 690, true),
-  ('fritz-kola 0,2 l', 'soft', 330, true),
-  ('fritz-kola super zero 0,2 l', 'soft', 330, true),
-  ('fritz-limo Apfel-Kirsch-Holunder 0,2 l', 'soft', 330, true),
-  ('fritz-spritz Bio-Rhabarberschorle 0,2 l', 'soft', 330, true),
-  ('Zurück zu den Quellen, still 0,33 l', 'soft', 350, true),
-  ('Zurück zu den Quellen, sprudelnd 0,33 l', 'soft', 350, true),
-  ('Rührei Genuss', 'fruehstueck', 790, false),
-  ('Omelett-Bar', 'fruehstueck', 890, false),
-  ('Nannis Brunch-Favourite', 'fruehstueck', 1490, false),
-  ('Classic Açaí Bowl', 'bowls', 1190, false),
-  ('Lotus Crunch Açaí Bowl', 'bowls', 1290, false),
-  ('Apfel Crunch Porridge', 'bowls', 990, false),
-  ('Nanni Egg Drop', 'shokupan', 1090, false),
-  ('Halloumi-Honey Drop', 'shokupan', 1290, false),
-  ('Pastrami New York Style Drop', 'shokupan', 1390, false),
-  ('Burrata Italia', 'shokupan', 1390, false),
-  ('Kleine Süßkartoffel-Pommes + Dip', 'shokupan', 390, false),
-  ('Süßkartoffel-Pancakes mit Halloumi', 'pancakes', 1290, false),
-  ('Süßkartoffel-Pancakes mit Tofu & Avocado', 'pancakes', 1290, false),
-  ('Süßkartoffel-Pancakes Vegan Greek', 'pancakes', 1290, false),
-  ('Süßkartoffel-Pancakes Apple Lotus', 'pancakes', 1190, false),
-  ('Avocado & Poached Egg', 'bagels', 990, false),
-  ('Smoky Tofu Bagel', 'bagels', 990, false),
-  ('Sucuk Egg Bagel', 'bagels', 990, false),
-  ('Egg Bagel', 'bagels', 890, false),
-  ('Salmon Bagel', 'bagels', 1090, false),
-  ('Golden Goat Club Sandwich', 'lunch', 1490, false),
-  ('Chicken Karaage Burger', 'lunch', 1550, false),
-  ('Avocado-Halloumi Burger', 'lunch', 1550, false),
-  ('Süßkartoffel-Pommes mit Dip', 'lunch', 690, false),
-  ('Classic French Toast', 'sweets', 1250, false),
-  ('Classy Berry Pancakes', 'sweets', 1190, false),
-  ('Bueno Berry Pancakes', 'sweets', 1190, false),
-  ('Nannis Vegan Banana Bread', 'sweets', 990, false),
-  ('Classic Vegan', 'waffeln', 390, false),
-  ('Banana Choc', 'waffeln', 690, false),
-  ('Lotus Crunch', 'waffeln', 750, false),
-  ('White Bueno Crunch', 'waffeln', 790, false),
-  ('Heiße Liebe', 'waffeln', 590, false),
-  ('Kirschtraum', 'waffeln', 690, false),
-  ('Oreo Berry Banana', 'waffeln', 750, false)
-  on conflict (name) do update set kategorie = excluded.kategorie, preis_cent = excluded.preis_cent, getraenk = excluded.getraenk;
+insert into artikel (name, kategorie, preis_cent, getraenk, beschreibung) values
+  ('Café Crema', 'kaffee', 320, true, ''),
+  ('Americano', 'kaffee', 350, true, ''),
+  ('Espresso', 'kaffee', 290, true, ''),
+  ('Espresso Doppio', 'kaffee', 440, true, ''),
+  ('Espresso Macchiato', 'kaffee', 330, true, ''),
+  ('Cappuccino', 'kaffee', 390, true, ''),
+  ('Flat White', 'kaffee', 530, true, ''),
+  ('Milchkaffee', 'kaffee', 450, true, ''),
+  ('Latte Macchiato', 'kaffee', 450, true, ''),
+  ('Kaffee & Kuchen Deal', 'kaffee', 600, true, 'Immer montags von 12 bis 18 Uhr.'),
+  ('Earl Grey', 'tee-matcha', 350, true, 'Feiner Schwarztee mit Bergamotte-Aroma.'),
+  ('Jasmin-Grüntee', 'tee-matcha', 350, true, 'Frisch aufgegossen – leicht, blumig und wohltuend.'),
+  ('Früchtetee Waldbeere', 'tee-matcha', 350, true, 'Aus feinen Beerennoten – fruchtig, süß-säuerlich und aromatisch.'),
+  ('Frischer Minztee', 'tee-matcha', 420, true, 'Aus frischer Minze – mild und beruhigend.'),
+  ('Frischer Ingwer-Zitronentee', 'tee-matcha', 420, true, 'Frischer Ingwer – wärmend, intensiv und natürlich erfrischend.'),
+  ('Hot Matcha', 'tee-matcha', 590, true, ''),
+  ('Iced Matcha', 'tee-matcha', 590, true, ''),
+  ('Strawberry Iced Matcha', 'tee-matcha', 650, true, ''),
+  ('Mango Iced Matcha', 'tee-matcha', 650, true, ''),
+  ('Iced Americano', 'favourites', 390, true, ''),
+  ('Iced Latte', 'favourites', 450, true, ''),
+  ('Iced Vanilla Latte', 'favourites', 520, true, ''),
+  ('Iced Chai Latte', 'favourites', 490, true, ''),
+  ('Chai Latte', 'favourites', 490, true, ''),
+  ('Pumpkin Spice Latte', 'favourites', 550, true, ''),
+  ('Hot Chocolate', 'favourites', 450, true, ''),
+  ('Hot White Chocolate', 'favourites', 450, true, ''),
+  ('Pfirsich-Limo', 'limo', 490, true, 'Pfirsichsirup und Mineralwasser.'),
+  ('Zitronen-Minze-Holunder-Limo', 'limo', 650, true, 'Zitrone, Minze, Ingwersirup, Holundersirup und Mineralwasser.'),
+  ('Himbeer-Minze-Holunder-Limo', 'limo', 650, true, 'Zitrone, Minze, Himbeersirup, Holundersirup und Mineralwasser.'),
+  ('Maracuja-Limette-Limo', 'limo', 650, true, 'Limette, Maracujasirup und Mineralwasser.'),
+  ('Frisch gepresster Orangensaft', 'fresh', 590, true, 'Frisch gepresst und ohne Zusätze.'),
+  ('Beet & Juice', 'fresh', 650, true, 'Frisch gepresster Mix aus Roter Bete, Apfel, Möhre, Ingwer, Zitrone und frischem Orangensaft – fruchtig und leicht würzig.'),
+  ('Berry Banana', 'fresh', 690, true, 'Beerenmix, Banane, Apfel und Orange – fruchtig, cremig und harmonisch.'),
+  ('Green Glow', 'fresh', 690, true, 'Spinat, Banane, Apfel, Mango und Zitrone – frisch, fruchtig und belebend.'),
+  ('Mango Sunshine', 'fresh', 690, true, 'Mango, Banane, Orange und Passionsfruchtsirup – fruchtig und erfrischend.'),
+  ('fritz-kola 0,2 l', 'soft', 330, true, ''),
+  ('fritz-kola super zero 0,2 l', 'soft', 330, true, ''),
+  ('fritz-limo Apfel-Kirsch-Holunder 0,2 l', 'soft', 330, true, ''),
+  ('fritz-spritz Bio-Rhabarberschorle 0,2 l', 'soft', 330, true, ''),
+  ('Zurück zu den Quellen, still 0,33 l', 'soft', 350, true, ''),
+  ('Zurück zu den Quellen, sprudelnd 0,33 l', 'soft', 350, true, ''),
+  ('Rührei Genuss', 'fruehstueck', 790, false, 'Cremiges Rührei, geröstetes Sauerteigbrot und Frischkäsecreme.'),
+  ('Omelett-Bar', 'fruehstueck', 890, false, 'Frisch zubereitetes Omelett mit Brot und Frischkäsecreme – verfeinere dein Omelett mit den Extras unten.'),
+  ('Nannis Brunch-Favourite', 'fruehstueck', 1490, false, 'Cremiges Rührei auf geröstetem Sauerteigbrot mit Avocado, Tomaten, Pickled Onions und Granatapfelkernen. Dazu zwei fluffige vegane Pancakes mit Beeren, Soja-Vanillecreme und Bio-Ahornsirup.'),
+  ('Classic Açaí Bowl', 'bowls', 1190, false, 'Cremige Açaí, kalt serviert mit Beeren, Banane, Crunchy Granola, Chiasamen und Kokosflocken – verfeinert mit Dattelsirup.'),
+  ('Lotus Crunch Açaí Bowl', 'bowls', 1290, false, 'Cremige Açaí, kalt serviert mit Beeren, Banane, Crunchy Granola, Soja-Vanillecreme, Chiasamen und Kokosflocken – getoppt mit Lotus Swirl und Lotus Crumble.'),
+  ('Apfel Crunch Porridge', 'bowls', 990, false, 'Warmes, cremiges Porridge mit Apfelkompott und Apfelstücken, Granola, gemahlenen Haselnüssen, Kokosflocken und Zimt – verfeinert mit einem Hauch Lotus Swirl.'),
+  ('Nanni Egg Drop', 'shokupan', 1090, false, 'Goldbraun getoastet mit Topping deiner Wahl, Cheddar-Melt, fluffigem, cremigem Rührei und Avocado, dazu hausgemachter Sweet-Cream-Senf als Finish. Topping: Bacon, Sucuk, Lachs oder Tofu. Sauce: Trüffelcreme oder Sriracha-Mayo.'),
+  ('Halloumi-Honey Drop', 'shokupan', 1290, false, 'Toskanacreme, Rucola, Halloumi, Tomaten, Honig, Kürbiskerne, Chili und Granatapfel-Drizzle.'),
+  ('Pastrami New York Style Drop', 'shokupan', 1390, false, 'Frischkäse, Rucola, Tomaten, Pastrami, Cornichons und Käse-Melt, Dattel-Senf-Dressing und Balsamico.'),
+  ('Burrata Italia', 'shokupan', 1390, false, 'Pesto, Rucola, Tomaten, Burrata, geröstete Pinienkerne, Olivenöl und Balsamico-Drizzle.'),
+  ('Kleine Süßkartoffel-Pommes + Dip', 'shokupan', 390, false, 'Zu deinem Shokupan. Dip: Trüffelcreme, Kräuterquark, vegane Mayo oder Ketchup.'),
+  ('Süßkartoffel-Pancakes mit Halloumi', 'pancakes', 1290, false, 'Vegane Creme, Rucola, Tomaten, Halloumi, Chiliflocken, Kürbiskerne und Granatapfel-Drizzle.'),
+  ('Süßkartoffel-Pancakes mit Tofu & Avocado', 'pancakes', 1290, false, 'Vegane Creme, Rucola, Tomaten, Tofu, Avocado, Granatapfelkerne und Granatapfel-Drizzle.'),
+  ('Süßkartoffel-Pancakes Vegan Greek', 'pancakes', 1290, false, 'Vegane Creme, Rucola, Tomate, Avocado, veganer Hirtenkäse, Granatapfelkerne und Balsamico.'),
+  ('Süßkartoffel-Pancakes Apple Lotus', 'pancakes', 1190, false, 'Apfelkompott, Mandelblättchen und Lotus-Swirl.'),
+  ('Avocado & Poached Egg', 'bagels', 990, false, 'Frischkäse, Rucola, Tomaten, Avocado, pochiertes Ei und Sweet-Cream-Senf-Drizzle.'),
+  ('Smoky Tofu Bagel', 'bagels', 990, false, 'Frischkäse, Rucola, Tomaten, Avocado, Tofu, Pickled Onions und Granatapfel-Drizzle.'),
+  ('Sucuk Egg Bagel', 'bagels', 990, false, 'Avocado-Mash, Rucola, Tomate, Rührei, Sucuk und Sriracha-Mayo.'),
+  ('Egg Bagel', 'bagels', 890, false, 'Frischkäse, Rucola, Tomate, Rührei, veganes Reibe-Topping und Maple-Mustard-Drizzle.'),
+  ('Salmon Bagel', 'bagels', 1090, false, 'Frisch belegt mit Frischkäse, Rucola, Gurkensalat, Lachs, Pickled Onions und Dill-Dattelsenf-Dressing. Auch mit veganem Lachs.'),
+  ('Golden Goat Club Sandwich', 'lunch', 1490, false, 'Frischkäse, Rucola, Tomaten, Avocado, karamellisierter Ziegenkäse und Walnüsse. Dazu Süßkartoffel-Pommes mit veganem Reibe-Topping und Dip.'),
+  ('Chicken Karaage Burger', 'lunch', 1550, false, 'Brioche Bun, Honey-Mustard-Sauce, Romanasalat, Tomate, Chicken Karaage, Cheddar-Melt und Pickled Onions. Dazu Süßkartoffel-Pommes mit veganem Reibe-Topping und Dip.'),
+  ('Avocado-Halloumi Burger', 'lunch', 1550, false, 'Brioche Bun, Avocado-Mash, Romanasalat, Tomate, Avocado, Halloumi, Honig-Drizzle, Pickled Onions und hausgemachte Honig-Senf-Sauce. Dazu Süßkartoffel-Pommes mit veganem Reibe-Topping und Dip.'),
+  ('Süßkartoffel-Pommes mit Dip', 'lunch', 690, false, 'Dip deiner Wahl: Trüffelcreme, Kräuterquark, vegane Mayo oder Ketchup.'),
+  ('Classic French Toast', 'sweets', 1250, false, 'Goldbraun gebraten, serviert mit hausgemachter Vanille-Mascarpone-Creme, Beerenkompott, frischen Beeren, karamellisierter Banane, Bio-Ahornsirup und Brownie-Crumble.'),
+  ('Classy Berry Pancakes', 'sweets', 1190, false, 'Goldbraun gebackene vegane Pancakes mit Beeren, cremiger Soja-Vanillecreme und Bio-Ahornsirup.'),
+  ('Bueno Berry Pancakes', 'sweets', 1190, false, 'Goldbraun gebackene vegane Pancakes mit Beeren, Bueno Crumble und Bueno-Sauce.'),
+  ('Nannis Vegan Banana Bread', 'sweets', 990, false, 'Getoastetes veganes Bananenbrot aus glutenfreien Zutaten mit Soja-Vanillecreme, Banane, Beeren, hausgemachtem Granola und Bio-Ahornsirup.'),
+  ('Classic Vegan', 'waffeln', 390, false, 'Puderzucker.'),
+  ('Banana Choc', 'waffeln', 690, false, 'Puderzucker, Bananen, Schokodrops und Schokosauce.'),
+  ('Lotus Crunch', 'waffeln', 750, false, 'Puderzucker, Apfelkompott, Lotus-Creme und Lotus-Crumble.'),
+  ('White Bueno Crunch', 'waffeln', 790, false, 'Puderzucker, Bueno-Haselnusssauce, weiße Schokosauce, gemahlene Haselnüsse und Bueno-Crunch.'),
+  ('Heiße Liebe', 'waffeln', 590, false, 'Puderzucker und heiße Kirschen.'),
+  ('Kirschtraum', 'waffeln', 690, false, 'Puderzucker, heiße Kirschen und hausgemachte Mascarpone-Creme.'),
+  ('Oreo Berry Banana', 'waffeln', 750, false, 'Puderzucker, Banane, Oreo-Crunch und Erdbeersauce.')
+  on conflict (name) do update set beschreibung = case when artikel.beschreibung = '' then excluded.beschreibung else artikel.beschreibung end;
 insert into extras (kategorie, name, preis_cent) values
   ('kaffee', 'Extra Espresso Shot', 150),
   ('kaffee', 'Sahne', 80),
@@ -767,7 +873,8 @@ insert into extras (kategorie, name, preis_cent) values
   ('lunch', 'Burrata', 450),
   ('waffeln', 'Veganes Vanilleeis', 120),
   ('waffeln', 'Sahne', 80),
-  ('waffeln', 'Ahornsirup', 100);
+  ('waffeln', 'Ahornsirup', 100)
+  on conflict (kategorie, name) do nothing;
 commit;
 
 -- Theken-Schlüssel erzeugen. Das Ergebnis unten kopieren und sicher aufbewahren, es wird nur dieses eine Mal angezeigt.

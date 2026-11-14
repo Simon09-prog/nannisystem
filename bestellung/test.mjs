@@ -300,6 +300,48 @@ test('Getrennte Zugänge: Theken-Schlüssel reicht nicht für die Einstellungen'
   await s.db.query("update einstellungen set chef_hash = null, theke_hash = sha256(convert_to($1, 'UTF8'))", [K]);
 });
 
+test('Karte pflegen: Preis, Texte, ausblenden, neuer Artikel, Extras', async () => {
+  const t2 = (await rpc('theke_tische', { p_key: K })).tische[1];
+  const stand = async () => rpc('karte_stand');
+  const b = pos => rpc('bestellung_aufgeben', { p_code: t2.code, p_positionen: pos });
+  let s0 = await stand();
+  assert.equal(s0.artikel.find(a => a.name === 'Espresso').preis_cent, 290);
+  assert.ok(s0.artikel.find(a => a.name === 'Rührei Genuss').beschreibung.includes('Rührei'));
+  assert.equal((await rpc('chef_artikel_speichern', { p_key: 'falsch', p_name: 'Espresso', p_daten: { preis_cent: 1 } })).fehler, 'key');
+  assert.equal((await rpc('chef_artikel_speichern', { p_key: K, p_name: 'Espresso', p_daten: { preis_cent: -5 } })).fehler, 'preis');
+  assert.equal((await rpc('chef_artikel_speichern', { p_key: K, p_name: 'Espresso', p_daten: { preis_cent: 'abc' } })).fehler, 'ungueltig');
+  // Preis und Anzeigename ändern: Die Bestellung rechnet sofort mit dem neuen Preis und trägt den neuen Namen
+  assert.equal((await rpc('chef_artikel_speichern', { p_key: K, p_name: 'Espresso', p_daten: { preis_cent: 310, titel: 'Espresso Classico', name_en: 'Classic espresso' } })).ok, true);
+  const o = await b([{ name: 'Espresso', menge: 2 }]);
+  assert.equal(o.summe_cent, 620);
+  const an = (await rpc('theke_bestellungen', { p_key: K })).bestellungen.find(x => x.id === o.id);
+  assert.equal(an.positionen[0].name, 'Espresso Classico');
+  // ausblenden: verschwindet aus der Karte und ist nicht bestellbar
+  await rpc('chef_artikel_speichern', { p_key: K, p_name: 'Americano', p_daten: { preis_cent: 350, versteckt: true } });
+  assert.equal((await stand()).artikel.some(a => a.name === 'Americano'), false);
+  assert.equal((await b([{ name: 'Americano', menge: 1 }])).fehler, 'artikel');
+  assert.equal((await rpc('theke_artikel', { p_key: K })).artikel.some(a => a.name === 'Americano'), false);
+  await rpc('chef_artikel_speichern', { p_key: K, p_name: 'Americano', p_daten: { preis_cent: 350, versteckt: false } });
+  // neuer Artikel
+  assert.equal((await rpc('chef_artikel_speichern', { p_key: K, p_name: 'Zimtschnecke', p_daten: { preis_cent: 420, kategorie: 'gibtsnicht' } })).fehler, 'kategorie');
+  const neu = await rpc('chef_artikel_speichern', { p_key: K, p_name: 'Zimtschnecke', p_daten: { preis_cent: 420, kategorie: 'sweets', beschreibung: 'Frisch gebacken.' } });
+  assert.equal(neu.ok, true); assert.equal(neu.neu, true);
+  const z = (await stand()).artikel.find(a => a.name === 'Zimtschnecke');
+  assert.equal(z.eigen, true); assert.equal(z.kategorie, 'sweets');
+  assert.equal((await b([{ name: 'Zimtschnecke', menge: 1 }])).summe_cent, 420);
+  // Löschen nur bei eigenen Artikeln
+  assert.equal((await rpc('chef_artikel_loeschen', { p_key: K, p_name: 'Cappuccino' })).fehler, 'fest');
+  assert.equal((await rpc('chef_artikel_loeschen', { p_key: K, p_name: 'Zimtschnecke' })).ok, true);
+  await s.db.exec("update bestellungen set status = 'abgelehnt' where status = 'neu'");   // sonst greift die Grenze von 3 offenen Bestellungen je Tisch
+  // Extras
+  assert.equal((await rpc('chef_extra_speichern', { p_key: K, p_kategorie: 'kaffee', p_name: 'Hafermilch Barista', p_preis_cent: 50 })).ok, true);
+  assert.equal((await b([{ name: 'Cappuccino', menge: 1, extras: [{ name: 'Hafermilch Barista' }] }])).summe_cent, 440);
+  assert.equal((await rpc('chef_extra_loeschen', { p_key: K, p_kategorie: 'kaffee', p_name: 'Hafermilch Barista' })).ok, true);
+  // aufräumen für die übrigen Tests
+  await rpc('chef_artikel_speichern', { p_key: K, p_name: 'Espresso', p_daten: { preis_cent: 290, titel: '', name_en: '' } });
+  await s.db.exec("update bestellungen set status = 'abgelehnt' where status = 'neu'");
+});
+
 test('Pausieren und Codes erneuern', async () => {
   await rpc('theke_aktiv', { p_key: K, p_aktiv: false });
   assert.equal((await rpc('tisch_info', { p_code: tischCode })).aktiv, false);

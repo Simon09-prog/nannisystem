@@ -102,6 +102,16 @@ create table if not exists zugriffe (
 );
 alter table zugriffe enable row level security;
 
+-- Spätere Erweiterung "Karte pflegen": Die Chefin kann Preise, Namen und Beschreibungen ändern, Artikel ausblenden
+-- und neue anlegen. Ab jetzt ist die Datenbank die gültige Karte; die Website zeigt ihren Stand an.
+alter table artikel add column if not exists titel           text not null default '';   -- anderer Anzeigename (leer = name)
+alter table artikel add column if not exists beschreibung    text not null default '';
+alter table artikel add column if not exists name_en         text not null default '';   -- englischer Name (leer = automatische Übersetzung)
+alter table artikel add column if not exists beschreibung_en text not null default '';
+alter table artikel add column if not exists versteckt       boolean not null default false;   -- dauerhaft ausgeblendet
+alter table artikel add column if not exists eigen           boolean not null default false;   -- im Chef-Bereich angelegt, steht nicht fest in der Website
+alter table artikel add column if not exists reihenfolge     int not null default 0;
+
 -- Zeilenschutz an und keine einzige Regel: Direkter Zugriff auf die Tabellen ist damit für alle gesperrt.
 alter table einstellungen enable row level security;
 alter table tische        enable row level security;
@@ -256,6 +266,7 @@ begin
     end if;
     select * into a from artikel where name = pos->>'name';
     if not found then return jsonb_build_object('ok', false, 'fehler', 'artikel'); end if;
+    if a.versteckt then return jsonb_build_object('ok', false, 'fehler', 'artikel'); end if;
     if a.ausverkauft_am = _heute() then return jsonb_build_object('ok', false, 'fehler', 'ausverkauft', 'artikel', a.name); end if;
 
     -- Extras: nur solche, die es in der Kategorie dieses Artikels wirklich gibt
@@ -270,7 +281,7 @@ begin
     if jsonb_array_length(v_extras) <> v_gewollt then return jsonb_build_object('ok', false, 'fehler', 'artikel'); end if;
 
     v_summe := v_summe + (a.preis_cent + v_extra_cent) * v_menge;
-    v_zeilen := v_zeilen || jsonb_build_object('name', a.name, 'menge', v_menge, 'preis_cent', a.preis_cent, 'notiz', v_notiz, 'extras', v_extras, 'getraenk', a.getraenk);
+    v_zeilen := v_zeilen || jsonb_build_object('name', coalesce(nullif(a.titel, ''), a.name), 'menge', v_menge, 'preis_cent', a.preis_cent, 'notiz', v_notiz, 'extras', v_extras, 'getraenk', a.getraenk);
   end loop;
 
   -- Laufende Nummer des Tages; die Sperre verhindert doppelte Nummern bei gleichzeitigen Bestellungen
@@ -291,6 +302,17 @@ create or replace function bestellung_status(p_ids uuid[]) returns jsonb
 language sql stable security definer set search_path = public as $$
   select coalesce(jsonb_agg(jsonb_build_object('id', id, 'status', status, 'bezahlt', bezahlt_at is not null)), '[]'::jsonb)
   from bestellungen where id = any (p_ids[1:20])
+$$;
+
+-- Der aktuelle Stand der Karte für die Website: alle sichtbaren Artikel und Extras mit Preisen und Texten.
+-- Öffentlich lesbar, so wie die Karte selbst.
+create or replace function karte_stand() returns jsonb
+language sql stable security definer set search_path = public as $$
+  select jsonb_build_object(
+    'artikel', coalesce((select jsonb_agg(jsonb_build_object('name', name, 'kategorie', kategorie, 'preis_cent', preis_cent, 'titel', titel,
+        'beschreibung', beschreibung, 'name_en', name_en, 'beschreibung_en', beschreibung_en, 'eigen', eigen) order by reihenfolge, name)
+      from artikel where not versteckt), '[]'::jsonb),
+    'extras', coalesce((select jsonb_agg(jsonb_build_object('kategorie', kategorie, 'name', name, 'preis_cent', preis_cent) order by kategorie, name) from extras), '[]'::jsonb))
 $$;
 
 -- Bestellung zurückziehen, um sie zu ändern. Geht nur, solange die Theke sie noch nicht angenommen hat.
@@ -465,7 +487,7 @@ language plpgsql stable security definer set search_path = public as $$
 begin
   if not _theke_ok(p_key) then return jsonb_build_object('ok', false, 'fehler', 'key'); end if;
   return jsonb_build_object('ok', true, 'artikel', coalesce(
-    (select jsonb_agg(jsonb_build_object('name', name, 'kategorie', kategorie, 'aus', ausverkauft_am is not distinct from _heute()) order by kategorie, name) from artikel),
+    (select jsonb_agg(jsonb_build_object('name', name, 'titel', titel, 'kategorie', kategorie, 'aus', ausverkauft_am is not distinct from _heute()) order by kategorie, name) from artikel where not versteckt),
     '[]'::jsonb));
 end $$;
 
@@ -521,6 +543,91 @@ begin
   if v_url <> '' and (v_url !~ '^https://[^\s"<>]+$' or length(v_url) > 300) then return jsonb_build_object('ok', false, 'fehler', 'ungueltig'); end if;
   update einstellungen set bewertung_url = v_url;
   return jsonb_build_object('ok', true);
+end $$;
+
+-- ---------------------------------------------------------------- Karte pflegen (nur Chef-Zugang)
+
+create or replace function chef_karte(p_key text) returns jsonb
+language plpgsql stable security definer set search_path = public as $$
+begin
+  if not _chef_ok(p_key) then return jsonb_build_object('ok', false, 'fehler', 'key'); end if;
+  return jsonb_build_object('ok', true,
+    'artikel', coalesce((select jsonb_agg(jsonb_build_object('name', name, 'kategorie', kategorie, 'preis_cent', preis_cent, 'titel', titel,
+        'beschreibung', beschreibung, 'name_en', name_en, 'beschreibung_en', beschreibung_en, 'versteckt', versteckt, 'eigen', eigen,
+        'getraenk', getraenk) order by reihenfolge, name) from artikel), '[]'::jsonb),
+    'extras', coalesce((select jsonb_agg(jsonb_build_object('kategorie', kategorie, 'name', name, 'preis_cent', preis_cent) order by kategorie, name) from extras), '[]'::jsonb));
+end $$;
+
+-- Artikel ändern oder neu anlegen. p_daten: preis_cent (Pflicht), titel, beschreibung, name_en, beschreibung_en, versteckt, getraenk
+-- und bei einem neuen Artikel kategorie. Gibt es p_name schon, wird geändert, sonst angelegt.
+create or replace function chef_artikel_speichern(p_key text, p_name text, p_daten jsonb) returns jsonb
+language plpgsql security definer set search_path = public as $$
+declare
+  v_name text := left(btrim(coalesce(p_name, '')), 80);
+  v_preis int; v_kat text;
+  kurz constant int := 80; lang constant int := 400;
+begin
+  if not _chef_ok(p_key) then return jsonb_build_object('ok', false, 'fehler', 'key'); end if;
+  if v_name = '' or jsonb_typeof(p_daten) is distinct from 'object' then return jsonb_build_object('ok', false, 'fehler', 'name'); end if;
+  v_preis := (p_daten->>'preis_cent')::int;
+  if v_preis is null or v_preis not between 0 and 100000 then return jsonb_build_object('ok', false, 'fehler', 'preis'); end if;
+
+  if exists (select 1 from artikel where name = v_name) then
+    update artikel set
+        preis_cent      = v_preis,
+        titel           = left(btrim(coalesce(p_daten->>'titel', titel)), kurz),
+        beschreibung    = left(btrim(coalesce(p_daten->>'beschreibung', beschreibung)), lang),
+        name_en         = left(btrim(coalesce(p_daten->>'name_en', name_en)), kurz),
+        beschreibung_en = left(btrim(coalesce(p_daten->>'beschreibung_en', beschreibung_en)), lang),
+        versteckt       = coalesce((p_daten->>'versteckt')::boolean, versteckt),
+        getraenk        = coalesce((p_daten->>'getraenk')::boolean, getraenk)
+      where name = v_name;
+    return jsonb_build_object('ok', true, 'neu', false);
+  end if;
+
+  v_kat := p_daten->>'kategorie';
+  if v_kat is null or not exists (select 1 from artikel where kategorie = v_kat) then return jsonb_build_object('ok', false, 'fehler', 'kategorie'); end if;
+  if (select count(*) from artikel) >= 500 then return jsonb_build_object('ok', false, 'fehler', 'voll'); end if;
+  insert into artikel (name, kategorie, preis_cent, beschreibung, name_en, beschreibung_en, versteckt, getraenk, eigen, reihenfolge)
+    values (v_name, v_kat, v_preis,
+      left(btrim(coalesce(p_daten->>'beschreibung', '')), lang), left(btrim(coalesce(p_daten->>'name_en', '')), kurz),
+      left(btrim(coalesce(p_daten->>'beschreibung_en', '')), lang), coalesce((p_daten->>'versteckt')::boolean, false),
+      coalesce((p_daten->>'getraenk')::boolean, (select bool_or(getraenk) from artikel where kategorie = v_kat), false),
+      true, (select coalesce(max(reihenfolge), 0) + 1 from artikel));
+  return jsonb_build_object('ok', true, 'neu', true);
+exception when invalid_text_representation or numeric_value_out_of_range then
+  return jsonb_build_object('ok', false, 'fehler', 'ungueltig');
+end $$;
+
+-- Löschen geht nur bei selbst angelegten Artikeln. Die festen Artikel der Website werden ausgeblendet.
+create or replace function chef_artikel_loeschen(p_key text, p_name text) returns jsonb
+language plpgsql security definer set search_path = public as $$
+begin
+  if not _chef_ok(p_key) then return jsonb_build_object('ok', false, 'fehler', 'key'); end if;
+  delete from artikel where name = p_name and eigen;
+  if found then return jsonb_build_object('ok', true); end if;
+  return jsonb_build_object('ok', false, 'fehler', 'fest');
+end $$;
+
+create or replace function chef_extra_speichern(p_key text, p_kategorie text, p_name text, p_preis_cent int) returns jsonb
+language plpgsql security definer set search_path = public as $$
+declare v_name text := left(btrim(coalesce(p_name, '')), 60);
+begin
+  if not _chef_ok(p_key) then return jsonb_build_object('ok', false, 'fehler', 'key'); end if;
+  if v_name = '' then return jsonb_build_object('ok', false, 'fehler', 'name'); end if;
+  if p_preis_cent is null or p_preis_cent not between 0 and 100000 then return jsonb_build_object('ok', false, 'fehler', 'preis'); end if;
+  if not exists (select 1 from artikel where kategorie = p_kategorie) then return jsonb_build_object('ok', false, 'fehler', 'kategorie'); end if;
+  insert into extras (kategorie, name, preis_cent) values (p_kategorie, v_name, p_preis_cent)
+    on conflict (kategorie, name) do update set preis_cent = excluded.preis_cent;
+  return jsonb_build_object('ok', true);
+end $$;
+
+create or replace function chef_extra_loeschen(p_key text, p_kategorie text, p_name text) returns jsonb
+language plpgsql security definer set search_path = public as $$
+begin
+  if not _chef_ok(p_key) then return jsonb_build_object('ok', false, 'fehler', 'key'); end if;
+  delete from extras where kategorie = p_kategorie and name = p_name;
+  return jsonb_build_object('ok', found);
 end $$;
 
 -- Schlüssel neu erzeugen (nur Chef-Zugang). p_art = 'theke' oder 'chef'.
@@ -621,7 +728,8 @@ begin
       tisch_info(text), bestellung_aufgeben(text, jsonb, bigint), bestellung_status(uuid[]), bestellung_zurueckziehen(uuid), zahlen_wuenschen(text, bigint), kellner_rufen(text, bigint),
       theke_bestellungen(text), theke_status(text, uuid, text), theke_bezahlt(text, bigint, jsonb), theke_serviert(text, uuid[], boolean), theke_ruf_erledigt(text, bigint), theke_aktiv(text, boolean),
       theke_artikel(text), theke_ausverkauft(text, text, boolean), theke_einstellungen(text), theke_zeiten_setzen(text, jsonb),
-      theke_ruhetag(text, date, boolean), theke_bewertung(text, text), theke_tag(text), schluessel_neu(text, text),
+      theke_ruhetag(text, date, boolean), theke_bewertung(text, text), theke_tag(text), schluessel_neu(text, text), karte_stand(), chef_karte(text), chef_artikel_speichern(text, text, jsonb),
+      chef_artikel_loeschen(text, text), chef_extra_speichern(text, text, text, int), chef_extra_loeschen(text, text, text),
       theke_tische(text), theke_tisch_anlegen(text, text, text), theke_tisch_loeschen(text, bigint),
       theke_tisch_neuer_code(text, bigint), theke_laden_code_neu(text)
     to anon;

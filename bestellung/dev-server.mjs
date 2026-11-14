@@ -16,7 +16,8 @@ const TYPEN = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; ch
   '.css': 'text/css; charset=utf-8', '.json': 'application/json', '.webp': 'image/webp', '.jpg': 'image/jpeg', '.png': 'image/png',
   '.svg': 'image/svg+xml', '.woff2': 'font/woff2', '.mp4': 'video/mp4', '.mp3': 'audio/mpeg' };
 // Nur diese Funktionen sind von außen erreichbar (wie die "grant"-Liste am Ende von schema.sql)
-const ERLAUBT = new Set(['tisch_info', 'bestellung_aufgeben', 'bestellung_status', 'zahlen_wuenschen', 'theke_bezahlt', 'kellner_rufen', 'theke_ruf_erledigt', 'bestellung_zurueckziehen', 'theke_serviert', 'schluessel_neu', 'theke_artikel', 'theke_ausverkauft',
+const ERLAUBT = new Set(['tisch_info', 'bestellung_aufgeben', 'bestellung_status', 'zahlen_wuenschen', 'theke_bezahlt', 'kellner_rufen', 'theke_ruf_erledigt', 'bestellung_zurueckziehen', 'theke_serviert', 'schluessel_neu', 'karte_stand', 'chef_karte', 'chef_artikel_speichern',
+  'chef_artikel_loeschen', 'chef_extra_speichern', 'chef_extra_loeschen', 'theke_artikel', 'theke_ausverkauft',
   'theke_einstellungen', 'theke_zeiten_setzen', 'theke_ruhetag', 'theke_bewertung', 'theke_tag', 'theke_bestellungen', 'theke_status', 'theke_aktiv',
   'theke_tische', 'theke_tisch_anlegen', 'theke_tisch_loeschen', 'theke_tisch_neuer_code', 'theke_laden_code_neu']);
 

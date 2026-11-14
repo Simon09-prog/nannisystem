@@ -1,6 +1,6 @@
-// Liest menu.json und macht daraus die Preislisten für die Datenbank (Tabellen artikel und extras).
-// Aufruf "npm run karte" schreibt bestellung/karte.sql; den Inhalt nach jeder Preisänderung
-// im Supabase-SQL-Editor ausführen. Der lokale Testserver lädt die Karte bei jedem Start selbst.
+// Liest menu.json und macht daraus die Erstbefüllung der Datenbank (Tabellen artikel und extras).
+// "npm run karte" schreibt bestellung/karte.sql. Diese Datei legt nur an, was in der Datenbank noch fehlt:
+// Preise und Texte, die im Chef-Bereich geändert wurden, überschreibt sie nicht. Die Datenbank ist die gültige Karte.
 import { readFileSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 
@@ -14,7 +14,7 @@ export function karte() {
   const artikel = [], extras = [];
   for (const k of menu.kategorien) {
     const gruppen = k.groups ? k.groups.map(g => g.items) : [k.items];
-    for (const it of gruppen.flat()) artikel.push({ name: it.name, kategorie: k.id, preis_cent: cent(it.price), getraenk: GETRAENKE.has(k.id) });
+    for (const it of gruppen.flat()) artikel.push({ name: it.name, kategorie: k.id, preis_cent: cent(it.price), getraenk: GETRAENKE.has(k.id), beschreibung: it.desc || '' });
     const bloecke = (k.extras || []).flatMap(b => b.items).concat(k.addons ? menu.addons || [] : []);
     for (const [name, preis] of bloecke) {
       // Steht ein Extra doppelt in einer Kategorie (Omelett-Extras und Add-ons), muss der Preis gleich sein
@@ -32,13 +32,13 @@ export function karteSql() {
   return [
     '-- Erzeugt aus menu.json mit "npm run karte". Nicht von Hand ändern.',
     'begin;',
-    'delete from extras;',
-    `delete from artikel where name not in (${artikel.map(a => q(a.name)).join(', ')});`,
-    'insert into artikel (name, kategorie, preis_cent, getraenk) values',
-    artikel.map(a => `  (${q(a.name)}, ${q(a.kategorie)}, ${a.preis_cent}, ${a.getraenk})`).join(',\n'),
-    '  on conflict (name) do update set kategorie = excluded.kategorie, preis_cent = excluded.preis_cent, getraenk = excluded.getraenk;',
+    'insert into artikel (name, kategorie, preis_cent, getraenk, beschreibung) values',
+    artikel.map(a => `  (${q(a.name)}, ${q(a.kategorie)}, ${a.preis_cent}, ${a.getraenk}, ${q(a.beschreibung)})`).join(',\n'),
+    // Gibt es den Artikel schon, bleibt alles wie es ist; nur eine noch leere Beschreibung wird nachgetragen
+    "  on conflict (name) do update set beschreibung = case when artikel.beschreibung = '' then excluded.beschreibung else artikel.beschreibung end;",
     ...(extras.length ? ['insert into extras (kategorie, name, preis_cent) values',
-      extras.map(x => `  (${q(x.kategorie)}, ${q(x.name)}, ${x.preis_cent})`).join(',\n') + ';'] : []),
+      extras.map(x => `  (${q(x.kategorie)}, ${q(x.name)}, ${x.preis_cent})`).join(',\n'),
+      '  on conflict (kategorie, name) do nothing;'] : []),
     'commit;', ''
   ].join('\n');
 }
