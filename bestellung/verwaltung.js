@@ -41,6 +41,7 @@
     try {
       const antwort = await NANNI.rpc(funktion, { p_key: KEY || CHEF, ...werte });
       if (!antwort.ok && antwort.fehler === 'key') sperren('Der Schlüssel gilt nicht mehr. Öffnet die Theke und gebt den aktuellen ein.');
+      if (!antwort.ok && antwort.fehler === 'gesperrt') hinweis('Zu viele falsche Versuche. Die Anmeldung ist für 15 Minuten gesperrt.');
       return antwort;
     } catch { hinweis('Keine Verbindung. Versucht es gleich noch einmal.'); return { ok: false }; }
   }
@@ -49,6 +50,7 @@
     try {
       const antwort = await NANNI.rpc(funktion, { p_key: CHEF || KEY, ...werte });
       if (!antwort.ok && antwort.fehler === 'key') chefZu();
+      if (!antwort.ok && antwort.fehler === 'gesperrt') chefZu('Zu viele falsche Versuche. Die Anmeldung ist für 15 Minuten gesperrt.');
       return antwort;
     } catch { hinweis('Keine Verbindung. Versucht es gleich noch einmal.'); return { ok: false }; }
   }
@@ -78,7 +80,7 @@
     if (!probe) return;
     try {
       const antwort = await NANNI.rpc('theke_einstellungen', { p_key: probe });
-      if (!antwort.ok) return chefZu('Dieser Schlüssel passt nicht zum Chef-Bereich.');
+      if (!antwort.ok) return chefZu(antwort.fehler === 'gesperrt' ? 'Zu viele falsche Versuche. Die Anmeldung ist für 15 Minuten gesperrt.' : 'Dieses Passwort passt nicht zum Chef-Bereich.');
       CHEF = probe; chefMerken();
       $('chef-key').value = '';
       // Kannte das Gerät vorher gar keinen Schlüssel, wird jetzt auch "Ausverkauft" sichtbar

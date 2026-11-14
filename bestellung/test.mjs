@@ -7,7 +7,10 @@ import { start } from './dev-server.mjs';
 const s = await start({ port: 0, memory: true });
 const K = s.thekeKey;
 // wie der Browser: echter HTTP-Aufruf an /rest/v1/rpc/...
-const rpc = async (fn, args = {}) => (await fetch(`${s.basis}/rest/v1/rpc/${fn}`, { method: 'POST', body: JSON.stringify(args) })).json();
+const roh = async (fn, args = {}) => (await fetch(`${s.basis}/rest/v1/rpc/${fn}`, { method: 'POST', body: JSON.stringify(args) })).json();
+// Die Tests schicken absichtlich viele falsche Schlüssel. Damit dabei nicht die Sperre nach Fehlversuchen zuschlägt,
+// werden die gezählten Fehlversuche vor jedem Aufruf gelöscht. Die Sperre selbst prüft ein eigener Test mit "roh".
+const rpc = async (fn, args = {}) => { await s.db.exec("delete from zugriffe where was = 'login'"); return roh(fn, args); };
 test.after(() => s.stop());
 // Die Tests laufen zu jeder Uhrzeit; die Öffnungszeiten prüft ein eigener Test weiter unten
 await s.db.exec('update einstellungen set immer_offen = true');
@@ -350,6 +353,31 @@ test('Karte pflegen: Preis, Texte, ausblenden, neuer Artikel, Extras', async () 
   // aufräumen für die übrigen Tests
   await rpc('chef_artikel_speichern', { p_key: K, p_name: 'Espresso', p_daten: { preis_cent: 290, titel: '', name_en: '' } });
   await s.db.exec("update bestellungen set status = 'abgelehnt' where status = 'neu'");
+});
+
+test('Sperre nach 10 falschen Passwörtern', async () => {
+  await s.db.exec("delete from zugriffe where was = 'login'; delete from geraete");
+  const mit = (key, geraet) => key + String.fromCharCode(31) + geraet;
+  // Das Theken-Tablet meldet sich einmal richtig an und ist damit ein bekanntes Gerät
+  assert.equal((await roh('theke_bestellungen', { p_key: mit(K, 'tablet') })).ok, true);
+  // Ein Fremder probiert 10 falsche Passwörter
+  for (let i = 0; i < 10; i++) assert.equal((await roh('theke_bestellungen', { p_key: mit('falsch' + i, 'fremd') })).fehler, 'key');
+  // Jetzt ist gesperrt, selbst mit dem richtigen Passwort von einem unbekannten Gerät
+  assert.equal((await roh('theke_bestellungen', { p_key: mit(K, 'fremd') })).fehler, 'gesperrt');
+  assert.equal((await roh('theke_einstellungen', { p_key: K })).fehler, 'gesperrt', 'auch ohne Geräte-Kennung');
+  // Das bekannte Tablet arbeitet ungestört weiter
+  assert.equal((await roh('theke_bestellungen', { p_key: mit(K, 'tablet') })).ok, true);
+  // Schickt das bekannte Tablet ein falsches Passwort, ist es nicht mehr bekannt und ebenfalls gesperrt
+  assert.equal((await roh('theke_bestellungen', { p_key: mit('falsch', 'tablet') })).fehler, 'key');
+  assert.equal((await roh('theke_bestellungen', { p_key: mit(K, 'tablet') })).fehler, 'gesperrt');
+  // Nach 15 Minuten geht es wieder
+  await s.db.exec("update zugriffe set fenster = fenster - interval '16 minutes' where was = 'login'");
+  assert.equal((await roh('theke_bestellungen', { p_key: mit(K, 'tablet') })).ok, true);
+  // Mit dem Theken-Passwort den Chef-Bereich zu öffnen zählt nicht als Fehlversuch (das passiert bei jedem Öffnen der Einstellungen)
+  await s.db.query("update einstellungen set chef_hash = sha256(convert_to('chefchef1', 'UTF8')) where id = 1");
+  for (let i = 0; i < 12; i++) assert.equal((await roh('theke_einstellungen', { p_key: mit(K, 'tablet') })).fehler, 'key');
+  assert.equal((await roh('theke_bestellungen', { p_key: mit(K, 'neuesgeraet') })).ok, true);
+  await s.db.exec("update einstellungen set chef_hash = null where id = 1; delete from zugriffe where was = 'login'");
 });
 
 test('Pausieren und Codes erneuern', async () => {

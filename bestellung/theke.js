@@ -50,7 +50,9 @@
     $('tor-knopf').disabled = true;
     try {
       const antwort = await NANNI.rpc('theke_bestellungen', { p_key: probe });
-      if (!antwort.ok) {
+      if (!antwort.ok && antwort.fehler === 'gesperrt') {
+        torZeigen('Zu viele falsche Versuche. Die Anmeldung ist für 15 Minuten gesperrt.');
+      } else if (!antwort.ok) {
         KEY = null; try { localStorage.removeItem(MERK); } catch { /* egal */ }
         torZeigen('Dieser Schlüssel stimmt nicht.');
       } else {
@@ -157,6 +159,8 @@
     unterwegs = true;
     try {
       const antwort = await NANNI.rpc('theke_bestellungen', { p_key: KEY });
+      // "gesperrt" ist nur vorübergehend: Schlüssel behalten und gleich wieder versuchen
+      if (!antwort.ok && antwort.fehler === 'gesperrt') { unterwegs = false; netz(false); wecker = setTimeout(abfragen, 15000); return; }
       if (!antwort.ok) { unterwegs = false; KEY = null; try { localStorage.removeItem(MERK); } catch { /* egal */ } return torZeigen('Der Schlüssel gilt nicht mehr. Gebt bitte den aktuellen ein.'); }
       fehlversuche = 0; netz(true);
       uebernehmen(antwort);

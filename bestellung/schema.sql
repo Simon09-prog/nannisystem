@@ -115,6 +115,15 @@ alter table artikel add column if not exists versteckt       boolean not null de
 alter table artikel add column if not exists eigen           boolean not null default false;   -- im Chef-Bereich angelegt, steht nicht fest in der Website
 alter table artikel add column if not exists reihenfolge     int not null default 0;
 
+-- Spätere Erweiterung "Sperre nach falschen Passwörtern":
+-- Geräte, die sich schon einmal richtig angemeldet haben. Gespeichert wird nur ein Fingerabdruck der Geräte-Kennung.
+-- Ein bekanntes Gerät (z. B. das Tablet an der Theke) arbeitet weiter, auch wenn jemand im selben WLAN falsche Passwörter probiert.
+create table if not exists geraete (
+  id    text primary key,
+  seit  timestamptz not null default now()
+);
+alter table geraete enable row level security;
+
 -- Zeilenschutz an und keine einzige Regel: Direkter Zugriff auf die Tabellen ist damit für alle gesperrt.
 alter table einstellungen enable row level security;
 alter table tische        enable row level security;
@@ -160,18 +169,60 @@ language sql stable security definer set search_path = public as $$
   limit 1
 $$;
 
--- Theken-Zugang: Theken-Schlüssel oder Chef-Schlüssel
-create or replace function _theke_ok(p_key text) returns boolean
-language sql stable security definer set search_path = public as $$
-  select coalesce((select sha256(convert_to(p_key, 'UTF8')) in (theke_hash, chef_hash) from einstellungen), false)
-$$;
+-- Passwort prüfen, mit Sperre: Nach 10 falschen Passwörtern von einem Internetanschluss innerhalb von 15 Minuten
+-- werden von dort keine Passwörter mehr geprüft, bis die 15 Minuten um sind.
+-- p_key ist "Passwort" oder "Passwort<Trennzeichen>Geräte-Kennung" (das Trennzeichen ist das unsichtbare Zeichen Nr. 31).
+-- Geräte, die sich schon einmal richtig angemeldet haben, sind von der Sperre ausgenommen, damit niemand die Theke lahmlegen kann.
+create or replace function _pruefen(p_key text, p_chef boolean) returns boolean
+language plpgsql security definer set search_path = public as $$
+declare
+  e einstellungen;
+  v_pw     text := split_part(coalesce(p_key, ''), chr(31), 1);
+  v_geraet text := split_part(coalesce(p_key, ''), chr(31), 2);
+  v_hash   bytea := sha256(convert_to(v_pw, 'UTF8'));
+  v_kopf   json := nullif(current_setting('request.headers', true), '')::json;
+  v_ip     text := md5(coalesce(v_kopf->>'cf-connecting-ip', nullif(btrim(split_part(v_kopf->>'x-forwarded-for', ',', 1)), ''), 'unbekannt'));
+  v_gueltig boolean; v_bekannt boolean;
+begin
+  perform set_config('nanni.fehler', '', true);
+  select * into e from einstellungen;
+  -- gültig = irgendein richtiges Passwort (Theke oder Chef); ob es für diesen Bereich reicht, entscheidet sich ganz unten
+  v_gueltig := coalesce(v_hash = e.theke_hash, false) or coalesce(v_hash = e.chef_hash, false);
+  v_bekannt := v_geraet <> '' and exists (select 1 from geraete where id = md5(v_geraet));
 
--- Chef-Zugang: nur der Chef-Schlüssel. Solange noch keiner gesetzt ist, reicht der Theken-Schlüssel.
+  if not v_bekannt and (select coalesce(sum(anzahl), 0) from zugriffe
+        where wer = v_ip and was = 'login' and fenster > now() - interval '15 minutes') >= 10 then
+    perform set_config('nanni.fehler', 'gesperrt', true);
+    return false;
+  end if;
+
+  if not v_gueltig then
+    insert into zugriffe (wer, was, fenster) values (v_ip, 'login', date_trunc('minute', now()))
+      on conflict (wer, was, fenster) do update set anzahl = zugriffe.anzahl + 1;
+    -- ein bekanntes Gerät mit falschem Passwort (z. B. nach einem Passwortwechsel) gilt ab jetzt wieder als unbekannt
+    if v_bekannt then delete from geraete where id = md5(v_geraet); end if;
+    return false;
+  end if;
+
+  if v_geraet <> '' and not v_bekannt then
+    insert into geraete (id) values (md5(v_geraet)) on conflict (id) do nothing;
+  end if;
+  if p_chef then
+    -- Chef-Bereich: nur das Chef-Passwort; solange keines gesetzt ist, reicht das Theken-Passwort
+    return case when e.chef_hash is null then v_hash = e.theke_hash else v_hash = e.chef_hash end;
+  end if;
+  return true;
+end $$;
+
+-- Warum wurde abgelehnt? 'key' = falsches Passwort, 'gesperrt' = zu viele Fehlversuche
+create or replace function _fehler() returns text
+language sql stable as $$ select coalesce(nullif(current_setting('nanni.fehler', true), ''), 'key') $$;
+
+create or replace function _theke_ok(p_key text) returns boolean
+language sql security definer set search_path = public as $$ select _pruefen(p_key, false) $$;
+
 create or replace function _chef_ok(p_key text) returns boolean
-language sql stable security definer set search_path = public as $$
-  select coalesce((select case when chef_hash is null then theke_hash = sha256(convert_to(p_key, 'UTF8'))
-                               else chef_hash = sha256(convert_to(p_key, 'UTF8')) end from einstellungen), false)
-$$;
+language sql security definer set search_path = public as $$ select _pruefen(p_key, true) $$;
 
 -- Bremse bei übermäßiger Nutzung: zählt je Anschluss und Zeitfenster mit und sagt, ob noch erlaubt ist.
 -- p_max Aufrufe in p_minuten Minuten. Die Grenzen sind großzügig, weil im Café viele Gäste dasselbe WLAN nutzen.
@@ -194,6 +245,7 @@ create or replace function _aufraeumen() returns void
 language sql security definer set search_path = public as $$
   update tische set offen_seit = null where offen_seit < now() - interval '12 hours';   -- vergessene Tische schließen
   delete from zugriffe where fenster < now() - interval '1 day';
+  delete from geraete where seit < now() - interval '180 days';   -- meldet sich danach einfach neu an
   delete from bestellungen
   where (created_at < now() - interval '3 days' and (bezahlt_at is not null or status = 'abgelehnt'))
      or created_at < now() - interval '30 days'
@@ -213,7 +265,7 @@ end $$;
 
 -- Was darf dieser Link? Tisch-Code: der Tisch steht fest. Laden-Code: Gast wählt den Tisch.
 create or replace function tisch_info(p_code text) returns jsonb
-language plpgsql stable security definer set search_path = public as $$
+language plpgsql security definer set search_path = public as $$
 declare e einstellungen; t tische;
 begin
   select * into e from einstellungen;
@@ -370,9 +422,9 @@ end $$;
 -- Alles, was die Theke braucht: offene Bestellungen, noch nicht bezahlte (höchstens 18 Stunden alt),
 -- alles von heute und die Tische, die zahlen möchten
 create or replace function theke_bestellungen(p_key text) returns jsonb
-language plpgsql stable security definer set search_path = public as $$
+language plpgsql security definer set search_path = public as $$
 begin
-  if not _theke_ok(p_key) then return jsonb_build_object('ok', false, 'fehler', 'key'); end if;
+  if not _theke_ok(p_key) then return jsonb_build_object('ok', false, 'fehler', _fehler()); end if;
   return jsonb_build_object('ok', true, 'jetzt', now(), 'aktiv', (select aktiv from einstellungen),
     'tische_offen', coalesce((select jsonb_agg(id) from tische where offen_seit is not null), '[]'::jsonb),
     'zahlen', coalesce((select jsonb_agg(jsonb_build_object('tisch_id', id, 'tisch', name, 'bereich', bereich, 'seit', zahlen_at)) from tische where zahlen_at is not null), '[]'::jsonb),
@@ -390,7 +442,7 @@ end $$;
 create or replace function theke_status(p_key text, p_id uuid, p_status text) returns jsonb
 language plpgsql security definer set search_path = public as $$
 begin
-  if not _theke_ok(p_key) then return jsonb_build_object('ok', false, 'fehler', 'key'); end if;
+  if not _theke_ok(p_key) then return jsonb_build_object('ok', false, 'fehler', _fehler()); end if;
   if p_status not in ('neu', 'angenommen', 'serviert', 'abgelehnt') then return jsonb_build_object('ok', false, 'fehler', 'status'); end if;
   -- Geht eine Bestellung zurück auf "neu" oder "in Arbeit", gilt auch nichts mehr als schon serviert
   update bestellungen set status = p_status, updated_at = now(),
@@ -419,7 +471,7 @@ declare
   b bestellungen; p jsonb; v_pos jsonb; i int;
   v_rest int; v_nimm int; v_einzel int; v_summe int := 0; v_offen boolean; v_rest_da boolean;
 begin
-  if not _theke_ok(p_key) then return jsonb_build_object('ok', false, 'fehler', 'key'); end if;
+  if not _theke_ok(p_key) then return jsonb_build_object('ok', false, 'fehler', _fehler()); end if;
   if p_auswahl is not null and jsonb_typeof(p_auswahl) <> 'array' then return jsonb_build_object('ok', false, 'fehler', 'ungueltig'); end if;
   for b in select * from bestellungen where tisch_id = p_tisch and bezahlt_at is null and status <> 'abgelehnt' order by created_at for update loop
     v_pos := b.positionen; v_offen := false;
@@ -461,7 +513,7 @@ create or replace function theke_serviert(p_key text, p_ids uuid[], p_nur_getrae
 language plpgsql security definer set search_path = public as $$
 declare b bestellungen; v_pos jsonb; v_alle boolean; v_nur boolean := coalesce(p_nur_getraenke, false);
 begin
-  if not _theke_ok(p_key) then return jsonb_build_object('ok', false, 'fehler', 'key'); end if;
+  if not _theke_ok(p_key) then return jsonb_build_object('ok', false, 'fehler', _fehler()); end if;
   for b in select * from bestellungen where id = any (p_ids[1:50]) and status in ('neu', 'angenommen') for update loop
     select jsonb_agg(case when not v_nur or coalesce((p->>'getraenk')::boolean, false) then p || '{"serviert": true}'::jsonb else p end order by o),
            bool_and(not v_nur or coalesce((p->>'getraenk')::boolean, false) or coalesce((p->>'serviert')::boolean, false))
@@ -479,16 +531,16 @@ end $$;
 create or replace function theke_ruf_erledigt(p_key text, p_tisch bigint) returns jsonb
 language plpgsql security definer set search_path = public as $$
 begin
-  if not _theke_ok(p_key) then return jsonb_build_object('ok', false, 'fehler', 'key'); end if;
+  if not _theke_ok(p_key) then return jsonb_build_object('ok', false, 'fehler', _fehler()); end if;
   update tische set ruf_at = null, ruf_erledigt_at = now() where id = p_tisch;
   return jsonb_build_object('ok', true);
 end $$;
 
 -- Ausverkauft: Liste aller Artikel und Schalter je Artikel. Gilt immer nur für den heutigen Tag.
 create or replace function theke_artikel(p_key text) returns jsonb
-language plpgsql stable security definer set search_path = public as $$
+language plpgsql security definer set search_path = public as $$
 begin
-  if not _theke_ok(p_key) then return jsonb_build_object('ok', false, 'fehler', 'key'); end if;
+  if not _theke_ok(p_key) then return jsonb_build_object('ok', false, 'fehler', _fehler()); end if;
   return jsonb_build_object('ok', true, 'artikel', coalesce(
     (select jsonb_agg(jsonb_build_object('name', name, 'titel', titel, 'kategorie', kategorie, 'aus', ausverkauft_am is not distinct from _heute()) order by kategorie, name) from artikel where not versteckt),
     '[]'::jsonb));
@@ -497,16 +549,16 @@ end $$;
 create or replace function theke_ausverkauft(p_key text, p_name text, p_aus boolean) returns jsonb
 language plpgsql security definer set search_path = public as $$
 begin
-  if not _theke_ok(p_key) then return jsonb_build_object('ok', false, 'fehler', 'key'); end if;
+  if not _theke_ok(p_key) then return jsonb_build_object('ok', false, 'fehler', _fehler()); end if;
   update artikel set ausverkauft_am = case when p_aus then _heute() else null end where name = p_name;
   return jsonb_build_object('ok', found);
 end $$;
 
 -- Einstellungen: Öffnungszeiten, Ruhetage, Bewertungslink
 create or replace function theke_einstellungen(p_key text) returns jsonb
-language plpgsql stable security definer set search_path = public as $$
+language plpgsql security definer set search_path = public as $$
 begin
-  if not _chef_ok(p_key) then return jsonb_build_object('ok', false, 'fehler', 'key'); end if;
+  if not _chef_ok(p_key) then return jsonb_build_object('ok', false, 'fehler', _fehler()); end if;
   return jsonb_build_object('ok', true, 'offen', _offen(), 'bewertung_url', (select bewertung_url from einstellungen),
     'chef_gesetzt', (select chef_hash is not null from einstellungen),
     'zeiten', coalesce((select jsonb_agg(jsonb_build_object('tag', tag, 'von', to_char(von, 'HH24:MI'), 'bis', to_char(bis, 'HH24:MI')) order by tag) from oeffnungszeiten), '[]'::jsonb),
@@ -517,7 +569,7 @@ end $$;
 create or replace function theke_zeiten_setzen(p_key text, p_zeiten jsonb) returns jsonb
 language plpgsql security definer set search_path = public as $$
 begin
-  if not _chef_ok(p_key) then return jsonb_build_object('ok', false, 'fehler', 'key'); end if;
+  if not _chef_ok(p_key) then return jsonb_build_object('ok', false, 'fehler', _fehler()); end if;
   if jsonb_typeof(p_zeiten) is distinct from 'array' then return jsonb_build_object('ok', false, 'fehler', 'ungueltig'); end if;
   delete from oeffnungszeiten where true;
   insert into oeffnungszeiten (tag, von, bis)
@@ -531,7 +583,7 @@ end $$;
 create or replace function theke_ruhetag(p_key text, p_datum date, p_an boolean) returns jsonb
 language plpgsql security definer set search_path = public as $$
 begin
-  if not _chef_ok(p_key) then return jsonb_build_object('ok', false, 'fehler', 'key'); end if;
+  if not _chef_ok(p_key) then return jsonb_build_object('ok', false, 'fehler', _fehler()); end if;
   if p_an then insert into ruhetage (datum) values (p_datum) on conflict do nothing;
   else delete from ruhetage where datum = p_datum; end if;
   return jsonb_build_object('ok', true);
@@ -542,7 +594,7 @@ create or replace function theke_bewertung(p_key text, p_url text) returns jsonb
 language plpgsql security definer set search_path = public as $$
 declare v_url text := btrim(coalesce(p_url, ''));
 begin
-  if not _chef_ok(p_key) then return jsonb_build_object('ok', false, 'fehler', 'key'); end if;
+  if not _chef_ok(p_key) then return jsonb_build_object('ok', false, 'fehler', _fehler()); end if;
   if v_url <> '' and (v_url !~ '^https://[^\s"<>]+$' or length(v_url) > 300) then return jsonb_build_object('ok', false, 'fehler', 'ungueltig'); end if;
   update einstellungen set bewertung_url = v_url where id = 1;
   return jsonb_build_object('ok', true);
@@ -551,9 +603,9 @@ end $$;
 -- ---------------------------------------------------------------- Karte pflegen (nur Chef-Zugang)
 
 create or replace function chef_karte(p_key text) returns jsonb
-language plpgsql stable security definer set search_path = public as $$
+language plpgsql security definer set search_path = public as $$
 begin
-  if not _chef_ok(p_key) then return jsonb_build_object('ok', false, 'fehler', 'key'); end if;
+  if not _chef_ok(p_key) then return jsonb_build_object('ok', false, 'fehler', _fehler()); end if;
   return jsonb_build_object('ok', true,
     'artikel', coalesce((select jsonb_agg(jsonb_build_object('name', name, 'kategorie', kategorie, 'preis_cent', preis_cent, 'titel', titel,
         'beschreibung', beschreibung, 'name_en', name_en, 'beschreibung_en', beschreibung_en, 'versteckt', versteckt, 'eigen', eigen,
@@ -570,7 +622,7 @@ declare
   v_preis int; v_kat text;
   kurz constant int := 80; lang constant int := 400;
 begin
-  if not _chef_ok(p_key) then return jsonb_build_object('ok', false, 'fehler', 'key'); end if;
+  if not _chef_ok(p_key) then return jsonb_build_object('ok', false, 'fehler', _fehler()); end if;
   if v_name = '' or jsonb_typeof(p_daten) is distinct from 'object' then return jsonb_build_object('ok', false, 'fehler', 'name'); end if;
   v_preis := (p_daten->>'preis_cent')::int;
   if v_preis is null or v_preis not between 0 and 100000 then return jsonb_build_object('ok', false, 'fehler', 'preis'); end if;
@@ -606,7 +658,7 @@ end $$;
 create or replace function chef_artikel_loeschen(p_key text, p_name text) returns jsonb
 language plpgsql security definer set search_path = public as $$
 begin
-  if not _chef_ok(p_key) then return jsonb_build_object('ok', false, 'fehler', 'key'); end if;
+  if not _chef_ok(p_key) then return jsonb_build_object('ok', false, 'fehler', _fehler()); end if;
   delete from artikel where name = p_name and eigen;
   if found then return jsonb_build_object('ok', true); end if;
   return jsonb_build_object('ok', false, 'fehler', 'fest');
@@ -616,7 +668,7 @@ create or replace function chef_extra_speichern(p_key text, p_kategorie text, p_
 language plpgsql security definer set search_path = public as $$
 declare v_name text := left(btrim(coalesce(p_name, '')), 60);
 begin
-  if not _chef_ok(p_key) then return jsonb_build_object('ok', false, 'fehler', 'key'); end if;
+  if not _chef_ok(p_key) then return jsonb_build_object('ok', false, 'fehler', _fehler()); end if;
   if v_name = '' then return jsonb_build_object('ok', false, 'fehler', 'name'); end if;
   if p_preis_cent is null or p_preis_cent not between 0 and 100000 then return jsonb_build_object('ok', false, 'fehler', 'preis'); end if;
   if not exists (select 1 from artikel where kategorie = p_kategorie) then return jsonb_build_object('ok', false, 'fehler', 'kategorie'); end if;
@@ -628,7 +680,7 @@ end $$;
 create or replace function chef_extra_loeschen(p_key text, p_kategorie text, p_name text) returns jsonb
 language plpgsql security definer set search_path = public as $$
 begin
-  if not _chef_ok(p_key) then return jsonb_build_object('ok', false, 'fehler', 'key'); end if;
+  if not _chef_ok(p_key) then return jsonb_build_object('ok', false, 'fehler', _fehler()); end if;
   delete from extras where kategorie = p_kategorie and name = p_name;
   return jsonb_build_object('ok', found);
 end $$;
@@ -639,7 +691,7 @@ create or replace function schluessel_neu(p_key text, p_art text) returns jsonb
 language plpgsql security definer set search_path = public as $$
 declare v_neu text := _code(40);
 begin
-  if not _chef_ok(p_key) then return jsonb_build_object('ok', false, 'fehler', 'key'); end if;
+  if not _chef_ok(p_key) then return jsonb_build_object('ok', false, 'fehler', _fehler()); end if;
   if p_art = 'chef' then update einstellungen set chef_hash = sha256(convert_to(v_neu, 'UTF8')) where id = 1;
   elsif p_art = 'theke' then update einstellungen set theke_hash = sha256(convert_to(v_neu, 'UTF8')) where id = 1;
   else return jsonb_build_object('ok', false, 'fehler', 'ungueltig');
@@ -652,7 +704,7 @@ create or replace function schluessel_setzen(p_key text, p_art text, p_neu text)
 language plpgsql security definer set search_path = public as $$
 declare v_neu text := btrim(coalesce(p_neu, ''));
 begin
-  if not _chef_ok(p_key) then return jsonb_build_object('ok', false, 'fehler', 'key'); end if;
+  if not _chef_ok(p_key) then return jsonb_build_object('ok', false, 'fehler', _fehler()); end if;
   if length(v_neu) not between 8 and 100 then return jsonb_build_object('ok', false, 'fehler', 'kurz'); end if;
   if p_art = 'chef' then update einstellungen set chef_hash = sha256(convert_to(v_neu, 'UTF8')) where id = 1;
   elsif p_art = 'theke' then update einstellungen set theke_hash = sha256(convert_to(v_neu, 'UTF8')) where id = 1;
@@ -682,10 +734,10 @@ end $$;
 
 -- Tagesübersicht: Bestellungen, Umsatz und meistbestellte Artikel von heute (ohne abgelehnte)
 create or replace function theke_tag(p_key text) returns jsonb
-language plpgsql stable security definer set search_path = public as $$
+language plpgsql security definer set search_path = public as $$
 declare v_start timestamptz := _heute()::timestamp at time zone 'Europe/Berlin';
 begin
-  if not _chef_ok(p_key) then return jsonb_build_object('ok', false, 'fehler', 'key'); end if;
+  if not _chef_ok(p_key) then return jsonb_build_object('ok', false, 'fehler', _fehler()); end if;
   return jsonb_build_object('ok', true, 'datum', _heute(),
     'anzahl', (select count(*) from bestellungen where created_at >= v_start and status <> 'abgelehnt'),
     'abgelehnt', (select count(*) from bestellungen where created_at >= v_start and status = 'abgelehnt'),
@@ -701,15 +753,15 @@ end $$;
 create or replace function theke_aktiv(p_key text, p_aktiv boolean) returns jsonb
 language plpgsql security definer set search_path = public as $$
 begin
-  if not _theke_ok(p_key) then return jsonb_build_object('ok', false, 'fehler', 'key'); end if;
+  if not _theke_ok(p_key) then return jsonb_build_object('ok', false, 'fehler', _fehler()); end if;
   update einstellungen set aktiv = coalesce(p_aktiv, true) where id = 1;
   return jsonb_build_object('ok', true);
 end $$;
 
 create or replace function theke_tische(p_key text) returns jsonb
-language plpgsql stable security definer set search_path = public as $$
+language plpgsql security definer set search_path = public as $$
 begin
-  if not _chef_ok(p_key) then return jsonb_build_object('ok', false, 'fehler', 'key'); end if;
+  if not _chef_ok(p_key) then return jsonb_build_object('ok', false, 'fehler', _fehler()); end if;
   return jsonb_build_object('ok', true, 'laden_code', (select laden_code from einstellungen), 'tische', coalesce(
     (select jsonb_agg(jsonb_build_object('id', id, 'name', name, 'bereich', bereich, 'code', code) order by bereich, length(name), name) from tische),
     '[]'::jsonb));
@@ -719,7 +771,7 @@ create or replace function theke_tisch_anlegen(p_key text, p_name text, p_bereic
 language plpgsql security definer set search_path = public as $$
 declare v_name text := left(btrim(coalesce(p_name, '')), 20); v_bereich text := left(btrim(coalesce(p_bereich, '')), 30); v_id bigint;
 begin
-  if not _chef_ok(p_key) then return jsonb_build_object('ok', false, 'fehler', 'key'); end if;
+  if not _chef_ok(p_key) then return jsonb_build_object('ok', false, 'fehler', _fehler()); end if;
   if v_name = '' then return jsonb_build_object('ok', false, 'fehler', 'name'); end if;
   if (select count(*) from tische) >= 200 then return jsonb_build_object('ok', false, 'fehler', 'voll'); end if;
   insert into tische (name, bereich, code) values (v_name, v_bereich, _code(10))
@@ -731,7 +783,7 @@ end $$;
 create or replace function theke_tisch_loeschen(p_key text, p_id bigint) returns jsonb
 language plpgsql security definer set search_path = public as $$
 begin
-  if not _chef_ok(p_key) then return jsonb_build_object('ok', false, 'fehler', 'key'); end if;
+  if not _chef_ok(p_key) then return jsonb_build_object('ok', false, 'fehler', _fehler()); end if;
   delete from tische where id = p_id;
   return jsonb_build_object('ok', found);
 end $$;
@@ -739,7 +791,7 @@ end $$;
 create or replace function theke_tisch_neuer_code(p_key text, p_id bigint) returns jsonb
 language plpgsql security definer set search_path = public as $$
 begin
-  if not _chef_ok(p_key) then return jsonb_build_object('ok', false, 'fehler', 'key'); end if;
+  if not _chef_ok(p_key) then return jsonb_build_object('ok', false, 'fehler', _fehler()); end if;
   update tische set code = _code(10) where id = p_id;
   return jsonb_build_object('ok', found);
 end $$;
@@ -747,7 +799,7 @@ end $$;
 create or replace function theke_laden_code_neu(p_key text) returns jsonb
 language plpgsql security definer set search_path = public as $$
 begin
-  if not _chef_ok(p_key) then return jsonb_build_object('ok', false, 'fehler', 'key'); end if;
+  if not _chef_ok(p_key) then return jsonb_build_object('ok', false, 'fehler', _fehler()); end if;
   update einstellungen set laden_code = _code(10) where id = 1;
   return jsonb_build_object('ok', true);
 end $$;
