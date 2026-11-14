@@ -10,8 +10,8 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; media-src 'self' blob:; font-src 'self'; connect-src 'self' https://kpgabhgmstwbackbilcu.supabase.co; object-src 'none'; base-uri 'none'; form-action 'self'">
 <meta name="theme-color" content="#33261f">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ccircle cx='32' cy='32' r='32' fill='%239aae93'/%3E%3Ctext x='32' y='41' font-family='sans-serif' font-size='26' text-anchor='middle' fill='%23fbf7f1'%3EN%3C/text%3E%3C/svg%3E">
-<link rel="stylesheet" href="bestellung/theke.css?v=13">
-<link rel="stylesheet" href="bestellung/verwaltung.css?v=13">
+<link rel="stylesheet" href="bestellung/theke.css?v=14">
+<link rel="stylesheet" href="bestellung/verwaltung.css?v=14">
 </head>
 <body class="verwaltung">
 
@@ -36,9 +36,14 @@
   </section>
 
   <section class="feld breit erst" id="chef-erst" hidden>
-    <header><h2>Chef-Schlüssel erzeugen</h2></header>
-    <p class="erklaer">Im Moment öffnet der Theken-Schlüssel auch Umsatz, Speisekarte und Einstellungen. Erzeugt einen eigenen Chef-Schlüssel, damit das nur noch die Chefin kann. Er wird einmal groß angezeigt, schreibt ihn dann ab.</p>
-    <button type="button" id="erst-chef">Chef-Schlüssel jetzt erzeugen</button>
+    <header><h2>Chef-Passwort festlegen</h2></header>
+    <p class="erklaer">Im Moment öffnet der Theken-Schlüssel auch Umsatz, Speisekarte und Einstellungen. Legt ein eigenes Chef-Passwort fest, damit das nur noch die Chefin kann.</p>
+    <form class="zeile" id="erst-form">
+      <input type="password" id="erst-passwort" placeholder="Eigenes Chef-Passwort, mindestens 8 Zeichen" aria-label="Eigenes Chef-Passwort" minlength="8" maxlength="100" autocomplete="new-password" required>
+      <button type="submit">Passwort festlegen</button>
+    </form>
+    <p class="erklaer">Oder lasst euch einen langen Zufalls-Schlüssel erzeugen:</p>
+    <button type="button" class="klein-knopf" id="erst-chef">Zufalls-Schlüssel erzeugen</button>
   </section>
 
   <section class="feld breit chef" hidden>
@@ -111,9 +116,20 @@
   <section class="feld breit chef" hidden>
     <header><h2>Zugänge</h2><button type="button" class="klein-knopf" id="chef-abmelden" hidden>Chef-Bereich auf diesem Gerät sperren</button></header>
     <p class="erklaer" id="zugang-stand"></p>
+    <h3>Chef-Passwort ändern</h3>
+    <form class="zeile" id="chef-setzen">
+      <input type="password" id="chef-neu" placeholder="Neues Chef-Passwort, mindestens 8 Zeichen" aria-label="Neues Chef-Passwort" minlength="8" maxlength="100" autocomplete="new-password" required>
+      <button type="submit">Festlegen</button>
+    </form>
+    <h3>Theken-Passwort ändern</h3>
+    <form class="zeile" id="theke-setzen">
+      <input type="password" id="theke-neu" placeholder="Neues Theken-Passwort, mindestens 8 Zeichen" aria-label="Neues Theken-Passwort" minlength="8" maxlength="100" autocomplete="new-password" required>
+      <button type="submit">Festlegen</button>
+    </form>
+    <h3>Oder einen Zufalls-Schlüssel erzeugen</h3>
     <div class="zeile">
-      <button type="button" id="neu-chef">Chef-Schlüssel neu erzeugen</button>
-      <button type="button" id="neu-theke">Theken-Schlüssel neu erzeugen</button>
+      <button type="button" class="klein-knopf" id="neu-chef">Chef-Schlüssel neu erzeugen</button>
+      <button type="button" class="klein-knopf" id="neu-theke">Theken-Schlüssel neu erzeugen</button>
     </div>
   </section>
 
@@ -147,7 +163,7 @@
   </form>
 </dialog>
 
-<script src="bestellung/config.js?v=13"></script>
-<script src="bestellung/verwaltung.js?v=13"></script>
+<script src="bestellung/config.js?v=14"></script>
+<script src="bestellung/verwaltung.js?v=14"></script>
 </body>
 </html>

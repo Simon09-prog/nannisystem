@@ -296,6 +296,16 @@ test('Getrennte Zugänge: Theken-Schlüssel reicht nicht für die Einstellungen'
   const neu = (await rpc('schluessel_neu', { p_key: chef, p_art: 'theke' })).schluessel;
   assert.equal((await rpc('theke_bestellungen', { p_key: K })).fehler, 'key');
   assert.equal((await rpc('theke_bestellungen', { p_key: neu })).ok, true);
+  // eigenes Passwort festlegen
+  assert.equal((await rpc('schluessel_setzen', { p_key: neu, p_art: 'chef', p_neu: 'geheim123' })).fehler, 'key', 'Theke darf das nicht');
+  assert.equal((await rpc('schluessel_setzen', { p_key: chef, p_art: 'chef', p_neu: 'kurz' })).fehler, 'kurz');
+  assert.equal((await rpc('schluessel_setzen', { p_key: chef, p_art: 'chef', p_neu: 'Mein eigenes Passwort' })).ok, true);
+  assert.equal((await rpc('theke_einstellungen', { p_key: chef })).fehler, 'key');
+  assert.equal((await rpc('theke_einstellungen', { p_key: 'Mein eigenes Passwort' })).ok, true);
+  // Notfall-Weg ist von außen nicht erreichbar, im SQL-Editor aber schon
+  assert.equal((await fetch(`${s.basis}/rest/v1/rpc/chef_passwort_setzen`, { method: 'POST', body: '{"p_neu":"hackerhacker"}' })).status, 404);
+  assert.equal((await s.db.query("select chef_passwort_setzen('Notfall-Passwort 1') as t")).rows[0].t, 'Chef-Passwort gesetzt.');
+  assert.equal((await rpc('theke_einstellungen', { p_key: 'Notfall-Passwort 1' })).ok, true);
   // für die übrigen Tests: alter Theken-Schlüssel wieder gültig, kein Chef-Schlüssel
   await s.db.query("update einstellungen set chef_hash = null, theke_hash = sha256(convert_to($1, 'UTF8'))", [K]);
 });

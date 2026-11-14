@@ -644,6 +644,39 @@ begin
   return jsonb_build_object('ok', true, 'schluessel', v_neu);
 end $$;
 
+-- Schlüssel selbst festlegen statt erzeugen lassen (nur Chef-Zugang). Mindestens 8 Zeichen.
+create or replace function schluessel_setzen(p_key text, p_art text, p_neu text) returns jsonb
+language plpgsql security definer set search_path = public as $$
+declare v_neu text := btrim(coalesce(p_neu, ''));
+begin
+  if not _chef_ok(p_key) then return jsonb_build_object('ok', false, 'fehler', 'key'); end if;
+  if length(v_neu) not between 8 and 100 then return jsonb_build_object('ok', false, 'fehler', 'kurz'); end if;
+  if p_art = 'chef' then update einstellungen set chef_hash = sha256(convert_to(v_neu, 'UTF8'));
+  elsif p_art = 'theke' then update einstellungen set theke_hash = sha256(convert_to(v_neu, 'UTF8'));
+  else return jsonb_build_object('ok', false, 'fehler', 'ungueltig');
+  end if;
+  return jsonb_build_object('ok', true);
+end $$;
+
+-- Notfall-Weg, nur im SQL-Editor von Supabase (von der Website aus nicht erreichbar):
+--   select chef_passwort_setzen('euer neues passwort');
+--   select theke_passwort_setzen('euer neues passwort');
+-- Damit kommt man wieder hinein, wenn ein Schlüssel verloren gegangen ist.
+create or replace function chef_passwort_setzen(p_neu text) returns text
+language plpgsql security definer set search_path = public as $$
+begin
+  if length(btrim(coalesce(p_neu, ''))) < 8 then return 'Zu kurz: mindestens 8 Zeichen.'; end if;
+  update einstellungen set chef_hash = sha256(convert_to(btrim(p_neu), 'UTF8'));
+  return 'Chef-Passwort gesetzt.';
+end $$;
+create or replace function theke_passwort_setzen(p_neu text) returns text
+language plpgsql security definer set search_path = public as $$
+begin
+  if length(btrim(coalesce(p_neu, ''))) < 8 then return 'Zu kurz: mindestens 8 Zeichen.'; end if;
+  update einstellungen set theke_hash = sha256(convert_to(btrim(p_neu), 'UTF8'));
+  return 'Theken-Passwort gesetzt.';
+end $$;
+
 -- Tagesübersicht: Bestellungen, Umsatz und meistbestellte Artikel von heute (ohne abgelehnte)
 create or replace function theke_tag(p_key text) returns jsonb
 language plpgsql stable security definer set search_path = public as $$
@@ -728,7 +761,7 @@ begin
       tisch_info(text), bestellung_aufgeben(text, jsonb, bigint), bestellung_status(uuid[]), bestellung_zurueckziehen(uuid), zahlen_wuenschen(text, bigint), kellner_rufen(text, bigint),
       theke_bestellungen(text), theke_status(text, uuid, text), theke_bezahlt(text, bigint, jsonb), theke_serviert(text, uuid[], boolean), theke_ruf_erledigt(text, bigint), theke_aktiv(text, boolean),
       theke_artikel(text), theke_ausverkauft(text, text, boolean), theke_einstellungen(text), theke_zeiten_setzen(text, jsonb),
-      theke_ruhetag(text, date, boolean), theke_bewertung(text, text), theke_tag(text), schluessel_neu(text, text), karte_stand(), chef_karte(text), chef_artikel_speichern(text, text, jsonb),
+      theke_ruhetag(text, date, boolean), theke_bewertung(text, text), theke_tag(text), schluessel_neu(text, text), schluessel_setzen(text, text, text), karte_stand(), chef_karte(text), chef_artikel_speichern(text, text, jsonb),
       chef_artikel_loeschen(text, text), chef_extra_speichern(text, text, text, int), chef_extra_loeschen(text, text, text),
       theke_tische(text), theke_tisch_anlegen(text, text, text), theke_tisch_loeschen(text, bigint),
       theke_tisch_neuer_code(text, bigint), theke_laden_code_neu(text)

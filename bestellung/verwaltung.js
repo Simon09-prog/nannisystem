@@ -316,6 +316,21 @@
     $('schluessel-neu').showModal();   // als Fenster in der Mitte, damit man ihn nicht übersieht
     einstellungenLaden();
   }
+  // Eigenes Passwort festlegen. Es wird nicht angezeigt und nicht im Klartext gespeichert.
+  async function passwortSetzen(art, feld) {
+    const neu = feld.value.trim();
+    if (neu.length < 8) return hinweis('Das Passwort braucht mindestens 8 Zeichen.');
+    const r = await chef('schluessel_setzen', { p_art: art, p_neu: neu });
+    if (!r.ok) return hinweis(r.fehler === 'kurz' ? 'Das Passwort braucht mindestens 8 Zeichen.' : 'Das hat nicht geklappt.');
+    if (art === 'chef') { CHEF = neu; merken.schreiben('nanni:chef-key', CHEF); }
+    if (art === 'theke' && KEY) { KEY = neu; merken.schreiben('nanni:theke-key', KEY); }
+    feld.value = '';
+    hinweis(art === 'chef' ? 'Chef-Passwort festgelegt. Dieses Gerät merkt es sich.' : 'Theken-Passwort festgelegt. An jedem Theken-Gerät muss es einmal neu eingegeben werden.');
+    einstellungenLaden();
+  }
+  $('erst-form').addEventListener('submit', ev => { ev.preventDefault(); passwortSetzen('chef', $('erst-passwort')); });
+  $('chef-setzen').addEventListener('submit', ev => { ev.preventDefault(); passwortSetzen('chef', $('chef-neu')); });
+  $('theke-setzen').addEventListener('submit', ev => { ev.preventDefault(); passwortSetzen('theke', $('theke-neu')); });
   zweimal($('neu-chef'), 'Wirklich neu erzeugen?', () => schluesselNeu('chef'));
   zweimal($('neu-theke'), 'Wirklich neu erzeugen?', () => schluesselNeu('theke'));
   zweimal($('erst-chef'), 'Wirklich erzeugen?', () => schluesselNeu('chef'));
