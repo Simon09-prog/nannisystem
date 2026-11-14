@@ -24,7 +24,11 @@
   };
 
   let KEY = merken.lesen('nanni:theke-key');     // Theken-Schlüssel dieses Geräts
-  let CHEF = merken.lesen('nanni:chef-key');     // Chef-Schlüssel, falls auf diesem Gerät hinterlegt
+  // Das Chef-Passwort wird bewusst NICHT auf dem Gerät gespeichert. Es gilt nur, solange diese Seite offen ist,
+  // und muss bei jedem Öffnen der Einstellungen neu eingegeben werden. So kommt an einem Theken-Gerät niemand
+  // in den Chef-Bereich, nur weil die Chefin dort einmal angemeldet war.
+  let CHEF = null;
+  merken.schreiben('nanni:chef-key', null);   // früher gespeicherte Chef-Zugänge von diesem Gerät entfernen
   const sperren = text => { $('sperre').textContent = text; $('sperre').hidden = false; $('felder').hidden = true; };
   if (!window.NANNI) return sperren('Die Verbindung zur Datenbank ist noch nicht eingerichtet.');
 
@@ -75,14 +79,14 @@
     try {
       const antwort = await NANNI.rpc('theke_einstellungen', { p_key: probe });
       if (!antwort.ok) return chefZu('Dieser Schlüssel passt nicht zum Chef-Bereich.');
-      CHEF = probe; merken.schreiben('nanni:chef-key', CHEF);
+      CHEF = probe;
       $('chef-key').value = '';
       // Kannte das Gerät vorher gar keinen Schlüssel, wird jetzt auch "Ausverkauft" sichtbar
       if ($('feld-ausverkauft').hidden) { $('feld-ausverkauft').hidden = false; artikelLaden(); }
       chefAuf();
     } catch { chefZu('Keine Verbindung. Versucht es gleich noch einmal.'); }
   });
-  $('chef-abmelden').addEventListener('click', () => { CHEF = null; merken.schreiben('nanni:chef-key', null); chefZu(); });
+  $('chef-abmelden').addEventListener('click', () => { CHEF = null; chefZu(); });
 
   async function chefAuf() {
     const e = await chef('theke_einstellungen');
@@ -303,14 +307,14 @@
     const alt = CHEF || KEY;
     const r = await chef('schluessel_neu', { p_art: art });
     if (!r.ok) return hinweis('Das hat nicht geklappt.');
-    if (art === 'chef') { CHEF = r.schluessel; merken.schreiben('nanni:chef-key', CHEF); }
+    if (art === 'chef') CHEF = r.schluessel;
     // Hat dieses Gerät den alten Theken-Schlüssel benutzt, merkt es sich gleich den neuen
     if (art === 'theke' && KEY) { KEY = r.schluessel; merken.schreiben('nanni:theke-key', KEY); }
     if (art === 'theke' && !KEY && alt === CHEF) { /* Chef-Gerät ohne Theken-Schlüssel: nichts zu merken */ }
     $('schluessel-titel').textContent = art === 'chef' ? 'Neuer Chef-Schlüssel' : 'Neuer Theken-Schlüssel';
     $('schluessel-wert').textContent = r.schluessel;
     $('schluessel-text').textContent = art === 'chef'
-      ? 'Schreibt ihn jetzt ab oder speichert ihn sicher. Er wird nicht noch einmal angezeigt. Dieses Gerät merkt ihn sich.'
+      ? 'Schreibt ihn jetzt ab oder speichert ihn sicher. Er wird nicht noch einmal angezeigt und muss bei jedem Öffnen der Einstellungen eingegeben werden.'
       : 'Schreibt ihn jetzt ab. Er wird nicht noch einmal angezeigt. Der alte Theken-Schlüssel gilt ab sofort nicht mehr; an jedem Theken-Gerät muss der neue einmal eingegeben werden.';
     $('schluessel-kopieren').textContent = 'Kopieren';
     $('schluessel-neu').showModal();   // als Fenster in der Mitte, damit man ihn nicht übersieht
@@ -322,10 +326,10 @@
     if (neu.length < 8) return hinweis('Das Passwort braucht mindestens 8 Zeichen.');
     const r = await chef('schluessel_setzen', { p_art: art, p_neu: neu });
     if (!r.ok) return hinweis(r.fehler === 'kurz' ? 'Das Passwort braucht mindestens 8 Zeichen.' : 'Das hat nicht geklappt.');
-    if (art === 'chef') { CHEF = neu; merken.schreiben('nanni:chef-key', CHEF); }
+    if (art === 'chef') CHEF = neu;
     if (art === 'theke' && KEY) { KEY = neu; merken.schreiben('nanni:theke-key', KEY); }
     feld.value = '';
-    hinweis(art === 'chef' ? 'Chef-Passwort festgelegt. Dieses Gerät merkt es sich.' : 'Theken-Passwort festgelegt. An jedem Theken-Gerät muss es einmal neu eingegeben werden.');
+    hinweis(art === 'chef' ? 'Chef-Passwort festgelegt.' : 'Theken-Passwort festgelegt. An jedem Theken-Gerät muss es einmal neu eingegeben werden.');
     einstellungenLaden();
   }
   $('erst-form').addEventListener('submit', ev => { ev.preventDefault(); passwortSetzen('chef', $('erst-passwort')); });

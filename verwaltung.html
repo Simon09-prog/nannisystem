@@ -10,8 +10,8 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; media-src 'self' blob:; font-src 'self'; connect-src 'self' https://kpgabhgmstwbackbilcu.supabase.co; object-src 'none'; base-uri 'none'; form-action 'self'">
 <meta name="theme-color" content="#33261f">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ccircle cx='32' cy='32' r='32' fill='%239aae93'/%3E%3Ctext x='32' y='41' font-family='sans-serif' font-size='26' text-anchor='middle' fill='%23fbf7f1'%3EN%3C/text%3E%3C/svg%3E">
-<link rel="stylesheet" href="bestellung/theke.css?v=14">
-<link rel="stylesheet" href="bestellung/verwaltung.css?v=14">
+<link rel="stylesheet" href="bestellung/theke.css?v=15">
+<link rel="stylesheet" href="bestellung/verwaltung.css?v=15">
 </head>
 <body class="verwaltung">
 
@@ -26,7 +26,7 @@
 
   <section class="feld breit" id="chef-tor" hidden>
     <header><h2>Chef-Bereich</h2></header>
-    <p class="erklaer">Umsatz, Speisekarte, Öffnungszeiten, Tische und Schlüssel sind nur mit dem Chef-Schlüssel zugänglich.</p>
+    <p class="erklaer">Umsatz, Speisekarte, Öffnungszeiten, Tische und Schlüssel sind nur mit dem Chef-Passwort zugänglich. Es wird auf dem Gerät nicht gespeichert und bei jedem Öffnen neu abgefragt.</p>
     <p class="erklaer"><b>Noch keinen Chef-Schlüssel?</b> Dann gebt hier einmal den Theken-Schlüssel ein. Danach könnt ihr den Chef-Schlüssel erzeugen.</p>
     <form class="zeile" id="chef-form">
       <input type="password" id="chef-key" placeholder="Chef-Schlüssel oder Theken-Schlüssel" aria-label="Chef-Schlüssel oder Theken-Schlüssel" autocomplete="off" autocapitalize="off" spellcheck="false">
@@ -114,7 +114,7 @@
   </section>
 
   <section class="feld breit chef" hidden>
-    <header><h2>Zugänge</h2><button type="button" class="klein-knopf" id="chef-abmelden" hidden>Chef-Bereich auf diesem Gerät sperren</button></header>
+    <header><h2>Zugänge</h2><button type="button" class="klein-knopf" id="chef-abmelden" hidden>Chef-Bereich jetzt sperren</button></header>
     <p class="erklaer" id="zugang-stand"></p>
     <h3>Chef-Passwort ändern</h3>
     <form class="zeile" id="chef-setzen">
@@ -163,7 +163,7 @@
   </form>
 </dialog>
 
-<script src="bestellung/config.js?v=14"></script>
-<script src="bestellung/verwaltung.js?v=14"></script>
+<script src="bestellung/config.js?v=15"></script>
+<script src="bestellung/verwaltung.js?v=15"></script>
 </body>
 </html>
