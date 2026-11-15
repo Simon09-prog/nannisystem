@@ -1,0 +1,14 @@
+# Cloudflare Pages: Dateien, die nur für die Entwicklung da sind, werden nicht ausgeliefert.
+# Wer sie aufruft, landet auf einer Adresse, die es nicht gibt, und sieht die Fehlerseite (404.html).
+/bestellung/schema.sql              /nicht-gefunden  302
+/bestellung/karte.sql               /nicht-gefunden  302
+/bestellung/supabase-einrichten.sql /nicht-gefunden  302
+/bestellung/dev-server.mjs          /nicht-gefunden  302
+/bestellung/karte.mjs               /nicht-gefunden  302
+/bestellung/test.mjs                /nicht-gefunden  302
+/package.json                       /nicht-gefunden  302
+/package-lock.json                  /nicht-gefunden  302
+/build_menu.py                      /nicht-gefunden  302
+/karte.template.html                /nicht-gefunden  302
+/karte.template                     /nicht-gefunden  302
+/netlify.toml                       /nicht-gefunden  302
