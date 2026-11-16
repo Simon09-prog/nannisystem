@@ -181,7 +181,7 @@ h1, h2, h4, p { margin: 0; }
   <svg class="k-logo" role="img" aria-label="NANNI Coffee &amp; Bar"><use href="#logo"/></svg>
   <span class="k-kicker">Redlingerstraße 11 · Osnabrück</span>
   <h1>Unsere <em>Karte</em></h1>
-  <p class="status" id="status"><i></i><span>Mo–Fr 10–18 · Sa 9–18 · So 9–17 Uhr</span></p>
+  <p class="status" id="status"><i></i><span>Mo–Mi, Fr 10–18 · Sa 9–18 · So 9–17 Uhr · Do Ruhetag</span></p>
   <div class="today" id="today" hidden>
     <span class="ico"><svg aria-hidden="true"><use href="#i-cup"/></svg></span>
     <div><small>Heute bei Nanni</small><b class="t-title"></b><span class="t-text"></span></div>
@@ -211,7 +211,7 @@ h1, h2, h4, p { margin: 0; }
       <tr data-day="1"><td>Montag</td><td>10:00 – 18:00</td></tr>
       <tr data-day="2"><td>Dienstag</td><td>10:00 – 18:00</td></tr>
       <tr data-day="3"><td>Mittwoch</td><td>10:00 – 18:00</td></tr>
-      <tr data-day="4"><td>Donnerstag</td><td>10:00 – 18:00</td></tr>
+      <tr data-day="4"><td>Donnerstag</td><td>Ruhetag</td></tr>
       <tr data-day="5"><td>Freitag</td><td>10:00 – 18:00</td></tr>
       <tr data-day="6"><td>Samstag</td><td>09:00 – 18:00</td></tr>
       <tr data-day="0"><td>Sonntag</td><td>09:00 – 17:00</td></tr>
@@ -234,26 +234,29 @@ h1, h2, h4, p { margin: 0; }
 
 <script>
 (() => {
-  const HOURS = { 0: [9, 17], 1: [10, 18], 2: [10, 18], 3: [10, 18], 4: [10, 18], 5: [10, 18], 6: [9, 18] };
+  const HOURS = { 0: [9, 17], 1: [10, 18], 2: [10, 18], 3: [10, 18], 4: null, 5: [10, 18], 6: [9, 18] };
   const parts = Object.fromEntries(new Intl.DateTimeFormat('en-US', { timeZone: 'Europe/Berlin', weekday: 'short', hour: 'numeric', minute: 'numeric', hour12: false })
     .formatToParts(new Date()).map(p => [p.type, p.value]));
   const today = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].indexOf(parts.weekday);
   const now = (+parts.hour % 24) + (+parts.minute) / 60;
   const pad = h => String(h).padStart(2, '0') + ':00';
-  const [open, close] = HOURS[today];
+  const [open, close] = HOURS[today] || [0, 0];   // Ruhetag: null
+  const TAGE = ['Sonntag', 'Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag'];
+  let next = (today + 1) % 7;
+  while (!HOURS[next]) next = (next + 1) % 7;
   const status = document.getElementById('status');
   if (now >= open && now < close) { status.classList.add('open'); status.lastElementChild.innerHTML = `<b>Jetzt geöffnet</b> · bis ${pad(close)} Uhr`; }
   else if (now < open) status.lastElementChild.innerHTML = `<b>Noch geschlossen</b> · öffnet um ${pad(open)} Uhr`;
-  else status.lastElementChild.innerHTML = `<b>Geschlossen</b> · öffnet morgen um ${pad(HOURS[(today + 1) % 7][0])} Uhr`;
+  else status.lastElementChild.innerHTML = `<b>${HOURS[today] ? 'Geschlossen' : 'Heute Ruhetag'}</b> · öffnet ${next === (today + 1) % 7 ? 'morgen' : 'am ' + TAGE[next]} um ${pad(HOURS[next][0])} Uhr`;
   document.querySelector(`.k-foot tr[data-day="${today}"]`)?.classList.add('is-today');
 
   // Aktion des Tages
   const deals = {
     1: ['Kaffee & Kuchen Deal', 'Kuchen + Kaffee für 6 € · 12–18 Uhr', '#kaffee'],
     2: ['Studi-Dienstag', '10 % auf die Rechnung mit Studierendenausweis', '#kaffee'],
-    3: ['Lunch Deal', 'Mo–Fr 11:30–14:30 Uhr, Getränk inklusive', '#lunch'],
-    4: ['Lunch Deal', 'Mo–Fr 11:30–14:30 Uhr, Getränk inklusive', '#lunch'],
-    5: ['Lunch Deal', 'Mo–Fr 11:30–14:30 Uhr, Getränk inklusive', '#lunch'],
+    3: ['Lunch Deal', 'Mo–Mi und Fr 11:30–14:30 Uhr, Getränk inklusive', '#lunch'],
+    4: ['Heute Ruhetag', 'Ab Freitag sind wir wieder für euch da', '#kaffee'],
+    5: ['Lunch Deal', 'Mo–Mi und Fr 11:30–14:30 Uhr, Getränk inklusive', '#lunch'],
     6: ['Lunch schon ab 12 Uhr', 'Am Wochenende gibt es Nannis Lunch Favourites schon mittags', '#lunch'],
     0: ['Lunch schon ab 12 Uhr', 'Am Wochenende gibt es Nannis Lunch Favourites schon mittags', '#lunch']
   };
