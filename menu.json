@@ -156,14 +156,14 @@
       "addons": true
     },
     {
-      "id": "lunch", "name": "Nannis Lunch Favourites", "short": "Lunch", "sub": "Mo–Fr ab 15 Uhr, am Wochenende schon ab 12 Uhr", "img": "bilder/golden-goat.webp",
+      "id": "lunch", "name": "Nannis Lunch Favourites", "short": "Lunch", "sub": "Mo–Mi und Fr ab 15 Uhr, am Wochenende schon ab 12 Uhr", "img": "bilder/golden-goat.webp",
       "items": [
         { "name": "Golden Goat Club Sandwich", "price": "14,90", "desc": "Frischkäse, Rucola, Tomaten, Avocado, karamellisierter Ziegenkäse und Walnüsse. Dazu Süßkartoffel-Pommes mit veganem Reibe-Topping und Dip.", "tags": ["veggie"] },
         { "name": "Chicken Karaage Burger", "price": "15,50", "desc": "Brioche Bun, Honey-Mustard-Sauce, Romanasalat, Tomate, Chicken Karaage, Cheddar-Melt und Pickled Onions. Dazu Süßkartoffel-Pommes mit veganem Reibe-Topping und Dip." },
         { "name": "Avocado-Halloumi Burger", "price": "15,50", "desc": "Brioche Bun, Avocado-Mash, Romanasalat, Tomate, Avocado, Halloumi, Honig-Drizzle, Pickled Onions und hausgemachte Honig-Senf-Sauce. Dazu Süßkartoffel-Pommes mit veganem Reibe-Topping und Dip.", "tags": ["veggie"] },
         { "name": "Süßkartoffel-Pommes mit Dip", "price": "6,90", "desc": "Dip deiner Wahl: Trüffelcreme, Kräuterquark, vegane Mayo oder Ketchup.", "tags": ["vegan"] }
       ],
-      "notes": ["Mittags von Mo–Fr (11:30–14:30 Uhr) gibt es den Lunch Deal mit Getränk inklusive."],
+      "notes": ["Lunch Deal: Mo–Mi und Fr von 11:30 bis 14:30 Uhr, am Wochenende ab 12 Uhr den ganzen Tag. Getränke sind nicht inklusive."],
       "addons": true
     },
     {

@@ -68,7 +68,7 @@ create table if not exists oeffnungszeiten (
   bis  time not null
 );
 insert into oeffnungszeiten (tag, von, bis)
-  select * from (values (1, time '10:00', time '18:00'), (2, '10:00', '18:00'), (3, '10:00', '18:00'), (4, '10:00', '18:00'),
+  select * from (values (1, time '09:00', time '18:00'), (2, '10:00', '18:00'), (3, '10:00', '18:00'),   -- Donnerstag (4) fehlt: Ruhetag
                         (5, '10:00', '18:00'), (6, '09:00', '18:00'), (7, '09:00', '17:00')) v
   where not exists (select 1 from oeffnungszeiten);
 alter table oeffnungszeiten enable row level security;

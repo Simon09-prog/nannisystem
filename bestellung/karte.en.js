@@ -5,14 +5,15 @@ window.NANNI_EN = {
   // ---------------------------------------------------------------- Seite
   'Unsere': 'Our', 'Karte': 'Menu',
   'Heute bei Nanni': 'Today at Nanni',
-  'Jetzt geöffnet': 'Open now', 'Noch geschlossen': 'Not open yet', 'Geschlossen': 'Closed',
+  'Jetzt geöffnet': 'Open now', 'Noch geschlossen': 'Not open yet', 'Geschlossen': 'Closed', 'Heute Ruhetag': 'Closed today',
+  'Ab Freitag sind wir wieder für euch da': 'We are back for you on Friday',
   'Kaffee & Kuchen Deal': 'Coffee & Cake Deal',
   'Kuchen + Kaffee für 6 € · 12–18 Uhr': 'Cake + coffee for €6 · 12 noon–6 pm',
-  'Studi-Dienstag': 'Student Tuesday',
-  '10 % auf die Rechnung mit Studierendenausweis': '10% off your bill with a student ID',
-  'Mo–Fr 11:30–14:30 Uhr, Getränk inklusive': 'Mon–Fri 11:30 am–2:30 pm, drink included',
-  'Lunch schon ab 12 Uhr': 'Lunch from 12 noon',
-  'Am Wochenende gibt es Nannis Lunch Favourites schon mittags': 'On weekends, Nanni’s Lunch Favourites are available from noon',
+  'Studi-Freitag': 'Student Friday',
+  '10 % auf die Rechnung mit gültigem Studierendenausweis': '10% off your bill with a valid student ID',
+  'Mo–Mi und Fr 11:30–14:30 Uhr': 'Mon–Wed and Fri 11:30 am–2:30 pm',
+  'Lunch Deal ab 12 Uhr': 'Lunch Deal from 12 noon',
+  'Am Wochenende gibt es den Lunch Deal ab 12 Uhr den ganzen Tag': 'On weekends the Lunch Deal is available all day from 12 noon',
   'Öffnungszeiten': 'Opening hours',
   'Montag': 'Monday', 'Dienstag': 'Tuesday', 'Mittwoch': 'Wednesday', 'Donnerstag': 'Thursday', 'Freitag': 'Friday', 'Samstag': 'Saturday', 'Sonntag': 'Sunday',
   'Anrufen': 'Call us', 'Reservieren': 'Book a table', 'Impressum': 'Legal notice', 'Datenschutz': 'Privacy',
@@ -146,7 +147,7 @@ window.NANNI_EN = {
 
   // ---------------------------------------------------------------- Lunch, Sweets, Waffeln
   'Nannis Lunch Favourites': 'Nanni’s Lunch Favourites',
-  'Mo–Fr ab 15 Uhr, am Wochenende schon ab 12 Uhr': 'Mon–Fri from 3 pm, on weekends from 12 noon',
+  'Mo–Mi und Fr ab 15 Uhr, am Wochenende schon ab 12 Uhr': 'Mon–Wed and Fri from 3 pm, on weekends from 12 noon',
   'Frischkäse, Rucola, Tomaten, Avocado, karamellisierter Ziegenkäse und Walnüsse. Dazu Süßkartoffel-Pommes mit veganem Reibe-Topping und Dip.':
     'Cream cheese, rocket, tomatoes, avocado, caramelised goat’s cheese and walnuts. Served with sweet potato fries with vegan grated topping and dip.',
   'Brioche Bun, Honey-Mustard-Sauce, Romanasalat, Tomate, Chicken Karaage, Cheddar-Melt und Pickled Onions. Dazu Süßkartoffel-Pommes mit veganem Reibe-Topping und Dip.':
@@ -155,7 +156,7 @@ window.NANNI_EN = {
     'Brioche bun, avocado mash, romaine lettuce, tomato, avocado, halloumi, honey drizzle, pickled onions and homemade honey mustard sauce. Served with sweet potato fries with vegan grated topping and dip.',
   'Süßkartoffel-Pommes mit Dip': 'Sweet potato fries with dip',
   'Dip deiner Wahl: Trüffelcreme, Kräuterquark, vegane Mayo oder Ketchup.': 'Dip of your choice: truffle cream, herb quark, vegan mayo or ketchup.',
-  'Mittags von Mo–Fr (11:30–14:30 Uhr) gibt es den Lunch Deal mit Getränk inklusive.': 'At lunchtime Mon–Fri (11:30 am–2:30 pm) the Lunch Deal includes a drink.',
+  'Lunch Deal: Mo–Mi und Fr von 11:30 bis 14:30 Uhr, am Wochenende ab 12 Uhr den ganzen Tag. Getränke sind nicht inklusive.': 'Lunch Deal: Mon–Wed and Fri from 11:30 am to 2:30 pm, on weekends all day from 12 noon. Drinks are not included.',
   'Nannis Sweets': 'Nanni’s Sweets',
   'French Toast und fluffige vegane Pancakes': 'French toast and fluffy vegan pancakes',
   'Goldbraun gebraten, serviert mit hausgemachter Vanille-Mascarpone-Creme, Beerenkompott, frischen Beeren, karamellisierter Banane, Bio-Ahornsirup und Brownie-Crumble.':

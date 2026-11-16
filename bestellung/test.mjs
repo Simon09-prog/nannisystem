@@ -230,7 +230,7 @@ test('Ausverkauft: Artikel ist für heute gesperrt', async () => {
 
 test('Einstellungen: Zeiten, Ruhetage, Bewertungslink, Tagesübersicht', async () => {
   let e = await rpc('theke_einstellungen', { p_key: K });
-  assert.equal(e.zeiten.length, 7); assert.equal(e.zeiten[0].von, '10:00');
+  assert.equal(e.zeiten.length, 6); assert.equal(e.zeiten[0].von, '09:00');   // Donnerstag ist Ruhetag
   assert.equal((await rpc('theke_zeiten_setzen', { p_key: K, p_zeiten: [{ tag: 1, von: '08:00', bis: '20:00' }] })).ok, true);
   assert.deepEqual((await rpc('theke_einstellungen', { p_key: K })).zeiten, [{ tag: 1, von: '08:00', bis: '20:00' }]);
   assert.equal((await rpc('theke_zeiten_setzen', { p_key: K, p_zeiten: [{ tag: 9, von: 'x', bis: 'y' }] })).fehler, 'ungueltig');

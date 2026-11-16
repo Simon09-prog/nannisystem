@@ -6,7 +6,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Speisekarte – NANNI Coffee &amp; Bar Osnabrück</title>
 <meta name="description" content="Die Karte von NANNI Coffee & Bar in Osnabrück: Kaffee, Matcha, hausgemachte Limos, Frühstück, Shokupan, Bagel, Waffeln, Lunch Deal und Kuchen – mit allen Preisen.">
-<meta name="robots" content="noindex">
+<meta name="robots" content="index, follow">
 <meta name="theme-color" content="#f7f0e6">
 <meta property="og:type" content="website">
 <meta property="og:locale" content="de_DE">
@@ -181,7 +181,7 @@ h1, h2, h4, p { margin: 0; }
   <svg class="k-logo" role="img" aria-label="NANNI Coffee &amp; Bar"><use href="#logo"/></svg>
   <span class="k-kicker">Redlingerstraße 11 · Osnabrück</span>
   <h1>Unsere <em>Karte</em></h1>
-  <p class="status" id="status"><i></i><span>Mo–Mi, Fr 10–18 · Sa 9–18 · So 9–17 Uhr · Do Ruhetag</span></p>
+  <p class="status" id="status"><i></i><span>Mo 9–18 · Di, Mi, Fr 10–18 · Sa 9–18 · So 9–17 Uhr · Do Ruhetag</span></p>
   <div class="today" id="today" hidden>
     <span class="ico"><svg aria-hidden="true"><use href="#i-cup"/></svg></span>
     <div><small>Heute bei Nanni</small><b class="t-title"></b><span class="t-text"></span></div>
@@ -208,7 +208,7 @@ h1, h2, h4, p { margin: 0; }
   <h3>Öffnungszeiten</h3>
   <table>
     <tbody>
-      <tr data-day="1"><td>Montag</td><td>10:00 – 18:00</td></tr>
+      <tr data-day="1"><td>Montag</td><td>09:00 – 18:00</td></tr>
       <tr data-day="2"><td>Dienstag</td><td>10:00 – 18:00</td></tr>
       <tr data-day="3"><td>Mittwoch</td><td>10:00 – 18:00</td></tr>
       <tr data-day="4"><td>Donnerstag</td><td>Ruhetag</td></tr>
@@ -234,7 +234,7 @@ h1, h2, h4, p { margin: 0; }
 
 <script>
 (() => {
-  const HOURS = { 0: [9, 17], 1: [10, 18], 2: [10, 18], 3: [10, 18], 4: null, 5: [10, 18], 6: [9, 18] };
+  const HOURS = { 0: [9, 17], 1: [9, 18], 2: [10, 18], 3: [10, 18], 4: null, 5: [10, 18], 6: [9, 18] };
   const parts = Object.fromEntries(new Intl.DateTimeFormat('en-US', { timeZone: 'Europe/Berlin', weekday: 'short', hour: 'numeric', minute: 'numeric', hour12: false })
     .formatToParts(new Date()).map(p => [p.type, p.value]));
   const today = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].indexOf(parts.weekday);
@@ -253,12 +253,12 @@ h1, h2, h4, p { margin: 0; }
   // Aktion des Tages
   const deals = {
     1: ['Kaffee & Kuchen Deal', 'Kuchen + Kaffee für 6 € · 12–18 Uhr', '#kaffee'],
-    2: ['Studi-Dienstag', '10 % auf die Rechnung mit Studierendenausweis', '#kaffee'],
-    3: ['Lunch Deal', 'Mo–Mi und Fr 11:30–14:30 Uhr, Getränk inklusive', '#lunch'],
+    2: ['Lunch Deal', 'Mo–Mi und Fr 11:30–14:30 Uhr', '#lunch'],
+    3: ['Lunch Deal', 'Mo–Mi und Fr 11:30–14:30 Uhr', '#lunch'],
     4: ['Heute Ruhetag', 'Ab Freitag sind wir wieder für euch da', '#kaffee'],
-    5: ['Lunch Deal', 'Mo–Mi und Fr 11:30–14:30 Uhr, Getränk inklusive', '#lunch'],
-    6: ['Lunch schon ab 12 Uhr', 'Am Wochenende gibt es Nannis Lunch Favourites schon mittags', '#lunch'],
-    0: ['Lunch schon ab 12 Uhr', 'Am Wochenende gibt es Nannis Lunch Favourites schon mittags', '#lunch']
+    5: ['Studi-Freitag', '10 % auf die Rechnung mit gültigem Studierendenausweis', '#kaffee'],
+    6: ['Lunch Deal ab 12 Uhr', 'Am Wochenende gibt es den Lunch Deal ab 12 Uhr den ganzen Tag', '#lunch'],
+    0: ['Lunch Deal ab 12 Uhr', 'Am Wochenende gibt es den Lunch Deal ab 12 Uhr den ganzen Tag', '#lunch']
   };
   const t = document.getElementById('today');
   t.querySelector('.t-title').textContent = deals[today][0];

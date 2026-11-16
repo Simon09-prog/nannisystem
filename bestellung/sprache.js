@@ -25,6 +25,7 @@
     [/^bis (\d\d:\d\d) Uhr$/, m => 'until ' + m[1]],
     [/^öffnet um (\d\d:\d\d) Uhr$/, m => 'opens at ' + m[1]],
     [/^öffnet morgen um (\d\d:\d\d) Uhr$/, m => 'opens tomorrow at ' + m[1]],
+    [/^öffnet am (\S+) um (\d\d:\d\d) Uhr$/, m => 'opens on ' + ({ Montag: 'Monday', Dienstag: 'Tuesday', Mittwoch: 'Wednesday', Donnerstag: 'Thursday', Freitag: 'Friday', Samstag: 'Saturday', Sonntag: 'Sunday' }[m[1]] || m[1]) + ' at ' + m[2]],
     [/^Stand: ([^·]+)$/, m => 'As of ' + m[1].replace(/^[A-Za-zä]+/, monat => MONATE[monat] || monat)],
     [/^Preise in Euro inkl\. MwSt\.$/, () => 'Prices in euros incl. VAT'],
     [/^Allergene und Zusatzstoffe: Bitte fragt unser Team, wir geben gern Auskunft\.$/, () => 'Allergens and additives: please ask our team, we are happy to help.']
