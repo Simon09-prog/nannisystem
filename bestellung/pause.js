@@ -4,7 +4,7 @@
 // Auch in der Pause erreichbar: die Karte über einen QR-Code am Tisch (Adresse mit ?t=...), Impressum und Datenschutz,
 // Theke und Chef-Bereich.
 (() => {
-  const PAUSE = true;
+  const PAUSE = false;
 
   if (!PAUSE) return;
   const amTisch = new URLSearchParams(location.search).has('t');
