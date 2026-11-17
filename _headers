@@ -15,3 +15,9 @@
 
 /verwaltung.html
   X-Robots-Tag: noindex, nofollow
+
+/bald.html
+  X-Robots-Tag: noindex, nofollow
+
+/bald
+  X-Robots-Tag: noindex, nofollow
