@@ -52,6 +52,19 @@
     document.getElementById('status')?.after(h('p', { class: 'nb-hinweis', style: 'margin:14px auto 0;max-width:30em;padding:10px 16px;border-radius:14px;background:#fff3c4;color:#5b4700;font-size:.92rem' }, text));
   }
 
+  // Ein Bestell-Link gilt auf jedem Handy 1 Stunde ab dem ersten Öffnen, auch neu Scannen verlängert nicht.
+  // Am nächsten Tag beginnt die Stunde von vorn. (Im privaten Modus merkt sich das Handy nichts, dann gilt jedes Öffnen neu.)
+  const GUELTIG = 1 * STUNDE;
+  const heute = new Date().toDateString();
+  let start = merken.lesen('start', null);
+  if (!start || start.tag !== heute) { start = { tag: heute, zeit: Date.now() }; merken.schreiben('start', start); }
+  const restzeit = start.zeit + GUELTIG - Date.now();
+  if (restzeit <= 0) {
+    hinweis('Die Bestellzeit mit diesem Code ist abgelaufen. Bestellt gern direkt bei uns an der Theke.');
+    return;
+  }
+  setTimeout(() => location.reload(), restzeit + 1000);   // läuft die Stunde ab, während die Karte offen ist: neu laden, dann greift der Hinweis
+
   // Erst wenn die Karte ihren aktuellen Stand aus der Datenbank hat (karte-live.js), kommen die Plus-Knöpfe dazu
   Promise.all([NANNI.rpc('tisch_info', { p_code: code }), window.NANNI_KARTE])
     .then(([info]) => info && info.ok ? starten(info) : hinweis('Dieser Bestell-Link gilt nicht mehr. Scannt den Code am Tisch bitte neu oder bestellt direkt bei uns.'))
