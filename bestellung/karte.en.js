@@ -90,8 +90,8 @@ window.NANNI_EN = {
   'Frisch zubereitetes Omelett mit Brot und Frischkäsecreme – verfeinere dein Omelett mit den Extras unten.':
     'Freshly made omelette with bread and cream cheese spread – customise it with the extras below.',
   'Nannis Brunch-Favourite': 'Nanni’s Brunch Favourite',
-  'Cremiges Rührei auf geröstetem Sauerteigbrot mit Avocado, Tomaten, Pickled Onions und Granatapfelkernen. Dazu zwei fluffige vegane Pancakes mit Beeren, Soja-Vanillecreme und Bio-Ahornsirup.':
-    'Creamy scrambled eggs on toasted sourdough with avocado, tomatoes, pickled onions and pomegranate seeds. Served with two fluffy vegan pancakes with berries, soy vanilla cream and organic maple syrup.',
+  'Cremiges Rührei auf geröstetem Sauerteigbrot mit Avocado, Tomaten, Pickled Onions und Granatapfelkernen. Dazu zwei fluffige Pancakes mit Beeren, Soja-Vanillecreme und Bio-Ahornsirup.':
+    'Creamy scrambled eggs on toasted sourdough with avocado, tomatoes, pickled onions and pomegranate seeds. Served with two fluffy pancakes with berries, soy vanilla cream and organic maple syrup.',
   'Açaí kalt, Porridge warm': 'Açaí cold, porridge warm',
   'Cremige Açaí, kalt serviert mit Beeren, Banane, Crunchy Granola, Chiasamen und Kokosflocken – verfeinert mit Dattelsirup.':
     'Creamy açaí, served cold with berries, banana, crunchy granola, chia seeds and coconut flakes – finished with date syrup.',
@@ -132,7 +132,12 @@ window.NANNI_EN = {
     'Vegan cream, rocket, tomato, avocado, vegan feta-style cheese, pomegranate seeds and balsamic.',
   'Süßkartoffel-Pancakes Apple Lotus': 'Sweet potato pancakes Apple Lotus',
   'Apfelkompott, Mandelblättchen und Lotus-Swirl.': 'Apple compote, flaked almonds and Lotus swirl.',
-  'Unser hausgemachter Pancake-Teig ist vegan und wird aus glutenfreien Zutaten zubereitet.': 'Our homemade pancake batter is vegan and made with gluten-free ingredients.',
+  'Unser Pancake-Teig ist hausgemacht. Er ist nicht vegan und nicht glutenfrei.': 'Our pancake batter is homemade. It is not vegan and not gluten-free.',
+  'Unser Waffelteig ist nicht glutenfrei.': 'Our waffle batter is not gluten-free.',
+  'French Toast und fluffige Pancakes': 'French toast and fluffy pancakes',
+  'Fluffy Pancakes': 'Fluffy Pancakes',
+  'Goldbraun gebackene Pancakes mit Beeren, cremiger Soja-Vanillecreme und Bio-Ahornsirup.': 'Golden pancakes with berries, creamy soy vanilla cream and organic maple syrup.',
+  'Goldbraun gebackene Pancakes mit Beeren, Bueno Crumble und Bueno-Sauce.': 'Golden pancakes with berries, Bueno crumble and Bueno sauce.',
   'Auf Wunsch glutenfreie Topping-Variante: Crunchy Mandel-Nuss-Topping. Kann Spuren von Gluten enthalten.':
     'Gluten-free topping on request: crunchy almond nut topping. May contain traces of gluten.',
   'Frisch belegt. Knusprig. Nanni.': 'Freshly filled. Crisp. Nanni.',

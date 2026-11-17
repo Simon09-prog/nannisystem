@@ -97,7 +97,7 @@
       "items": [
         { "name": "Rührei Genuss", "price": "7,90", "desc": "Cremiges Rührei, geröstetes Sauerteigbrot und Frischkäsecreme.", "tags": ["veggie", "vegan-opt"] },
         { "name": "Omelett-Bar", "price": "8,90", "desc": "Frisch zubereitetes Omelett mit Brot und Frischkäsecreme – verfeinere dein Omelett mit den Extras unten.", "tags": ["veggie"] },
-        { "name": "Nannis Brunch-Favourite", "price": "14,90", "desc": "Cremiges Rührei auf geröstetem Sauerteigbrot mit Avocado, Tomaten, Pickled Onions und Granatapfelkernen. Dazu zwei fluffige vegane Pancakes mit Beeren, Soja-Vanillecreme und Bio-Ahornsirup.", "tags": ["veggie", "vegan-opt"] }
+        { "name": "Nannis Brunch-Favourite", "price": "14,90", "desc": "Cremiges Rührei auf geröstetem Sauerteigbrot mit Avocado, Tomaten, Pickled Onions und Granatapfelkernen. Dazu zwei fluffige Pancakes mit Beeren, Soja-Vanillecreme und Bio-Ahornsirup.", "tags": ["veggie"] }
       ],
       "extras": [{ "title": "Omelett-Extras", "items": [["Tomaten", "0,80"], ["Rote Zwiebeln", "0,80"], ["Paprika", "0,80"], ["Rucola", "0,80"], ["Käse", "1,50"], ["Avocado", "2,00"], ["Sucuk", "2,00"], ["Bacon", "2,50"], ["Halloumi", "2,50"], ["Lachs", "2,50"]] }],
       "addons": true
@@ -130,13 +130,12 @@
       "id": "pancakes", "name": "Süßkartoffel-Pancakes", "short": "Pancakes", "sub": "Herzhaft. Süß. Süßkartoffel.", "img": "bilder/brunch-tisch.webp",
       "items": [
         { "name": "Süßkartoffel-Pancakes mit Halloumi", "price": "12,90", "desc": "Vegane Creme, Rucola, Tomaten, Halloumi, Chiliflocken, Kürbiskerne und Granatapfel-Drizzle.", "tags": ["veggie", "scharf"] },
-        { "name": "Süßkartoffel-Pancakes mit Tofu & Avocado", "price": "12,90", "desc": "Vegane Creme, Rucola, Tomaten, Tofu, Avocado, Granatapfelkerne und Granatapfel-Drizzle.", "tags": ["vegan"] },
-        { "name": "Süßkartoffel-Pancakes Vegan Greek", "price": "12,90", "desc": "Vegane Creme, Rucola, Tomate, Avocado, veganer Hirtenkäse, Granatapfelkerne und Balsamico.", "tags": ["vegan"] },
-        { "name": "Süßkartoffel-Pancakes Apple Lotus", "price": "11,90", "desc": "Apfelkompott, Mandelblättchen und Lotus-Swirl.", "tags": ["vegan"] }
+        { "name": "Süßkartoffel-Pancakes mit Tofu & Avocado", "price": "12,90", "desc": "Vegane Creme, Rucola, Tomaten, Tofu, Avocado, Granatapfelkerne und Granatapfel-Drizzle.", "tags": ["veggie"] },
+        { "name": "Süßkartoffel-Pancakes Vegan Greek", "price": "12,90", "desc": "Vegane Creme, Rucola, Tomate, Avocado, veganer Hirtenkäse, Granatapfelkerne und Balsamico.", "tags": ["veggie"] },
+        { "name": "Süßkartoffel-Pancakes Apple Lotus", "price": "11,90", "desc": "Apfelkompott, Mandelblättchen und Lotus-Swirl.", "tags": ["veggie"] }
       ],
       "notes": [
-        "Unser hausgemachter Pancake-Teig ist vegan und wird aus glutenfreien Zutaten zubereitet.",
-        "Auf Wunsch glutenfreie Topping-Variante: Crunchy Mandel-Nuss-Topping. Kann Spuren von Gluten enthalten."
+        "Unser Pancake-Teig ist hausgemacht. Er ist nicht vegan und nicht glutenfrei."
       ],
       "addons": true
     },
@@ -167,14 +166,14 @@
       "addons": true
     },
     {
-      "id": "sweets", "name": "Nannis Sweets", "short": "Sweets", "sub": "French Toast und fluffige vegane Pancakes", "img": "bilder/french-toast.webp",
+      "id": "sweets", "name": "Nannis Sweets", "short": "Sweets", "sub": "French Toast und fluffige Pancakes", "img": "bilder/french-toast.webp",
       "groups": [
         { "title": "French Toast", "items": [
           { "name": "Classic French Toast", "price": "12,50", "desc": "Goldbraun gebraten, serviert mit hausgemachter Vanille-Mascarpone-Creme, Beerenkompott, frischen Beeren, karamellisierter Banane, Bio-Ahornsirup und Brownie-Crumble.", "tags": ["veggie"] }
         ] },
-        { "title": "Fluffy Vegan Pancakes", "items": [
-          { "name": "Classy Berry Pancakes", "price": "11,90", "desc": "Goldbraun gebackene vegane Pancakes mit Beeren, cremiger Soja-Vanillecreme und Bio-Ahornsirup.", "tags": ["vegan"] },
-          { "name": "Bueno Berry Pancakes", "price": "11,90", "desc": "Goldbraun gebackene vegane Pancakes mit Beeren, Bueno Crumble und Bueno-Sauce.", "tags": ["veggie"] },
+        { "title": "Fluffy Pancakes", "items": [
+          { "name": "Classy Berry Pancakes", "price": "11,90", "desc": "Goldbraun gebackene Pancakes mit Beeren, cremiger Soja-Vanillecreme und Bio-Ahornsirup.", "tags": ["veggie"] },
+          { "name": "Bueno Berry Pancakes", "price": "11,90", "desc": "Goldbraun gebackene Pancakes mit Beeren, Bueno Crumble und Bueno-Sauce.", "tags": ["veggie"] },
           { "name": "Nannis Vegan Banana Bread", "price": "9,90", "desc": "Getoastetes veganes Bananenbrot aus glutenfreien Zutaten mit Soja-Vanillecreme, Banane, Beeren, hausgemachtem Granola und Bio-Ahornsirup.", "tags": ["vegan"] }
         ] }
       ]
@@ -190,6 +189,7 @@
         { "name": "Kirschtraum", "price": "6,90", "desc": "Puderzucker, heiße Kirschen und hausgemachte Mascarpone-Creme." },
         { "name": "Oreo Berry Banana", "price": "7,50", "desc": "Puderzucker, Banane, Oreo-Crunch und Erdbeersauce.", "tags": ["vegan"] }
       ],
+      "notes": ["Unser Waffelteig ist nicht glutenfrei."],
       "extras": [{ "title": "Waffel-Extras", "items": [["Veganes Vanilleeis", "1,20"], ["Sahne", "0,80"], ["Ahornsirup", "1,00"]] }]
     }
   ]
