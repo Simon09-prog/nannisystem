@@ -238,9 +238,9 @@ window.NANNI_EN = {
   'Bestellen am Handy geht während unserer Öffnungszeiten.': 'Ordering by phone is available during our opening hours.',
   'Dieser Bestell-Link gilt nicht mehr. Scannt den Code am Tisch bitte neu oder bestellt direkt bei uns.': 'This ordering link is no longer valid. Please scan the code on your table again or order directly with us.',
   'Standort wird geprüft …': 'Checking location …',
-  'Euer Browser kann keinen Standort bestimmen. Bestellt bitte direkt bei uns an der Theke.': 'Your browser cannot determine your location. Please order directly at the counter.',
-  'Zum Bestellen am Handy brauchen wir kurz euren Standort, damit nur Gäste im Café bestellen. Erlaubt ihn bitte in den Einstellungen eures Browsers oder bestellt an der Theke.': 'To order by phone we briefly need your location, so that only guests in the café can order. Please allow it in your browser settings or order at the counter.',
-  'Euer Standort ließ sich gerade nicht bestimmen. Versucht es bitte noch einmal oder bestellt an der Theke.': 'Your location could not be determined right now. Please try again or order at the counter.',
+  'Bestellen am Handy geht nur im Café. Bestellt gern an der Theke.': 'Ordering by phone only works inside the café. Feel free to order at the counter.',
+  'Ohne Standort geht Bestellen am Handy leider nicht. Bestellt gern an der Theke.': 'Ordering by phone needs your location, sorry. Feel free to order at the counter.',
+  'Standort nicht gefunden. Versucht es bitte noch einmal.': 'Location not found. Please try again.',
   'Bestellen am Handy geht nur bei uns im Café. Kommt gern vorbei!': 'Ordering by phone only works inside our café. Come and visit us!',
   'Bestellen am Handy ist gerade nicht erreichbar. Bestellt bitte direkt bei uns.': 'Ordering by phone is unavailable right now. Please order directly with us.'
 };

@@ -67,14 +67,12 @@
   // Antwort: null = vor Ort, sonst der Text für den Gast
   async function vorOrt() {
     try { if (Date.now() - (+sessionStorage.getItem(VOR_ORT) || 0) < 30 * 60e3) return null; } catch { /* kein Speicher: neu prüfen */ }
-    if (!navigator.geolocation) return 'Euer Browser kann keinen Standort bestimmen. Bestellt bitte direkt bei uns an der Theke.';
+    if (!navigator.geolocation) return 'Bestellen am Handy geht nur im Café. Bestellt gern an der Theke.';
+    // Der Browser fragt den Gast selbst: „Darf … deinen Standort verwenden?“ – Erlauben / Nicht erlauben
     const pos = await new Promise(fertig => navigator.geolocation.getCurrentPosition(fertig, fehler => fertig(fehler),
       { enableHighAccuracy: true, timeout: 15000, maximumAge: 60000 }));
-    if (!pos.coords) {
-      return pos.code === 1
-        ? 'Zum Bestellen am Handy brauchen wir kurz euren Standort, damit nur Gäste im Café bestellen. Erlaubt ihn bitte in den Einstellungen eures Browsers oder bestellt an der Theke.'
-        : 'Euer Standort ließ sich gerade nicht bestimmen. Versucht es bitte noch einmal oder bestellt an der Theke.';
-    }
+    if (!pos.coords) return pos.code === 1 ? 'Ohne Standort geht Bestellen am Handy leider nicht. Bestellt gern an der Theke.'
+      : 'Standort nicht gefunden. Versucht es bitte noch einmal.';
     const meter = abstand(CAFE, { lat: pos.coords.latitude, lng: pos.coords.longitude });
     if (meter > RADIUS + Math.min(pos.coords.accuracy || 0, KULANZ)) return 'Bestellen am Handy geht nur bei uns im Café. Kommt gern vorbei!';
     try { sessionStorage.setItem(VOR_ORT, String(Date.now())); } catch { /* egal */ }
