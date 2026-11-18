@@ -237,6 +237,6 @@ window.NANNI_EN = {
   'Wir haben gerade geschlossen.': 'We are closed right now.',
   'Bestellen am Handy geht während unserer Öffnungszeiten.': 'Ordering by phone is available during our opening hours.',
   'Dieser Bestell-Link gilt nicht mehr. Scannt den Code am Tisch bitte neu oder bestellt direkt bei uns.': 'This ordering link is no longer valid. Please scan the code on your table again or order directly with us.',
-  'Die Bestellzeit mit diesem Code ist abgelaufen. Bestellt gern direkt bei uns an der Theke.': 'Ordering time with this code has expired. Feel free to order directly with us at the counter.',
+  'Ihr habt bezahlt, danke für euren Besuch! Möchtet ihr noch etwas, bestellt gern direkt bei uns an der Theke.': 'You have paid, thank you for visiting! If you would like anything else, just order with us at the counter.',
   'Bestellen am Handy ist gerade nicht erreichbar. Bestellt bitte direkt bei uns.': 'Ordering by phone is unavailable right now. Please order directly with us.'
 };

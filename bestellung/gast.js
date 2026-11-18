@@ -52,18 +52,11 @@
     document.getElementById('status')?.after(h('p', { class: 'nb-hinweis', style: 'margin:14px auto 0;max-width:30em;padding:10px 16px;border-radius:14px;background:#fff3c4;color:#5b4700;font-size:.92rem' }, text));
   }
 
-  // Ein Bestell-Link gilt auf jedem Handy 1 Stunde ab dem ersten Öffnen, auch neu Scannen verlängert nicht.
-  // Am nächsten Tag beginnt die Stunde von vorn. (Im privaten Modus merkt sich das Handy nichts, dann gilt jedes Öffnen neu.)
-  const GUELTIG = 1 * STUNDE;
+  // Ist auf diesem Handy alles bezahlt, ist das Bestellen hier für heute vorbei, auch neu Scannen hilft nicht.
+  // Am nächsten Tag geht es wieder. (Im privaten Modus merkt sich das Handy nichts.)
   const heute = new Date().toDateString();
-  let start = merken.lesen('start', null);
-  if (!start || start.tag !== heute) { start = { tag: heute, zeit: Date.now() }; merken.schreiben('start', start); }
-  const restzeit = start.zeit + GUELTIG - Date.now();
-  if (restzeit <= 0) {
-    hinweis('Die Bestellzeit mit diesem Code ist abgelaufen. Bestellt gern direkt bei uns an der Theke.');
-    return;
-  }
-  setTimeout(() => location.reload(), restzeit + 1000);   // läuft die Stunde ab, während die Karte offen ist: neu laden, dann greift der Hinweis
+  const SCHLUSS = 'Ihr habt bezahlt, danke für euren Besuch! Möchtet ihr noch etwas, bestellt gern direkt bei uns an der Theke.';
+  if (merken.lesen('bezahlt', null) === heute) { hinweis(SCHLUSS); return; }
 
   // Erst wenn die Karte ihren aktuellen Stand aus der Datenbank hat (karte-live.js), kommen die Plus-Knöpfe dazu
   Promise.all([NANNI.rpc('tisch_info', { p_code: code }), window.NANNI_KARTE])
@@ -385,6 +378,14 @@
           }
         }
         if (neu) { merken.schreiben('bestellungen', bestellungen); leisteZeichnen(); standZeichnen(); }
+        // Alles bezahlt (nichts mehr offen, mindestens eine Bestellung bezahlt): für heute Schluss mit Bestellen
+        if (neu && bestellungen.some(b => b.bezahlt) && !bestellungen.some(b => !b.bezahlt && b.status !== 'abgelehnt')) {
+          merken.schreiben('bezahlt', heute); merken.schreiben('korb', []);
+          document.querySelectorAll('dialog[open]').forEach(d => d.close());
+          document.querySelectorAll('.nb-plus').forEach(k => k.remove());
+          leiste.remove(); sitzLeiste.remove(); tischKnopf.remove(); document.body.classList.remove('nb-mit-leiste');
+          return hinweis(SCHLUSS);
+        }
       } catch { /* beim nächsten Mal wieder versuchen */ }
       wecker = setTimeout(standAbfragen, offen.some(b => !fertig(b)) ? 5000 : 15000);
     }
