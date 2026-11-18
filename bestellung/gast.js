@@ -187,11 +187,19 @@
     function artikelBlatt(artikel) {
       const b = blatt(artikel.name, artikel.text);
       let menge = 1;
-      const haken = artikel.extras.map(x => ({ x, feld: h('input', { type: 'checkbox' }) }));
-      const gewaehlt = () => haken.filter(k => k.feld.checked).map(k => k.x);
+      // Extras, die mit "Getränk: " beginnen, sind eine Pflicht-Auswahl (genau eins, z. B. das Getränk im Lunch Deal)
+      const WAHL = 'Getränk: ';
+      const wahl = artikel.extras.filter(x => x.name.startsWith(WAHL)).map(x => ({ x, feld: h('input', { type: 'radio', name: 'nb-wahl' }) }));
+      const haken = artikel.extras.filter(x => !x.name.startsWith(WAHL)).map(x => ({ x, feld: h('input', { type: 'checkbox' }) }));
+      const gewaehlt = () => [...wahl, ...haken].filter(k => k.feld.checked).map(k => k.x);
+      const preis = x => x.cent ? '+' + euro(x.cent) : 'inklusive';
+      if (wahl.length) {
+        b.inhalt.append(h('h4', {}, 'Getränk inklusive'), h('ul', { class: 'nb-extras' },
+          wahl.map(k => h('li', {}, h('label', {}, k.feld, h('span', {}, k.x.name.slice(WAHL.length)), h('em', {}, preis(k.x)))))));
+      }
       if (haken.length) {
-        b.inhalt.append(h('h4', {}, artikel.extras.every(x => !x.cent) ? 'Inklusive dazu' : 'Extras'), h('ul', { class: 'nb-extras' },
-          haken.map(k => h('li', {}, h('label', {}, k.feld, h('span', {}, k.x.name), h('em', {}, k.x.cent ? '+' + euro(k.x.cent) : 'inklusive'))))));
+        b.inhalt.append(h('h4', {}, haken.every(k => !k.x.cent) ? 'Inklusive dazu' : 'Extras'), h('ul', { class: 'nb-extras' },
+          haken.map(k => h('li', {}, h('label', {}, k.feld, h('span', {}, k.x.name), h('em', {}, preis(k.x)))))));
       }
       const wunsch = h('textarea', { rows: 2, maxlength: 200, placeholder: 'z. B. mit Hafermilch, koffeinfrei, ohne Zwiebeln' });
       b.inhalt.append(h('h4', {}, 'Wunsch dazu'), wunsch,
@@ -204,9 +212,13 @@
         if (gleich) gleich.menge = Math.min(20, gleich.menge + menge); else korb.push(zeile);
         korbSpeichern(); b.d.close();
       } });
-      const preisZeigen = () => dazu.replaceChildren(h('span', {}, 'Hinzufügen'),
-        h('span', {}, euro((artikel.cent + gewaehlt().reduce((s, x) => s + x.cent, 0)) * menge)));
-      haken.forEach(k => k.feld.addEventListener('change', preisZeigen));
+      const preisZeigen = () => {
+        const fehlt = wahl.length && !wahl.some(k => k.feld.checked);
+        dazu.disabled = !!fehlt;
+        dazu.replaceChildren(h('span', {}, fehlt ? 'Bitte Getränk wählen' : 'Hinzufügen'),
+          h('span', {}, euro((artikel.cent + gewaehlt().reduce((s, x) => s + x.cent, 0)) * menge)));
+      };
+      [...wahl, ...haken].forEach(k => k.feld.addEventListener('change', preisZeigen));
       b.fuss.append(h('div', { class: 'nb-reihe' }, zaehler(1, 1, m => { menge = m; preisZeigen(); }), dazu));
       preisZeigen();
     }

@@ -16,7 +16,7 @@ cats = menu["kategorien"]
 
 # Kategorien ohne Foto bekommen ein Linien-Icon (Symbole stehen in beiden Seiten im <defs>-Block)
 ICON = {"favourites": "i-iced", "fresh": "i-citrus", "soft": "i-bottle", "fruehstueck": "i-egg",
-        "bowls": "i-bowl", "lunchdeal": "i-bowl", "bagels": "i-bagel", "waffeln": "i-waffle"}
+        "bowls": "i-bowl", "lunchdeal": "i-bowl", "tee-matcha": "i-cup", "limo": "i-spritz", "shokupan": "i-bagel", "sweets": "i-waffle", "bagels": "i-bagel", "waffeln": "i-waffle"}
 # Markierung -> (CSS-Klasse, Text, Icon)
 TAG = {"vegan": ("tag-vegan", "vegan", "i-leaf"), "veggie": ("tag-veggie", "veggie", "i-leaf"),
        "vegan-opt": ("tag-vegan", "vegan möglich", "i-leaf"), "scharf": ("tag-hot", "scharf", "i-chili")}

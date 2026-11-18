@@ -246,7 +246,6 @@ window.NANNI_EN = {
   // ---------------------------------------------------------------- Karte November 2026 (lose Blätter)
   'Nanni Lunch Deal': 'Nanni Lunch Deal',
   'Mo–Mi und Fr 11:30–14:30 Uhr · inkl. Getränk deiner Wahl': 'Mon–Wed and Fri 11:30 am–2:30 pm · drink of your choice included',
-  'Im Preis ist ein Getränk deiner Wahl enthalten: Tee, Kaffee oder eine hausgemachte Limo. Welche Sorte, sagt ihr uns gern im Wunschfeld.': 'A drink of your choice is included: tea, coffee or a homemade lemonade. Let us know which one in the request field.',
   'Getränk inklusive': 'Drink included',
   'Getränk: Kaffee': 'Drink: coffee',
   'Getränk: Tee': 'Drink: tea',
@@ -276,5 +275,24 @@ window.NANNI_EN = {
   'Inklusive dazu': 'Included',
   '11:30–14:30 Uhr · inkl. Getränk': '11:30 am–2:30 pm · drink included',
   'Lunch ab 12 Uhr': 'Lunch from 12 noon',
-  'Am Wochenende gibt es unsere Lunch Favourites schon ab 12 Uhr': 'On weekends our Lunch Favourites are available from 12 noon'
+  'Am Wochenende gibt es unsere Lunch Favourites schon ab 12 Uhr': 'On weekends our Lunch Favourites are available from 12 noon',
+  'Getränk inklusive (eins auswählen)': 'Drink included (choose one)',
+  'Bitte Getränk wählen': 'Please choose a drink',
+  'Im Preis ist ein Getränk deiner Wahl enthalten: Kaffee, Tee oder eine hausgemachte Limo. Beim Bestellen am Handy wählt ihr es direkt mit aus.': 'A drink of your choice is included: coffee, tea or a homemade lemonade. When ordering by phone, just pick it right away.',
+  'Pancakes, Waffeln, Kuchen und Lunch – so sieht es gerade bei Nanni aus.': 'Pancakes, waffles, cake and lunch – this is Nanni right now.',
+  'Getränk: Café Crema': 'Drink: Café Crema',
+  'Getränk: Americano': 'Drink: Americano',
+  'Getränk: Espresso': 'Drink: Espresso',
+  'Getränk: Cappuccino': 'Drink: Cappuccino',
+  'Getränk: Milchkaffee': 'Drink: Café au lait',
+  'Getränk: Latte Macchiato': 'Drink: Latte Macchiato',
+  'Getränk: Earl Grey': 'Drink: Earl Grey',
+  'Getränk: Jasmin-Grüntee': 'Drink: Jasmine green tea',
+  'Getränk: Früchtetee Waldbeere': 'Drink: Wild berry fruit tea',
+  'Getränk: Frischer Minztee': 'Drink: Fresh mint tea',
+  'Getränk: Frischer Ingwer-Zitronentee': 'Drink: Fresh ginger lemon tea',
+  'Getränk: Pfirsich-Limo': 'Drink: Peach lemonade',
+  'Getränk: Zitronen-Minze-Holunder-Limo': 'Drink: Lemon, mint & elderflower lemonade',
+  'Getränk: Himbeer-Minze-Holunder-Limo': 'Drink: Raspberry, mint & elderflower lemonade',
+  'Getränk: Maracuja-Limette-Limo': 'Drink: Passion fruit & lime lemonade'
 };
