@@ -52,11 +52,34 @@
     document.getElementById('status')?.after(h('p', { class: 'nb-hinweis', style: 'margin:14px auto 0;max-width:30em;padding:10px 16px;border-radius:14px;background:#fff3c4;color:#5b4700;font-size:.92rem' }, text));
   }
 
-  // Ist auf diesem Handy alles bezahlt, ist das Bestellen hier für heute vorbei, auch neu Scannen hilft nicht.
-  // Am nächsten Tag geht es wieder. (Im privaten Modus merkt sich das Handy nichts.)
-  const heute = new Date().toDateString();
-  const SCHLUSS = 'Ihr habt bezahlt, danke für euren Besuch! Möchtet ihr noch etwas, bestellt gern direkt bei uns an der Theke.';
-  if (merken.lesen('bezahlt', null) === heute) { hinweis(SCHLUSS); return; }
+  // ------------------------------------------------------------ Standort
+  // Bestellen und Kellner rufen gehen nur im Umkreis des Cafés. Der Standort wird nur hier im Browser mit der
+  // Adresse des Cafés verglichen und danach verworfen; er wird nie gesendet oder gespeichert.
+  // RADIUS: 150 m um die Redlingerstraße 11. Ist das Handy ungenau (drinnen oft der Fall), zählt die
+  // Ungenauigkeit bis zu 150 m zu seinen Gunsten, damit Gäste im Café nicht abgewiesen werden.
+  const CAFE = { lat: 52.2743974, lng: 8.0441274 }, RADIUS = 150, KULANZ = 150;
+  const VOR_ORT = 'nanni:vorort:' + code;   // nur der Zeitpunkt der letzten erfolgreichen Prüfung (sessionStorage), kein Standort
+  function abstand(a, b) {   // Meter zwischen zwei Punkten (Haversine)
+    const r = Math.PI / 180, dLat = (b.lat - a.lat) * r, dLng = (b.lng - a.lng) * r;
+    const x = Math.sin(dLat / 2) ** 2 + Math.cos(a.lat * r) * Math.cos(b.lat * r) * Math.sin(dLng / 2) ** 2;
+    return 2 * 6371e3 * Math.asin(Math.sqrt(x));
+  }
+  // Antwort: null = vor Ort, sonst der Text für den Gast
+  async function vorOrt() {
+    try { if (Date.now() - (+sessionStorage.getItem(VOR_ORT) || 0) < 30 * 60e3) return null; } catch { /* kein Speicher: neu prüfen */ }
+    if (!navigator.geolocation) return 'Euer Browser kann keinen Standort bestimmen. Bestellt bitte direkt bei uns an der Theke.';
+    const pos = await new Promise(fertig => navigator.geolocation.getCurrentPosition(fertig, fehler => fertig(fehler),
+      { enableHighAccuracy: true, timeout: 15000, maximumAge: 60000 }));
+    if (!pos.coords) {
+      return pos.code === 1
+        ? 'Zum Bestellen am Handy brauchen wir kurz euren Standort, damit nur Gäste im Café bestellen. Erlaubt ihn bitte in den Einstellungen eures Browsers oder bestellt an der Theke.'
+        : 'Euer Standort ließ sich gerade nicht bestimmen. Versucht es bitte noch einmal oder bestellt an der Theke.';
+    }
+    const meter = abstand(CAFE, { lat: pos.coords.latitude, lng: pos.coords.longitude });
+    if (meter > RADIUS + Math.min(pos.coords.accuracy || 0, KULANZ)) return 'Bestellen am Handy geht nur bei uns im Café. Kommt gern vorbei!';
+    try { sessionStorage.setItem(VOR_ORT, String(Date.now())); } catch { /* egal */ }
+    return null;
+  }
 
   // Erst wenn die Karte ihren aktuellen Stand aus der Datenbank hat (karte-live.js), kommen die Plus-Knöpfe dazu
   Promise.all([NANNI.rpc('tisch_info', { p_code: code }), window.NANNI_KARTE])
@@ -243,8 +266,11 @@
 
       async function abschicken() {
         if (!tisch) return tischWaehlen(() => { tischZeileZeichnen(); abschicken(); });
-        senden.disabled = true; senden.textContent = T('Wird gesendet …'); fehler.hidden = true;
+        senden.disabled = true; senden.textContent = T('Standort wird geprüft …'); fehler.hidden = true;
         const scheitern = text => { fehler.textContent = T(text); fehler.hidden = false; senden.disabled = false; senden.textContent = T('Bestellung abschicken'); };
+        const weg = await vorOrt();
+        if (weg) return scheitern(weg);
+        senden.textContent = T('Wird gesendet …');
         let antwort;
         try {
           antwort = await NANNI.rpc('bestellung_aufgeben', {
@@ -289,6 +315,8 @@
       const fehler = h('p', { class: 'nb-fehler', role: 'alert', hidden: true });
       const knopf = h('button', { class: 'nb-knopf mitte', type: 'button', onclick: async () => {
         knopf.disabled = true; fehler.hidden = true;
+        const weg = await vorOrt();
+        if (weg) { fehler.textContent = T(weg); fehler.hidden = false; knopf.disabled = false; return; }
         try {
           const antwort = await NANNI.rpc('kellner_rufen', { p_code: code, ...(info.wahl && { p_tisch: tisch.id }) });
           if (antwort.ok) return knopf.replaceWith(h('p', { class: 'nb-bescheid' }, h('b', {}, 'Wir wissen Bescheid.'), ' Jemand kommt gleich zu euch.'));
@@ -378,14 +406,6 @@
           }
         }
         if (neu) { merken.schreiben('bestellungen', bestellungen); leisteZeichnen(); standZeichnen(); }
-        // Alles bezahlt (nichts mehr offen, mindestens eine Bestellung bezahlt): für heute Schluss mit Bestellen
-        if (neu && bestellungen.some(b => b.bezahlt) && !bestellungen.some(b => !b.bezahlt && b.status !== 'abgelehnt')) {
-          merken.schreiben('bezahlt', heute); merken.schreiben('korb', []);
-          document.querySelectorAll('dialog[open]').forEach(d => d.close());
-          document.querySelectorAll('.nb-plus').forEach(k => k.remove());
-          leiste.remove(); sitzLeiste.remove(); tischKnopf.remove(); document.body.classList.remove('nb-mit-leiste');
-          return hinweis(SCHLUSS);
-        }
       } catch { /* beim nächsten Mal wieder versuchen */ }
       wecker = setTimeout(standAbfragen, offen.some(b => !fertig(b)) ? 5000 : 15000);
     }
