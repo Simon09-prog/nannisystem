@@ -16,7 +16,7 @@ cats = menu["kategorien"]
 
 # Kategorien ohne Foto bekommen ein Linien-Icon (Symbole stehen in beiden Seiten im <defs>-Block)
 ICON = {"favourites": "i-iced", "fresh": "i-citrus", "soft": "i-bottle", "fruehstueck": "i-egg",
-        "bowls": "i-bowl", "bagels": "i-bagel", "waffeln": "i-waffle"}
+        "bowls": "i-bowl", "lunchdeal": "i-bowl", "bagels": "i-bagel", "waffeln": "i-waffle"}
 # Markierung -> (CSS-Klasse, Text, Icon)
 TAG = {"vegan": ("tag-vegan", "vegan", "i-leaf"), "veggie": ("tag-veggie", "veggie", "i-leaf"),
        "vegan-opt": ("tag-vegan", "vegan möglich", "i-leaf"), "scharf": ("tag-hot", "scharf", "i-chili")}
@@ -74,7 +74,7 @@ def body_html(c):
         blocks.append({"title": "Add-ons", "items": ADDONS})
     for b in blocks:
         out += (f'<div class="extras"><b>{e(b["title"])}</b><ul>'
-                + "".join(f'<li data-n="{e(n)}" data-p="{cents(p)}">{e(n)} <span>+{p}&nbsp;€</span></li>' for n, p in b["items"]) + "</ul></div>")
+                + "".join(f'<li data-n="{e(n)}" data-p="{cents(p)}">{e(n)} <span>{"inklusive" if cents(p) == 0 else "+" + p + "&nbsp;€"}</span></li>' for n, p in b["items"]) + "</ul></div>")
     if c.get("notes"):
         out += '<ul class="cat-notes">' + "".join(f"<li>{e(n)}</li>" for n in c["notes"]) + "</ul>"
     return out

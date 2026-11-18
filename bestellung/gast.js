@@ -190,8 +190,8 @@
       const haken = artikel.extras.map(x => ({ x, feld: h('input', { type: 'checkbox' }) }));
       const gewaehlt = () => haken.filter(k => k.feld.checked).map(k => k.x);
       if (haken.length) {
-        b.inhalt.append(h('h4', {}, 'Extras'), h('ul', { class: 'nb-extras' },
-          haken.map(k => h('li', {}, h('label', {}, k.feld, h('span', {}, k.x.name), h('em', {}, '+' + euro(k.x.cent)))))));
+        b.inhalt.append(h('h4', {}, artikel.extras.every(x => !x.cent) ? 'Inklusive dazu' : 'Extras'), h('ul', { class: 'nb-extras' },
+          haken.map(k => h('li', {}, h('label', {}, k.feld, h('span', {}, k.x.name), h('em', {}, k.x.cent ? '+' + euro(k.x.cent) : 'inklusive'))))));
       }
       const wunsch = h('textarea', { rows: 2, maxlength: 200, placeholder: 'z. B. mit Hafermilch, koffeinfrei, ohne Zwiebeln' });
       b.inhalt.append(h('h4', {}, 'Wunsch dazu'), wunsch,

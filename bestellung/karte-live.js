@@ -68,7 +68,7 @@ window.NANNI_KARTE = (async () => {
     const soll = new Map(stand.extras.filter(x => x.kategorie === kategorie).map(x => [x.name, x]));
     const extraFuellen = (li, x) => {
       li.dataset.n = x.name; li.dataset.p = x.preis_cent;
-      li.replaceChildren(T(x.name) + ' ', element('span', '', '+' + euro(x.preis_cent)));
+      li.replaceChildren(T(x.name) + ' ', element('span', '', x.preis_cent ? '+' + euro(x.preis_cent) : T('inklusive')));
     };
     for (const li of ort.querySelectorAll('.extras li[data-n]')) {
       const x = soll.get(li.dataset.n);

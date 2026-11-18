@@ -254,12 +254,12 @@ h1, h2, h4, p { margin: 0; }
   // Aktion des Tages
   const deals = {
     1: ['Kaffee & Kuchen Deal', 'Kuchen + Kaffee für 6 € · 12–18 Uhr', '#kaffee'],
-    2: ['Lunch Deal', 'Mo–Mi und Fr 11:30–14:30 Uhr', '#lunch'],
-    3: ['Lunch Deal', 'Mo–Mi und Fr 11:30–14:30 Uhr', '#lunch'],
+    2: ['Lunch Deal', '11:30–14:30 Uhr · inkl. Getränk', '#lunchdeal'],
+    3: ['Lunch Deal', '11:30–14:30 Uhr · inkl. Getränk', '#lunchdeal'],
     4: ['Heute Ruhetag', 'Ab Freitag sind wir wieder für euch da', '#kaffee'],
     5: ['Studi-Freitag', '10 % auf die Rechnung mit gültigem Studierendenausweis', '#kaffee'],
-    6: ['Lunch Deal ab 12 Uhr', 'Am Wochenende gibt es den Lunch Deal ab 12 Uhr den ganzen Tag', '#lunch'],
-    0: ['Lunch Deal ab 12 Uhr', 'Am Wochenende gibt es den Lunch Deal ab 12 Uhr den ganzen Tag', '#lunch']
+    6: ['Lunch ab 12 Uhr', 'Am Wochenende gibt es unsere Lunch Favourites schon ab 12 Uhr', '#lunch'],
+    0: ['Lunch ab 12 Uhr', 'Am Wochenende gibt es unsere Lunch Favourites schon ab 12 Uhr', '#lunch']
   };
   const t = document.getElementById('today');
   t.querySelector('.t-title').textContent = deals[today][0];
@@ -285,10 +285,10 @@ h1, h2, h4, p { margin: 0; }
 </script>
 <!-- Bestellen am Tisch: wird nur aktiv, wenn die Karte mit einem Tisch-Code (?t=...) geöffnet wird -->
 <!-- Sprache: englische Texte und Umschalter. Muss vor gast.js stehen. -->
-<script src="bestellung/karte.en.js?v=22" defer></script>
+<script src="bestellung/karte.en.js?v=23" defer></script>
 <script src="bestellung/sprache.js?v=18" defer></script>
 <script src="bestellung/config.js?v=18" defer></script>
-<script src="bestellung/karte-live.js?v=18" defer></script>
-<script src="bestellung/gast.js?v=22" defer></script>
+<script src="bestellung/karte-live.js?v=19" defer></script>
+<script src="bestellung/gast.js?v=23" defer></script>
 </body>
 </html>

@@ -43,8 +43,31 @@ export function karteSql() {
   ].join('\n');
 }
 
+// Die Karte in der Datenbank komplett durch menu.json ersetzen: Preise, Texte und Extras wie in menu.json,
+// alles andere (auch im Chef-Bereich angelegte Artikel) wird ausgeblendet. Für einen Kartenwechsel,
+// einmal in den SQL-Editor von Supabase kopieren und ausführen (bestellung/karte-ersetzen.sql).
+export function karteErsetzenSql() {
+  const { artikel, extras } = karte();
+  const q = s => "'" + s.replace(/'/g, "''") + "'";
+  return [
+    '-- Erzeugt aus menu.json mit "npm run karte". Ersetzt die Karte in der Datenbank komplett durch menu.json.',
+    'begin;',
+    'insert into artikel (name, kategorie, preis_cent, getraenk, beschreibung, reihenfolge) values',
+    artikel.map((a, i) => `  (${q(a.name)}, ${q(a.kategorie)}, ${a.preis_cent}, ${a.getraenk}, ${q(a.beschreibung)}, ${i + 1})`).join(',\n'),
+    '  on conflict (name) do update set kategorie = excluded.kategorie, preis_cent = excluded.preis_cent, getraenk = excluded.getraenk,',
+    "    beschreibung = excluded.beschreibung, reihenfolge = excluded.reihenfolge, titel = '', name_en = '', beschreibung_en = '', versteckt = false, eigen = false;",
+    'update artikel set versteckt = true where name not in (' + artikel.map(a => q(a.name)).join(', ') + ');',
+    'delete from extras where (kategorie, name) not in (' + extras.map(x => `(${q(x.kategorie)}, ${q(x.name)})`).join(', ') + ');',
+    'insert into extras (kategorie, name, preis_cent) values',
+    extras.map(x => `  (${q(x.kategorie)}, ${q(x.name)}, ${x.preis_cent})`).join(',\n'),
+    '  on conflict (kategorie, name) do update set preis_cent = excluded.preis_cent;',
+    'commit;', ''
+  ].join('\n');
+}
+
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
   writeFileSync(HIER + 'karte.sql', karteSql());
+  writeFileSync(HIER + 'karte-ersetzen.sql', karteErsetzenSql());
   // Alles in einer Datei für die erste Einrichtung bei Supabase: einmal in den SQL-Editor kopieren und ausführen.
   // Die letzte Zeile erzeugt den Theken-Schlüssel und zeigt ihn als Ergebnis an.
   writeFileSync(HIER + 'supabase-einrichten.sql', [readFileSync(HIER + 'schema.sql', 'utf8'), karteSql(),
