@@ -155,6 +155,14 @@ language sql stable security definer set search_path = public as $$
         and (now() at time zone 'Europe/Berlin')::time between von and bis))
 $$;
 
+-- Lunch Deal: nur Mo–Mi und Fr von 11:30 bis 14:30 Uhr (bei immer_offen zum Testen jederzeit)
+create or replace function _lunchzeit() returns boolean
+language sql stable security definer set search_path = public as $$
+  select (select immer_offen from einstellungen) or (
+    extract(isodow from now() at time zone 'Europe/Berlin') in (1, 2, 3, 5)
+    and (now() at time zone 'Europe/Berlin')::time between time '11:30' and time '14:30')
+$$;
+
 -- Namen der Artikel, die heute ausverkauft sind
 create or replace function _ausverkauft() returns jsonb
 language sql stable security definer set search_path = public as $$
@@ -270,13 +278,13 @@ declare e einstellungen; t tische;
 begin
   select * into e from einstellungen;
   if p_code = e.laden_code then
-    return jsonb_build_object('ok', true, 'wahl', true, 'aktiv', e.aktiv, 'offen', _offen(), 'ausverkauft', _ausverkauft(), 'bewertung_url', e.bewertung_url, 'tische', coalesce(
+    return jsonb_build_object('ok', true, 'wahl', true, 'aktiv', e.aktiv, 'offen', _offen(), 'lunch', _lunchzeit(), 'ausverkauft', _ausverkauft(), 'bewertung_url', e.bewertung_url, 'tische', coalesce(
       (select jsonb_agg(jsonb_build_object('id', id, 'name', name, 'bereich', bereich) order by bereich, length(name), name) from tische),
       '[]'::jsonb));
   end if;
   select * into t from tische where code = p_code;
   if not found then return jsonb_build_object('ok', false); end if;
-  return jsonb_build_object('ok', true, 'wahl', false, 'aktiv', e.aktiv, 'offen', _offen(), 'ausverkauft', _ausverkauft(), 'bewertung_url', e.bewertung_url, 'tisch', t.name, 'bereich', t.bereich);
+  return jsonb_build_object('ok', true, 'wahl', false, 'aktiv', e.aktiv, 'offen', _offen(), 'lunch', _lunchzeit(), 'ausverkauft', _ausverkauft(), 'bewertung_url', e.bewertung_url, 'tisch', t.name, 'bereich', t.bereich);
 end $$;
 
 -- Bestellung abschicken. Preise, die der Browser mitschickt, werden ignoriert:
@@ -323,6 +331,7 @@ begin
     if not found then return jsonb_build_object('ok', false, 'fehler', 'artikel'); end if;
     if a.versteckt then return jsonb_build_object('ok', false, 'fehler', 'artikel'); end if;
     if a.ausverkauft_am = _heute() then return jsonb_build_object('ok', false, 'fehler', 'ausverkauft', 'artikel', a.name); end if;
+    if a.kategorie = 'lunchdeal' and not _lunchzeit() then return jsonb_build_object('ok', false, 'fehler', 'lunchzeit', 'artikel', a.name); end if;
 
     -- Extras: nur solche, die es in der Kategorie dieses Artikels wirklich gibt
     select count(distinct j->>'name') into v_gewollt
@@ -334,6 +343,10 @@ begin
       where x.kategorie = a.kategorie
         and x.name in (select j->>'name' from jsonb_array_elements(case when jsonb_typeof(pos->'extras') = 'array' then pos->'extras' else '[]'::jsonb end) j);
     if jsonb_array_length(v_extras) <> v_gewollt then return jsonb_build_object('ok', false, 'fehler', 'artikel'); end if;
+    -- Lunch Deal: genau ein Getränk muss gewählt sein
+    if a.kategorie = 'lunchdeal' and (select count(*) from jsonb_array_elements(v_extras) j where j->>'name' like 'Getränk: %') <> 1 then
+      return jsonb_build_object('ok', false, 'fehler', 'ungueltig');
+    end if;
 
     v_summe := v_summe + (a.preis_cent + v_extra_cent) * v_menge;
     v_zeilen := v_zeilen || jsonb_build_object('name', coalesce(nullif(a.titel, ''), a.name), 'menge', v_menge, 'preis_cent', a.preis_cent, 'notiz', v_notiz, 'extras', v_extras, 'getraenk', a.getraenk);
@@ -916,7 +929,10 @@ insert into extras (kategorie, name, preis_cent) values
   ('lunchdeal', 'Getränk: Café Crema', 0),
   ('lunchdeal', 'Getränk: Americano', 0),
   ('lunchdeal', 'Getränk: Espresso', 0),
+  ('lunchdeal', 'Getränk: Espresso Doppio', 0),
+  ('lunchdeal', 'Getränk: Espresso Macchiato', 0),
   ('lunchdeal', 'Getränk: Cappuccino', 0),
+  ('lunchdeal', 'Getränk: Flat White', 0),
   ('lunchdeal', 'Getränk: Milchkaffee', 0),
   ('lunchdeal', 'Getränk: Latte Macchiato', 0),
   ('lunchdeal', 'Getränk: Earl Grey', 0),

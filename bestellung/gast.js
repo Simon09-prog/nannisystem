@@ -139,6 +139,12 @@
     const knoepfe = new Map();   // Artikelname -> Knopf, damit er die Menge im Korb zeigen kann
     if (bestellbar) {
       for (const bereich of document.querySelectorAll('.kcat')) {
+        // Lunch Deal nur zu seiner Zeit (Mo–Mi und Fr 11:30–14:30); die Datenbank sagt, ob gerade Lunchzeit ist
+        if (bereich.id === 'lunchdeal' && info.lunch === false) {
+          bereich.querySelector('.kcat-head')?.after(h('p', { class: 'nb-hinweis', style: 'margin:0 0 12px;padding:10px 14px;border-radius:14px;background:#fff3c4;color:#5b4700;font-size:.92rem' },
+            'Lunch Deal: Mo–Mi und Fr 11:30–14:30'));
+          continue;
+        }
         const extras = [...bereich.querySelectorAll('.extras li[data-n]')].map(li => ({ name: li.dataset.n, cent: +li.dataset.p }));
         for (const li of bereich.querySelectorAll('.mi[data-n]')) {
           const artikel = { name: li.dataset.n, cent: +li.dataset.p, text: li.querySelector('p')?.textContent || '', extras };
@@ -193,9 +199,15 @@
       const haken = artikel.extras.filter(x => !x.name.startsWith(WAHL)).map(x => ({ x, feld: h('input', { type: 'checkbox' }) }));
       const gewaehlt = () => [...wahl, ...haken].filter(k => k.feld.checked).map(k => k.x);
       const preis = x => x.cent ? '+' + euro(x.cent) : 'inklusive';
+      // Normaler Preis des Getränks aus der Karte: wird durchgestrichen gezeigt, gezahlt wird 0 €
+      const normalPreis = name => +document.querySelector(`.mi[data-n="${CSS.escape(name)}"]`)?.dataset.p || 0;
       if (wahl.length) {
         b.inhalt.append(h('h4', {}, 'Getränk inklusive'), h('ul', { class: 'nb-extras' },
-          wahl.map(k => h('li', {}, h('label', {}, k.feld, h('span', {}, k.x.name.slice(WAHL.length)), h('em', {}, preis(k.x)))))));
+          wahl.map(k => {
+            const name = k.x.name.slice(WAHL.length), normal = normalPreis(name);
+            return h('li', {}, h('label', {}, k.feld, h('span', {}, name),
+              h('em', {}, normal ? [h('s', { style: 'opacity:.6;margin-right:6px' }, euro(normal)), euro(0)] : preis(k.x))));
+          })));
       }
       if (haken.length) {
         b.inhalt.append(h('h4', {}, haken.every(k => !k.x.cent) ? 'Inklusive dazu' : 'Extras'), h('ul', { class: 'nb-extras' },
@@ -288,6 +300,9 @@
             p_positionen: korb.map(z => ({ name: z.name, menge: z.menge, notiz: z.notiz, extras: z.extras.map(x => ({ name: x.name })) }))
           });
         } catch { return scheitern('Keine Verbindung. Prüft kurz euer Netz und versucht es noch einmal.'); }
+        if (!antwort.ok && antwort.fehler === 'lunchzeit') {
+          return scheitern('„' + antwort.artikel + '“ gibt es nur Mo–Mi und Fr von 11:30 bis 14:30 Uhr. Nehmt es bitte aus der Bestellung.');
+        }
         if (!antwort.ok && antwort.fehler === 'ausverkauft') {
           return scheitern('„' + antwort.artikel + '“ ist leider gerade ausverkauft. Nehmt es bitte aus der Bestellung.');
         }

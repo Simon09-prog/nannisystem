@@ -49,6 +49,9 @@ def all_items(c):
     return [it for _, items in groups(c) for it in items]
 
 
+PREIS = {it["name"]: it["price"] for c in cats for it in all_items(c)}
+
+
 def item_html(it):
     marks = ""
     for t in it.get("tags", []):
@@ -59,6 +62,17 @@ def item_html(it):
     desc = f'<p>{e(it["desc"])}</p>' if it.get("desc") else ""
     return (f'<li class="mi" data-n="{e(it["name"])}" data-p="{cents(it["price"])}"><div class="mi-top"><h4>{e(it["name"])}{marks}</h4>'
             f'<span class="mi-line" aria-hidden="true"></span><span class="mi-price">{it["price"]}&nbsp;€</span></div>{desc}</li>')
+
+
+WAHL = "Getränk: "   # Pflicht-Auswahl, z. B. das Getränk im Lunch Deal: normaler Preis durchgestrichen, dafür 0 €
+
+
+def extra_html(n, p):
+    if cents(p) == 0 and n.startswith(WAHL):
+        normal = PREIS.get(n[len(WAHL):])
+        preis = (f'<s>{normal}&nbsp;€</s> 0,00&nbsp;€' if normal else 'inklusive')
+        return f'<li data-n="{e(n)}" data-p="0">{e(n[len(WAHL):])} <span>{preis}</span></li>'
+    return f'<li data-n="{e(n)}" data-p="{cents(p)}">{e(n)} <span>{"inklusive" if cents(p) == 0 else "+" + p + "&nbsp;€"}</span></li>'
 
 
 def body_html(c):
@@ -74,7 +88,7 @@ def body_html(c):
         blocks.append({"title": "Add-ons", "items": ADDONS})
     for b in blocks:
         out += (f'<div class="extras"><b>{e(b["title"])}</b><ul>'
-                + "".join(f'<li data-n="{e(n)}" data-p="{cents(p)}">{e(n)} <span>{"inklusive" if cents(p) == 0 else "+" + p + "&nbsp;€"}</span></li>' for n, p in b["items"]) + "</ul></div>")
+                + "".join(extra_html(n, p) for n, p in b["items"]) + "</ul></div>")
     if c.get("notes"):
         out += '<ul class="cat-notes">' + "".join(f"<li>{e(n)}</li>" for n in c["notes"]) + "</ul>"
     return out

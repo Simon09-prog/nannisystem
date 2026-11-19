@@ -294,5 +294,9 @@ window.NANNI_EN = {
   'Getränk: Pfirsich-Limo': 'Drink: Peach lemonade',
   'Getränk: Zitronen-Minze-Holunder-Limo': 'Drink: Lemon, mint & elderflower lemonade',
   'Getränk: Himbeer-Minze-Holunder-Limo': 'Drink: Raspberry, mint & elderflower lemonade',
-  'Getränk: Maracuja-Limette-Limo': 'Drink: Passion fruit & lime lemonade'
+  'Getränk: Maracuja-Limette-Limo': 'Drink: Passion fruit & lime lemonade',
+  'Getränk: Espresso Doppio': 'Drink: Espresso Doppio',
+  'Getränk: Espresso Macchiato': 'Drink: Espresso Macchiato',
+  'Getränk: Flat White': 'Drink: Flat White',
+  'Lunch Deal: Mo–Mi und Fr 11:30–14:30': 'Lunch Deal: Mon–Wed and Fri 11:30 am–2:30 pm'
 };

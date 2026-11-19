@@ -41,7 +41,7 @@ test('Theke: Tische anlegen, doppelte werden abgelehnt', async () => {
 test('Gast: Link-Arten', async () => {
   assert.deepEqual(await rpc('tisch_info', { p_code: 'gibtsnicht' }), { ok: false });
   const fest = await rpc('tisch_info', { p_code: tischCode });
-  assert.deepEqual(fest, { ok: true, wahl: false, aktiv: true, offen: true, ausverkauft: [], bewertung_url: '', tisch: '1', bereich: 'Drinnen' });
+  assert.deepEqual(fest, { ok: true, wahl: false, aktiv: true, offen: true, lunch: true, ausverkauft: [], bewertung_url: '', tisch: '1', bereich: 'Drinnen' });
   const laden = await rpc('tisch_info', { p_code: ladenCode });
   assert.equal(laden.wahl, true);
   assert.equal(laden.tische.length, 2);
@@ -396,4 +396,16 @@ test('Tisch löschen: alte Bestellungen bleiben lesbar', async () => {
   const t = await rpc('theke_bestellungen', { p_key: K });
   assert.ok(t.bestellungen.length >= 1);
   assert.equal(t.bestellungen[0].tisch, '1');
+});
+
+test('Lunch Deal: genau ein Getränk inklusive', async () => {
+  const tischCode = (await rpc('theke_tische', { p_key: K })).tische.at(-1).code;   // die Codes von oben gelten nicht mehr
+  const ohne = await rpc('bestellung_aufgeben', { p_code: tischCode, p_positionen: [{ name: 'Nannis Knusper-Rösti', menge: 1, extras: [] }] });
+  assert.equal(ohne.fehler, 'ungueltig');
+  const zwei = await rpc('bestellung_aufgeben', { p_code: tischCode, p_positionen: [{ name: 'Nannis Knusper-Rösti', menge: 1,
+    extras: [{ name: 'Getränk: Cappuccino' }, { name: 'Getränk: Pfirsich-Limo' }] }] });
+  assert.equal(zwei.fehler, 'ungueltig');
+  const mit = await rpc('bestellung_aufgeben', { p_code: tischCode, p_positionen: [{ name: 'Nannis Knusper-Rösti', menge: 1, extras: [{ name: 'Getränk: Flat White' }] }] });
+  assert.equal(mit.ok, true);
+  assert.equal(mit.summe_cent, 1390);
 });

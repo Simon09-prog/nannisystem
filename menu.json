@@ -22,7 +22,7 @@
       "notes": ["Alle Kaffees gibt es auch koffeinfrei.", "Milchalternativen ohne Aufpreis: Kokos-, Hafer- und Sojamilch."]
     },
     {
-      "id": "tee-matcha", "name": "Tee & Matcha", "sub": "Frisch aufgegossen", "img": null,
+      "id": "tee-matcha", "name": "Tee & Matcha", "sub": "Frisch aufgegossen", "img": "bilder/matcha-mango.webp",
       "items": [
         {"name": "Earl Grey", "price": "3,50", "desc": "Feiner Schwarztee mit Bergamotte-Aroma."},
         {"name": "Jasmin-Grüntee", "price": "3,50", "desc": "Frisch aufgegossen – leicht, blumig und wohltuend."},
@@ -36,7 +36,7 @@
       ]
     },
     {
-      "id": "favourites", "name": "Nannis Favourites", "short": "Favourites", "sub": "Iced, hot und sweet", "img": null,
+      "id": "favourites", "name": "Nannis Favourites", "short": "Favourites", "sub": "Iced, hot und sweet", "img": "bilder/cappuccino.webp",
       "groups": [
         { "title": "Iced", "items": [
           {"name": "Iced Americano", "price": "3,90"},
@@ -55,7 +55,7 @@
       ]
     },
     {
-      "id": "limo", "name": "Hausgemachte Limo", "short": "Limo", "sub": "Frisch. Fruchtig. Hausgemacht.", "img": null,
+      "id": "limo", "name": "Hausgemachte Limo", "short": "Limo", "sub": "Frisch. Fruchtig. Hausgemacht.", "img": "bilder/limo-karaffe.webp",
       "items": [
         {"name": "Pfirsich-Limo", "price": "4,90", "desc": "Pfirsichsirup und Mineralwasser."},
         {"name": "Zitronen-Minze-Holunder-Limo", "price": "6,50", "desc": "Zitrone, Minze, Ingwersirup, Holundersirup und Mineralwasser."},
@@ -64,7 +64,7 @@
       ]
     },
     {
-      "id": "fresh", "name": "Nannis Fresh Bar", "short": "Fresh Bar", "sub": "Frisch gepresste Säfte und Smoothies", "img": null,
+      "id": "fresh", "name": "Nannis Fresh Bar", "short": "Fresh Bar", "sub": "Frisch gepresste Säfte und Smoothies", "img": "bilder/cheesecake-limo.webp",
       "groups": [
         { "title": "Frisch gepresst", "items": [
           {"name": "Frisch gepresster Orangensaft", "price": "5,90", "desc": "Frisch gepresst und ohne Zusätze."},
@@ -78,7 +78,7 @@
       ]
     },
     {
-      "id": "soft", "name": "Kaltgetränke & Wasser", "short": "Kaltgetränke", "sub": "Kalt. Frisch. Nanni.", "img": null,
+      "id": "soft", "name": "Kaltgetränke & Wasser", "short": "Kaltgetränke", "sub": "Kalt. Frisch. Nanni.", "img": "bilder/kuchen-limo.webp",
       "items": [
         {"name": "fritz-kola 0,2 l", "price": "3,30"},
         {"name": "fritz-kola super zero 0,2 l", "price": "3,30"},
@@ -97,7 +97,7 @@
         {"name": "Vegane Schupfnudelpfanne", "price": "12,90", "tags": ["vegan"], "desc": "Gebratene Kartoffel-Schupfnudeln mit Champignons in cremiger pflanzlicher Rahmsauce."},
         {"name": "Nannis Knusper-Rösti", "price": "13,90", "tags": ["veggie"], "desc": "Kartoffelrösti mit Kräuterquark, Spiegelei, Kürbiskernen und Beilagensalat."}
       ],
-      "extras": [{"title": "Getränk inklusive (eins auswählen)", "items": [["Getränk: Café Crema", "0,00"], ["Getränk: Americano", "0,00"], ["Getränk: Espresso", "0,00"], ["Getränk: Cappuccino", "0,00"], ["Getränk: Milchkaffee", "0,00"], ["Getränk: Latte Macchiato", "0,00"], ["Getränk: Earl Grey", "0,00"], ["Getränk: Jasmin-Grüntee", "0,00"], ["Getränk: Früchtetee Waldbeere", "0,00"], ["Getränk: Frischer Minztee", "0,00"], ["Getränk: Frischer Ingwer-Zitronentee", "0,00"], ["Getränk: Pfirsich-Limo", "0,00"], ["Getränk: Zitronen-Minze-Holunder-Limo", "0,00"], ["Getränk: Himbeer-Minze-Holunder-Limo", "0,00"], ["Getränk: Maracuja-Limette-Limo", "0,00"]]}],
+      "extras": [{"title": "Getränk inklusive (eins auswählen)", "items": [["Getränk: Café Crema", "0,00"], ["Getränk: Americano", "0,00"], ["Getränk: Espresso", "0,00"], ["Getränk: Espresso Doppio", "0,00"], ["Getränk: Espresso Macchiato", "0,00"], ["Getränk: Cappuccino", "0,00"], ["Getränk: Flat White", "0,00"], ["Getränk: Milchkaffee", "0,00"], ["Getränk: Latte Macchiato", "0,00"], ["Getränk: Earl Grey", "0,00"], ["Getränk: Jasmin-Grüntee", "0,00"], ["Getränk: Früchtetee Waldbeere", "0,00"], ["Getränk: Frischer Minztee", "0,00"], ["Getränk: Frischer Ingwer-Zitronentee", "0,00"], ["Getränk: Pfirsich-Limo", "0,00"], ["Getränk: Zitronen-Minze-Holunder-Limo", "0,00"], ["Getränk: Himbeer-Minze-Holunder-Limo", "0,00"], ["Getränk: Maracuja-Limette-Limo", "0,00"]]}],
       "notes": ["Im Preis ist ein Getränk deiner Wahl enthalten: Kaffee, Tee oder eine hausgemachte Limo. Beim Bestellen am Handy wählt ihr es direkt mit aus."]
     },
     {
@@ -111,7 +111,7 @@
       "addons": true
     },
     {
-      "id": "bowls", "name": "Bowls & Porridge", "short": "Bowls", "sub": "Açaí kalt, Porridge warm", "img": null,
+      "id": "bowls", "name": "Bowls & Porridge", "short": "Bowls", "sub": "Açaí kalt, Porridge warm", "img": "bilder/brunch-tisch.webp",
       "items": [
         {"name": "Classic Açaí Bowl", "price": "11,90", "desc": "Cremige Açaí, kalt serviert mit Beeren, Banane, Crunchy Granola, Chiasamen und Kokosflocken – verfeinert mit Dattelsirup.", "tags": ["vegan"]},
         {"name": "Lotus Crunch Açaí Bowl", "price": "12,90", "desc": "Cremige Açaí, kalt serviert mit Beeren, Banane, Crunchy Granola, Soja-Vanillecreme, Chiasamen und Kokosflocken – getoppt mit Lotus Swirl und Lotus Crumble.", "tags": ["vegan"]},
@@ -120,7 +120,7 @@
       "notes": ["Porridge auch mit glutenfreien Zutaten (+1,50 €): glutenfreie Haferflocken, glutenfreier Haferdrink und glutenfreies Crunchy-Nuss-Topping.", "Unser Granola ist vegan und wird mit glutenfreien Haferflocken hergestellt. Kann Spuren von Gluten enthalten."]
     },
     {
-      "id": "shokupan", "name": "Shokupan Sandwiches", "short": "Shokupan", "sub": "Frisch gebacken, liebevoll belegt und knusprig getoastet", "img": null,
+      "id": "shokupan", "name": "Shokupan Sandwiches", "short": "Shokupan", "sub": "Frisch gebacken, liebevoll belegt und knusprig getoastet", "img": "bilder/club-sandwich.webp",
       "callout": {"title": "Shokupan. New. Fresh. Urban.", "text": "Unser Egg Drop Sandwich wird mit japanischem Milchbrot zubereitet – besonders soft und fluffig, mit feiner, brioche-ähnlicher Note. Goldig getoastet und frisch belegt wird es bei uns zum modernen Brunch- und Lunch-Sandwich."},
       "items": [
         {"name": "Nanni Egg Drop", "price": "10,90", "desc": "Goldbraun getoastet mit Topping deiner Wahl, Cheddar-Melt, fluffigem, cremigem Rührei und Avocado, dazu hausgemachter Sweet-Cream-Senf als Finish. Topping: Bacon, Sucuk, Lachs oder Tofu. Sauce: Trüffelcreme oder Sriracha-Mayo.", "tags": ["veggie"]},
@@ -142,7 +142,7 @@
       "addons": true
     },
     {
-      "id": "bagels", "name": "Bagels", "sub": "Frisch belegt. Knusprig. Nanni.", "img": null,
+      "id": "bagels", "name": "Bagels", "sub": "Frisch belegt. Knusprig. Nanni.", "img": "bilder/sunny-crispy.webp",
       "items": [
         {"name": "Avocado & Poached Egg", "price": "9,90", "desc": "Frischkäse, Rucola, Tomaten, Avocado, pochiertes Ei und Sweet-Cream-Senf-Drizzle.", "tags": ["veggie"]},
         {"name": "Smoky Tofu Bagel", "price": "9,90", "desc": "Frischkäse, Rucola, Tomaten, Avocado, Tofu, Pickled Onions und Granatapfel-Drizzle.", "tags": ["vegan"]},
@@ -164,7 +164,7 @@
       "addons": true
     },
     {
-      "id": "sweets", "name": "Nannis Sweets", "short": "Sweets", "sub": "French Toast und fluffige Pancakes", "img": null,
+      "id": "sweets", "name": "Nannis Sweets", "short": "Sweets", "sub": "French Toast und fluffige Pancakes", "img": "bilder/french-toast.webp",
       "groups": [
         { "title": "French Toast", "items": [
           {"name": "Classic French Toast", "price": "12,50", "desc": "Goldbraun gebraten, serviert mit hausgemachter Vanille-Mascarpone-Creme, Beerenkompott, frischen Beeren, karamellisierter Banane, Bio-Ahornsirup und Brownie-Crumble.", "tags": ["veggie"]}
