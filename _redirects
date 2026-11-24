@@ -3,6 +3,8 @@
 /bestellung/schema.sql              /nicht-gefunden  302
 /bestellung/karte.sql               /nicht-gefunden  302
 /bestellung/supabase-einrichten.sql /nicht-gefunden  302
+/bestellung/karte-ersetzen.sql      /nicht-gefunden  302
+/bestellung/update-lunchzeit.sql    /nicht-gefunden  302
 /bestellung/dev-server.mjs          /nicht-gefunden  302
 /bestellung/karte.mjs               /nicht-gefunden  302
 /bestellung/test.mjs                /nicht-gefunden  302

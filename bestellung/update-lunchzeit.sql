@@ -97,3 +97,6 @@ begin
 exception when invalid_text_representation or numeric_value_out_of_range then
   return jsonb_build_object('ok', false, 'fehler', 'ungueltig');
 end $$;
+
+-- Neu angelegte Funktionen gibt Supabase automatisch für alle frei. Die Hilfsfunktion ist nur für die Datenbank selbst gedacht.
+revoke execute on function _lunchzeit() from public, anon, authenticated;
