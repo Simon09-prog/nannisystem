@@ -317,5 +317,14 @@ window.NANNI_EN = {
   'Dann kommen Essen und Getränke für euren ganzen Tisch zusammen an. Sagt kurz den anderen Bescheid, dass alle jetzt bestellen, oder gebt alles gemeinsam von einem Handy auf.': 'Then food and drinks for your whole table arrive together. Let the others know that everyone is ordering now, or place everything together from one phone.',
   'Alles klar, abschicken': 'Got it, send order',
   'Noch kurz warten': 'Wait a moment',
-  'Die Bestellzeit mit diesem Code ist abgelaufen. Bestellt gern direkt bei uns an der Theke.': 'Ordering time with this code has expired. Feel free to order directly at the counter.'
+  'Die Bestellzeit mit diesem Code ist abgelaufen. Bestellt gern direkt bei uns an der Theke.': 'Ordering time with this code has expired. Feel free to order directly at the counter.',
+  'Cremiges Rührei und geröstetes Sauerteigbrot.': 'Creamy scrambled eggs and toasted sourdough bread.',
+  'Frisch zubereitetes Omelett mit Brot – verfeinere dein Omelett mit den Extras unten.': 'Freshly made omelette with bread – customise your omelette with the extras below.',
+  'Porridge auch mit glutenfreien Zutaten (+1,50 €): glutenfreie Haferflocken, glutenfreier Haferdrink und Mandelmus.': 'Porridge also available with gluten-free ingredients (+€1.50): gluten-free oats, gluten-free oat drink and almond butter.',
+  'Frischkäse, Rucola, Tomate, Rührei, veganes Reibe-Topping und Balsamico.': 'Cream cheese, rocket, tomato, scrambled eggs, vegan grated topping and balsamic.',
+  'Belegt mit Rucola, Tomaten, Halloumi, Chiliflocken, Kürbiskernen, Granatapfel-Sirup und Honig.': 'Topped with rocket, tomatoes, halloumi, chilli flakes, pumpkin seeds, pomegranate syrup and honey.',
+  'Belegt mit Rucola, Tomaten, Tofu, Avocado, Granatapfelkernen und Granatapfel-Sirup.': 'Topped with rocket, tomatoes, tofu, avocado, pomegranate seeds and pomegranate syrup.',
+  'Belegt mit Rucola, Tomate, Avocado, veganem Hirtenkäse, Granatapfelkernen und Balsamico.': 'Topped with rocket, tomato, avocado, vegan feta-style cheese, pomegranate seeds and balsamic.',
+  'Mit Apfelkompott, Mandelblättchen und Lotus-Swirl.': 'With apple compote, flaked almonds and Lotus swirl.',
+  'Unser Pancake-Teig ist hausgemacht und vegan. Er ist nicht glutenfrei.': 'Our pancake batter is homemade and vegan. It is not gluten-free.'
 };

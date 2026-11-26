@@ -103,8 +103,8 @@
     {
       "id": "fruehstueck", "name": "Good Morning, Nanni", "short": "Frühstück", "sub": "Mit Eiern aus ökologischer Haltung",
       "items": [
-        {"name": "Rührei Genuss", "price": "7,90", "desc": "Cremiges Rührei, geröstetes Sauerteigbrot und Frischkäsecreme.", "tags": ["veggie", "vegan-opt"]},
-        {"name": "Omelett-Bar", "price": "8,90", "desc": "Frisch zubereitetes Omelett mit Brot und Frischkäsecreme – verfeinere dein Omelett mit den Extras unten.", "tags": ["veggie"]},
+        {"name": "Rührei Genuss", "price": "7,90", "desc": "Cremiges Rührei und geröstetes Sauerteigbrot.", "tags": ["veggie", "vegan-opt"]},
+        {"name": "Omelett-Bar", "price": "8,90", "desc": "Frisch zubereitetes Omelett mit Brot – verfeinere dein Omelett mit den Extras unten.", "tags": ["veggie"]},
         {"name": "Nannis Brunch-Favourite", "price": "14,90", "desc": "Cremiges Rührei auf geröstetem Sauerteigbrot mit Avocado, Tomaten, Pickled Onions und Granatapfelkernen. Dazu zwei fluffige Pancakes mit Beeren, Soja-Vanillecreme und Bio-Ahornsirup.", "tags": ["veggie"]}
       ],
       "extras": [{"title": "Omelett-Extras", "items": [["Tomaten", "0,80"], ["Rote Zwiebeln", "0,80"], ["Paprika", "0,80"], ["Rucola", "0,80"], ["Käse", "1,50"], ["Avocado", "2,00"], ["Sucuk", "2,00"], ["Bacon", "2,50"], ["Halloumi", "2,50"], ["Lachs", "2,50"]]}],
@@ -117,7 +117,7 @@
         {"name": "Lotus Crunch Açaí Bowl", "price": "12,90", "desc": "Cremige Açaí, kalt serviert mit Beeren, Banane, Crunchy Granola, Soja-Vanillecreme, Chiasamen und Kokosflocken – getoppt mit Lotus Swirl und Lotus Crumble.", "tags": ["vegan"]},
         {"name": "Apfel Crunch Porridge", "price": "9,90", "desc": "Warmes, cremiges Porridge mit Apfelkompott und Apfelstücken, Granola, gemahlenen Haselnüssen, Kokosflocken und Zimt – verfeinert mit einem Hauch Lotus Swirl.", "tags": ["vegan"]}
       ],
-      "notes": ["Porridge auch mit glutenfreien Zutaten (+1,50 €): glutenfreie Haferflocken, glutenfreier Haferdrink und glutenfreies Crunchy-Nuss-Topping.", "Unser Granola ist vegan und wird mit glutenfreien Haferflocken hergestellt. Kann Spuren von Gluten enthalten."]
+      "notes": ["Porridge auch mit glutenfreien Zutaten (+1,50 €): glutenfreie Haferflocken, glutenfreier Haferdrink und Mandelmus.", "Unser Granola ist vegan und wird mit glutenfreien Haferflocken hergestellt. Kann Spuren von Gluten enthalten."]
     },
     {
       "id": "shokupan", "name": "Shokupan Sandwiches", "short": "Shokupan", "sub": "Frisch gebacken, liebevoll belegt und knusprig getoastet", "img": "bilder/club-sandwich.webp",
@@ -134,11 +134,12 @@
     {
       "id": "pancakes", "name": "Süßkartoffel-Pancakes", "short": "Süßkartoffel-Pancakes", "sub": "Herzhaft. Süß. Süßkartoffel.", "img": "bilder/halloumi-pancakes.webp",
       "items": [
-        {"name": "Süßkartoffel-Pancakes mit Halloumi", "price": "11,50", "tags": ["veggie", "scharf"], "desc": "Belegt mit Rucola-Mix, Tomaten, Halloumi, Kürbiskernen, Chili, Balsamico und Honig. Herzhaft, süß und einfach unwiderstehlich!"},
-        {"name": "Süßkartoffel-Pancakes mit Tofu & Avocado", "price": "11,50", "tags": ["veggie"], "desc": "Belegt mit Rucola-Mix, Tomaten, Avocado, Tofu, Granatapfelkernen und Balsamico. Frisch, nussig und voller Power!"},
-        {"name": "Süßkartoffel-Pancakes mit Feta", "price": "11,50", "tags": ["veggie"], "desc": "Belegt mit Rucola-Mix, Feta, Tomaten, Avocado, Granatapfelkernen und Balsamico. Cremig, frisch und perfekt abgestimmt!"}
+        {"name": "Süßkartoffel-Pancakes mit Halloumi", "price": "12,90", "tags": ["veggie", "scharf"], "desc": "Belegt mit Rucola, Tomaten, Halloumi, Chiliflocken, Kürbiskernen, Granatapfel-Sirup und Honig."},
+        {"name": "Süßkartoffel-Pancakes mit Tofu & Avocado", "price": "12,90", "tags": ["vegan"], "desc": "Belegt mit Rucola, Tomaten, Tofu, Avocado, Granatapfelkernen und Granatapfel-Sirup."},
+        {"name": "Süßkartoffel-Pancakes Vegan Greek", "price": "12,90", "tags": ["vegan"], "desc": "Belegt mit Rucola, Tomate, Avocado, veganem Hirtenkäse, Granatapfelkernen und Balsamico."},
+        {"name": "Süßkartoffel-Pancakes Apple Lotus", "price": "11,90", "tags": ["vegan"], "desc": "Mit Apfelkompott, Mandelblättchen und Lotus-Swirl."}
       ],
-      "notes": ["Unser Pancake-Teig ist hausgemacht. Er ist nicht vegan und nicht glutenfrei."],
+      "notes": ["Unser Pancake-Teig ist hausgemacht und vegan. Er ist nicht glutenfrei."],
       "addons": true
     },
     {
@@ -147,7 +148,7 @@
         {"name": "Avocado & Poached Egg", "price": "9,90", "desc": "Frischkäse, Rucola, Tomaten, Avocado, pochiertes Ei und Sweet-Cream-Senf-Drizzle.", "tags": ["veggie"]},
         {"name": "Smoky Tofu Bagel", "price": "9,90", "desc": "Frischkäse, Rucola, Tomaten, Avocado, Tofu, Pickled Onions und Granatapfel-Drizzle.", "tags": ["vegan"]},
         {"name": "Sucuk Egg Bagel", "price": "9,90", "desc": "Avocado-Mash, Rucola, Tomate, Rührei, Sucuk und Sriracha-Mayo."},
-        {"name": "Egg Bagel", "price": "8,90", "desc": "Frischkäse, Rucola, Tomate, Rührei, veganes Reibe-Topping und Maple-Mustard-Drizzle.", "tags": ["veggie", "vegan-opt"]},
+        {"name": "Egg Bagel", "price": "8,90", "desc": "Frischkäse, Rucola, Tomate, Rührei, veganes Reibe-Topping und Balsamico.", "tags": ["veggie", "vegan-opt"]},
         {"name": "Salmon Bagel", "price": "10,90", "desc": "Frisch belegt mit Frischkäse, Rucola, Gurkensalat, Lachs, Pickled Onions und Dill-Dattelsenf-Dressing. Auch mit veganem Lachs.", "tags": ["vegan-opt"]}
       ],
       "notes": ["Alle Bagels gibt es auch glutenfrei (+1,50 €). Kann Spuren von Gluten enthalten.", "Alle veganen Optionen werden mit unserer veganen Creme serviert."],
