@@ -305,9 +305,10 @@ test('Getrennte Zugänge: Theken-Schlüssel reicht nicht für die Einstellungen'
   assert.equal((await rpc('schluessel_setzen', { p_key: chef, p_art: 'chef', p_neu: 'Mein eigenes Passwort' })).ok, true);
   assert.equal((await rpc('theke_einstellungen', { p_key: chef })).fehler, 'key');
   assert.equal((await rpc('theke_einstellungen', { p_key: 'Mein eigenes Passwort' })).ok, true);
-  // Notfall-Weg ist von außen nicht erreichbar, im SQL-Editor aber schon
+  // Notfall-Weg: keine Funktion mehr (von außen nicht aufrufbar), nur ein direkter Eintrag im SQL-Editor
   assert.equal((await fetch(`${s.basis}/rest/v1/rpc/chef_passwort_setzen`, { method: 'POST', body: '{"p_neu":"hackerhacker"}' })).status, 404);
-  assert.equal((await s.db.query("select chef_passwort_setzen('Notfall-Passwort 1') as t")).rows[0].t, 'Chef-Passwort gesetzt.');
+  assert.equal((await s.db.query("select count(*)::int as n from pg_proc where proname in ('chef_passwort_setzen', 'theke_passwort_setzen')")).rows[0].n, 0);
+  await s.db.query("update einstellungen set chef_hash = sha256(convert_to('Notfall-Passwort 1', 'UTF8')) where id = 1");
   assert.equal((await rpc('theke_einstellungen', { p_key: 'Notfall-Passwort 1' })).ok, true);
   // für die übrigen Tests: alter Theken-Schlüssel wieder gültig, kein Chef-Schlüssel
   await s.db.query("update einstellungen set chef_hash = null, theke_hash = sha256(convert_to($1, 'UTF8'))", [K]);

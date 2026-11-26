@@ -726,24 +726,13 @@ begin
   return jsonb_build_object('ok', true);
 end $$;
 
--- Notfall-Weg, nur im SQL-Editor von Supabase (von der Website aus nicht erreichbar):
---   select chef_passwort_setzen('euer neues passwort');
---   select theke_passwort_setzen('euer neues passwort');
--- Damit kommt man wieder hinein, wenn ein Schlüssel verloren gegangen ist.
-create or replace function chef_passwort_setzen(p_neu text) returns text
-language plpgsql security definer set search_path = public as $$
-begin
-  if length(btrim(coalesce(p_neu, ''))) < 8 then return 'Zu kurz: mindestens 8 Zeichen.'; end if;
-  update einstellungen set chef_hash = sha256(convert_to(btrim(p_neu), 'UTF8')) where id = 1;
-  return 'Chef-Passwort gesetzt.';
-end $$;
-create or replace function theke_passwort_setzen(p_neu text) returns text
-language plpgsql security definer set search_path = public as $$
-begin
-  if length(btrim(coalesce(p_neu, ''))) < 8 then return 'Zu kurz: mindestens 8 Zeichen.'; end if;
-  update einstellungen set theke_hash = sha256(convert_to(btrim(p_neu), 'UTF8')) where id = 1;
-  return 'Theken-Passwort gesetzt.';
-end $$;
+-- Notfall-Weg bei vergessenem Passwort: KEINE Funktion dafür (eine Funktion wäre eine zusätzliche Tür von außen).
+-- Stattdessen im SQL-Editor von Supabase direkt eintragen:
+--   update einstellungen set chef_hash  = sha256(convert_to('euer neues passwort', 'UTF8')) where id = 1;
+--   update einstellungen set theke_hash = sha256(convert_to('euer neues passwort', 'UTF8')) where id = 1;
+-- Frühere Notfall-Funktionen entfernen, falls es sie noch gibt.
+drop function if exists chef_passwort_setzen(text);
+drop function if exists theke_passwort_setzen(text);
 
 -- Tagesübersicht: Bestellungen, Umsatz und meistbestellte Artikel von heute (ohne abgelehnte)
 create or replace function theke_tag(p_key text) returns jsonb
