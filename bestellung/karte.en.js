@@ -326,5 +326,6 @@ window.NANNI_EN = {
   'Belegt mit Rucola, Tomaten, Tofu, Avocado, Granatapfelkernen und Granatapfel-Sirup.': 'Topped with rocket, tomatoes, tofu, avocado, pomegranate seeds and pomegranate syrup.',
   'Belegt mit Rucola, Tomate, Avocado, veganem Hirtenkäse, Granatapfelkernen und Balsamico.': 'Topped with rocket, tomato, avocado, vegan feta-style cheese, pomegranate seeds and balsamic.',
   'Mit Apfelkompott, Mandelblättchen und Lotus-Swirl.': 'With apple compote, flaked almonds and Lotus swirl.',
-  'Unser Pancake-Teig ist hausgemacht und vegan. Er ist nicht glutenfrei.': 'Our pancake batter is homemade and vegan. It is not gluten-free.'
+  'Unser Pancake-Teig ist hausgemacht und vegan. Er ist nicht glutenfrei.': 'Our pancake batter is homemade and vegan. It is not gluten-free.',
+  'Süßkartoffel-Pommes': 'Sweet potato fries'
 };
