@@ -410,3 +410,20 @@ test('Lunch Deal: genau ein Getränk inklusive', async () => {
   assert.equal(mit.ok, true);
   assert.equal(mit.summe_cent, 1390);
 });
+
+test('Lunch Deal außerhalb der Lunchzeit: dieselben Gerichte, aber ohne Getränk', async () => {
+  const tischCode = (await rpc('theke_tische', { p_key: K })).tische.at(-1).code;
+  await s.db.query("update bestellungen set status = 'serviert' where status = 'neu'");   // Platz für neue Bestellungen an diesem Tisch
+  const vorher = (await s.db.query("select pg_get_functiondef('_lunchzeit'::regproc) as d")).rows[0].d;
+  await s.db.query("create or replace function _lunchzeit() returns boolean language sql stable as $$ select false $$");
+  try {
+    assert.equal((await rpc('tisch_info', { p_code: tischCode })).lunch, false);
+    const mitGetraenk = await rpc('bestellung_aufgeben', { p_code: tischCode, p_positionen: [{ name: 'Nannis Knusper-Rösti', menge: 1, extras: [{ name: 'Getränk: Flat White' }] }] });
+    assert.equal(mitGetraenk.fehler, 'lunchzeit');
+    const ohne = await rpc('bestellung_aufgeben', { p_code: tischCode, p_positionen: [{ name: 'Nannis Knusper-Rösti', menge: 1, extras: [] }] });
+    assert.equal(ohne.ok, true);
+    assert.equal(ohne.summe_cent, 1390);
+  } finally {
+    await s.db.query(vorher);
+  }
+});

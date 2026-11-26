@@ -331,7 +331,6 @@ begin
     if not found then return jsonb_build_object('ok', false, 'fehler', 'artikel'); end if;
     if a.versteckt then return jsonb_build_object('ok', false, 'fehler', 'artikel'); end if;
     if a.ausverkauft_am = _heute() then return jsonb_build_object('ok', false, 'fehler', 'ausverkauft', 'artikel', a.name); end if;
-    if a.kategorie = 'lunchdeal' and not _lunchzeit() then return jsonb_build_object('ok', false, 'fehler', 'lunchzeit', 'artikel', a.name); end if;
 
     -- Extras: nur solche, die es in der Kategorie dieses Artikels wirklich gibt
     select count(distinct j->>'name') into v_gewollt
@@ -343,9 +342,11 @@ begin
       where x.kategorie = a.kategorie
         and x.name in (select j->>'name' from jsonb_array_elements(case when jsonb_typeof(pos->'extras') = 'array' then pos->'extras' else '[]'::jsonb end) j);
     if jsonb_array_length(v_extras) <> v_gewollt then return jsonb_build_object('ok', false, 'fehler', 'artikel'); end if;
-    -- Lunch Deal: genau ein Getränk muss gewählt sein
-    if a.kategorie = 'lunchdeal' and (select count(*) from jsonb_array_elements(v_extras) j where j->>'name' like 'Getränk: %') <> 1 then
-      return jsonb_build_object('ok', false, 'fehler', 'ungueltig');
+    -- Lunch Deal: zur Lunchzeit genau ein Getränk inklusive, zu allen anderen Zeiten dieselben Gerichte ohne Getränk
+    if a.kategorie = 'lunchdeal' then
+      v_gewollt := (select count(*) from jsonb_array_elements(v_extras) j where j->>'name' like 'Getränk: %');
+      if _lunchzeit() and v_gewollt <> 1 then return jsonb_build_object('ok', false, 'fehler', 'ungueltig'); end if;
+      if not _lunchzeit() and v_gewollt > 0 then return jsonb_build_object('ok', false, 'fehler', 'lunchzeit', 'artikel', a.name); end if;
     end if;
 
     v_summe := v_summe + (a.preis_cent + v_extra_cent) * v_menge;
@@ -860,7 +861,7 @@ insert into artikel (name, kategorie, preis_cent, getraenk, beschreibung) values
   ('Zitronen-Minze-Holunder-Limo', 'limo', 650, true, 'Zitrone, Minze, Ingwersirup, Holundersirup und Mineralwasser.'),
   ('Himbeer-Minze-Holunder-Limo', 'limo', 650, true, 'Zitrone, Minze, Himbeersirup, Holundersirup und Mineralwasser.'),
   ('Maracuja-Limette-Limo', 'limo', 650, true, 'Limette, Maracujasirup und Mineralwasser.'),
-  ('Frisch gepresster Orangensaft', 'fresh', 590, true, 'Frisch gepresst und ohne Zusätze.'),
+  ('Frisch gepresster Orangensaft', 'fresh', 490, true, 'Frisch gepresst und ohne Zusätze.'),
   ('Beet & Juice', 'fresh', 650, true, 'Frisch gepresster Mix aus Roter Bete, Apfel, Möhre, Ingwer, Zitrone und frischem Orangensaft – fruchtig und leicht würzig.'),
   ('Berry Banana', 'fresh', 690, true, 'Beerenmix, Banane, Apfel und Orange – fruchtig, cremig und harmonisch.'),
   ('Green Glow', 'fresh', 690, true, 'Spinat, Banane, Apfel, Mango und Zitrone – frisch, fruchtig und belebend.'),
@@ -894,10 +895,7 @@ insert into artikel (name, kategorie, preis_cent, getraenk, beschreibung) values
   ('Sucuk Egg Bagel', 'bagels', 990, false, 'Avocado-Mash, Rucola, Tomate, Rührei, Sucuk und Sriracha-Mayo.'),
   ('Egg Bagel', 'bagels', 890, false, 'Frischkäse, Rucola, Tomate, Rührei, veganes Reibe-Topping und Maple-Mustard-Drizzle.'),
   ('Salmon Bagel', 'bagels', 1090, false, 'Frisch belegt mit Frischkäse, Rucola, Gurkensalat, Lachs, Pickled Onions und Dill-Dattelsenf-Dressing. Auch mit veganem Lachs.'),
-  ('Golden Goat Club Sandwich', 'lunch', 1490, false, 'Frischkäse, Rucola, Tomaten, Avocado, karamellisierter Ziegenkäse und Walnüsse. Dazu Süßkartoffel-Pommes mit veganem Reibe-Topping und Dip.'),
-  ('Chicken Karaage Burger', 'lunch', 1550, false, 'Brioche Bun, Honey-Mustard-Sauce, Romanasalat, Tomate, Chicken Karaage, Cheddar-Melt und Pickled Onions. Dazu Süßkartoffel-Pommes mit veganem Reibe-Topping und Dip.'),
-  ('Avocado-Halloumi Burger', 'lunch', 1550, false, 'Brioche Bun, Avocado-Mash, Romanasalat, Tomate, Avocado, Halloumi, Honig-Drizzle, Pickled Onions und hausgemachte Honig-Senf-Sauce. Dazu Süßkartoffel-Pommes mit veganem Reibe-Topping und Dip.'),
-  ('Süßkartoffel-Pommes mit Dip', 'lunch', 690, false, 'Dip deiner Wahl: Trüffelcreme, Kräuterquark, vegane Mayo oder Ketchup.'),
+  ('Süßkartoffel-Pommes mit Dip', 'pommes', 690, false, 'Dip deiner Wahl: Trüffelcreme, Kräuterquark, vegane Mayo oder Ketchup.'),
   ('Classic French Toast', 'sweets', 1250, false, 'Goldbraun gebraten, serviert mit hausgemachter Vanille-Mascarpone-Creme, Beerenkompott, frischen Beeren, karamellisierter Banane, Bio-Ahornsirup und Brownie-Crumble.'),
   ('Classy Berry Pancakes', 'sweets', 1190, false, 'Goldbraun gebackene Pancakes mit Beeren, cremiger Soja-Vanillecreme und Bio-Ahornsirup.'),
   ('Bueno Berry Pancakes', 'sweets', 1190, false, 'Goldbraun gebackene Pancakes mit Beeren, Bueno Crumble und Bueno-Sauce.'),
@@ -974,15 +972,6 @@ insert into extras (kategorie, name, preis_cent) values
   ('bagels', 'Pastrami', 280),
   ('bagels', 'Bacon', 250),
   ('bagels', 'Burrata', 450),
-  ('lunch', 'Pochiertes Ei', 150),
-  ('lunch', 'Avocado', 200),
-  ('lunch', 'Sucuk', 200),
-  ('lunch', 'Halloumi', 250),
-  ('lunch', 'Lachs', 250),
-  ('lunch', 'Veganer Lachs', 280),
-  ('lunch', 'Pastrami', 280),
-  ('lunch', 'Bacon', 250),
-  ('lunch', 'Burrata', 450),
   ('waffeln', 'Veganes Vanilleeis', 120),
   ('waffeln', 'Sahne', 80),
   ('waffeln', 'Ahornsirup', 100)

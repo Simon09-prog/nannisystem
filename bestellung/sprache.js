@@ -21,6 +21,7 @@
     [/^(\d+) offen$/, m => m[1] + ' open'],
     [/^(.+) hinzufügen$/, m => 'Add ' + T(m[1])],
     [/^Wir kommen zu euch an (.+)\.$/, m => 'We will come to you at ' + T(m[1]) + '.'],
+    [/^Die Lunch-Deal-Zeit ist gerade vorbei\. „(.+)“ gibt es jetzt nur ohne Getränk\. Nehmt es bitte aus der Bestellung und legt es neu in den Warenkorb\.$/, m => 'Lunch Deal time is over. “' + T(m[1]) + '” is now only available without a drink. Please remove it from your order and add it again.'],
     [/^„(.+)“ ist leider gerade ausverkauft\. Nehmt es bitte aus der Bestellung\.$/, m => '“' + T(m[1]) + '” is sold out right now. Please remove it from your order.'],
     [/^bis (\d\d:\d\d) Uhr$/, m => 'until ' + m[1]],
     [/^öffnet um (\d\d:\d\d) Uhr$/, m => 'opens at ' + m[1]],

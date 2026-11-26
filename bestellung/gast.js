@@ -57,6 +57,8 @@
   // Adresse des Cafés verglichen und danach verworfen; er wird nie gesendet oder gespeichert.
   // RADIUS: 150 m um die Redlingerstraße 11. Ist das Handy ungenau (drinnen oft der Fall), zählt die
   // Ungenauigkeit bis zu 150 m zu seinen Gunsten, damit Gäste im Café nicht abgewiesen werden.
+  // STANDORT_PRUEFEN = false schaltet die Prüfung aus: dann kann jeder mit dem Link bestellen, auch von außerhalb.
+  const STANDORT_PRUEFEN = false;
   const CAFE = { lat: 52.2743974, lng: 8.0441274 }, RADIUS = 150, KULANZ = 150;
   const VOR_ORT = 'nanni:vorort:' + code;   // nur der Zeitpunkt der letzten erfolgreichen Prüfung (sessionStorage), kein Standort
   function abstand(a, b) {   // Meter zwischen zwei Punkten (Haversine)
@@ -66,6 +68,7 @@
   }
   // Antwort: null = vor Ort, sonst der Text für den Gast
   async function vorOrt() {
+    if (!STANDORT_PRUEFEN) return null;
     try { if (Date.now() - (+sessionStorage.getItem(VOR_ORT) || 0) < 30 * 60e3) return null; } catch { /* kein Speicher: neu prüfen */ }
     if (!navigator.geolocation) return 'Bestellen am Handy geht nur im Café. Bestellt gern an der Theke.';
     // Der Browser fragt den Gast selbst: „Darf … deinen Standort verwenden?“ – Erlauben / Nicht erlauben
@@ -78,6 +81,19 @@
     try { sessionStorage.setItem(VOR_ORT, String(Date.now())); } catch { /* egal */ }
     return null;
   }
+
+  // Ein Bestell-Link gilt auf jedem Handy 1,5 Stunden ab dem ersten Öffnen, auch neu Scannen verlängert nicht.
+  // Am nächsten Tag beginnt die Zeit von vorn. (Im privaten Modus merkt sich das Handy nichts, dann gilt jedes Öffnen neu.)
+  const GUELTIG = 1.5 * STUNDE;
+  const heute = new Date().toDateString();
+  let start = merken.lesen('start', null);
+  if (!start || start.tag !== heute) { start = { tag: heute, zeit: Date.now() }; merken.schreiben('start', start); }
+  const restzeit = start.zeit + GUELTIG - Date.now();
+  if (restzeit <= 0) {
+    hinweis('Die Bestellzeit mit diesem Code ist abgelaufen. Bestellt gern direkt bei uns an der Theke.');
+    return;
+  }
+  setTimeout(() => location.reload(), restzeit + 1000);   // läuft die Zeit ab, während die Karte offen ist: neu laden, dann greift der Hinweis
 
   // Erst wenn die Karte ihren aktuellen Stand aus der Datenbank hat (karte-live.js), kommen die Plus-Knöpfe dazu
   Promise.all([NANNI.rpc('tisch_info', { p_code: code }), window.NANNI_KARTE])
@@ -139,13 +155,15 @@
     const knoepfe = new Map();   // Artikelname -> Knopf, damit er die Menge im Korb zeigen kann
     if (bestellbar) {
       for (const bereich of document.querySelectorAll('.kcat')) {
-        // Lunch Deal nur zu seiner Zeit (Mo–Mi und Fr 11:30–14:30); die Datenbank sagt, ob gerade Lunchzeit ist
-        if (bereich.id === 'lunchdeal' && info.lunch === false) {
+        // Lunch Deal: Getränk inklusive nur zu seiner Zeit (Mo–Mi und Fr 11:30–14:30); die Datenbank sagt, ob gerade Lunchzeit ist.
+        // Zu allen anderen Zeiten gibt es dieselben Gerichte zum selben Preis, aber ohne Getränk.
+        const ohneGetraenk = bereich.id === 'lunchdeal' && info.lunch === false;
+        if (ohneGetraenk) {
           bereich.querySelector('.kcat-head')?.after(h('p', { class: 'nb-hinweis', style: 'margin:0 0 12px;padding:10px 14px;border-radius:14px;background:#fff3c4;color:#5b4700;font-size:.92rem' },
-            'Lunch Deal: Mo–Mi und Fr 11:30–14:30'));
-          continue;
+            'Gerade ist keine Lunch-Deal-Zeit (Mo–Mi und Fr 11:30–14:30). Ihr könnt die Gerichte trotzdem bestellen, dann aber ohne Getränk.'));
         }
-        const extras = [...bereich.querySelectorAll('.extras li[data-n]')].map(li => ({ name: li.dataset.n, cent: +li.dataset.p }));
+        const extras = [...bereich.querySelectorAll('.extras li[data-n]')].map(li => ({ name: li.dataset.n, cent: +li.dataset.p }))
+          .filter(x => !(ohneGetraenk && x.name.startsWith('Getränk: ')));
         for (const li of bereich.querySelectorAll('.mi[data-n]')) {
           const artikel = { name: li.dataset.n, cent: +li.dataset.p, text: li.querySelector('p')?.textContent || '', extras };
           if (ausverkauft.has(artikel.name)) {
@@ -288,7 +306,8 @@
 
       async function abschicken() {
         if (!tisch) return tischWaehlen(() => { tischZeileZeichnen(); abschicken(); });
-        senden.disabled = true; senden.textContent = T('Standort wird geprüft …'); fehler.hidden = true;
+        if (!gruppeGefragt()) return gruppeFragen(abschicken);
+        senden.disabled = true; senden.textContent = T(STANDORT_PRUEFEN ? 'Standort wird geprüft …' : 'Wird gesendet …'); fehler.hidden = true;
         const scheitern = text => { fehler.textContent = T(text); fehler.hidden = false; senden.disabled = false; senden.textContent = T('Bestellung abschicken'); };
         const weg = await vorOrt();
         if (weg) return scheitern(weg);
@@ -301,7 +320,7 @@
           });
         } catch { return scheitern('Keine Verbindung. Prüft kurz euer Netz und versucht es noch einmal.'); }
         if (!antwort.ok && antwort.fehler === 'lunchzeit') {
-          return scheitern('„' + antwort.artikel + '“ gibt es nur Mo–Mi und Fr von 11:30 bis 14:30 Uhr. Nehmt es bitte aus der Bestellung.');
+          return scheitern('Die Lunch-Deal-Zeit ist gerade vorbei. „' + antwort.artikel + '“ gibt es jetzt nur ohne Getränk. Nehmt es bitte aus der Bestellung und legt es neu in den Warenkorb.');
         }
         if (!antwort.ok && antwort.fehler === 'ausverkauft') {
           return scheitern('„' + antwort.artikel + '“ ist leider gerade ausverkauft. Nehmt es bitte aus der Bestellung.');
@@ -329,8 +348,29 @@
       tischZeileZeichnen();
       b.inhalt.append(liste);
       b.fuss.append(info.wahl ? tischZeile : h('div', { class: 'nb-tischzeile fest' }, h('b', {}, tischName(tisch))), h('div', { class: 'nb-summe' }, h('span', {}, 'Summe'), summe), fehler,
-        h('p', { class: 'nb-klein' }, 'Bezahlt wird wie gewohnt bei uns im Café.'), senden);
+        h('p', { class: 'nb-klein' }, 'Bezahlt wird bei uns an der Theke.'), senden);
       zeichnen();
+    }
+
+    // ---------------------------------------------------------- Blatt: Allein oder zu mehreren?
+    // Vor der ersten Bestellung in diesem Tab: Sitzen mehrere am Tisch, sollen sie gleichzeitig bestellen,
+    // damit Essen und Getränke zusammen ankommen. Gefragt wird nur einmal je Besuch (sessionStorage, 3 Stunden).
+    const GRUPPE = 'nanni:gruppe:' + code;
+    function gruppeGefragt() {
+      try { return Date.now() - (+sessionStorage.getItem(GRUPPE) || 0) < 3 * STUNDE; } catch { return true; }
+    }
+    function gruppeFragen(weiter) {
+      const b = blatt('Sitzt du allein am Tisch?', 'Kurze Frage, bevor die Bestellung rausgeht.');
+      const fertig = () => { try { sessionStorage.setItem(GRUPPE, String(Date.now())); } catch { /* egal */ } b.d.close(); weiter(); };
+      const mehrere = () => {
+        b.inhalt.replaceChildren(h('p', { class: 'nb-bescheid' }, h('b', {}, 'Bestellt am besten gleichzeitig.'),
+          ' Dann kommen Essen und Getränke für euren ganzen Tisch zusammen an. Sagt kurz den anderen Bescheid, dass alle jetzt bestellen, oder gebt alles gemeinsam von einem Handy auf.'));
+        b.fuss.replaceChildren(h('button', { class: 'nb-knopf mitte', type: 'button', onclick: fertig }, 'Alles klar, abschicken'),
+          h('button', { class: 'nb-knopf hell mitte', type: 'button', onclick: () => b.d.close() }, 'Noch kurz warten'));
+      };
+      b.inhalt.append(h('p', {}, 'Wenn ihr zu mehreren seid, bringen wir euch alles gern zusammen.'));
+      b.fuss.append(h('button', { class: 'nb-knopf mitte', type: 'button', onclick: fertig }, 'Ich sitze allein'),
+        h('button', { class: 'nb-knopf hell mitte', type: 'button', onclick: mehrere }, 'Wir sind mehrere'));
     }
 
     // ---------------------------------------------------------- Blatt: Kellner rufen
@@ -390,11 +430,11 @@
     }
 
     function standBlatt() {
-      const b = blatt('Eure Bestellungen', 'Bezahlt wird wie gewohnt bei uns im Café.');
+      const b = blatt('Eure Bestellungen', 'Bezahlt wird bei uns an der Theke.');
       standListe = b.inhalt; standZeichnen();
       b.d.addEventListener('close', () => { standListe = null; });
-      // "Wir möchten zahlen": sagt der Theke Bescheid. Bezahlt wird beim Personal oder an der Theke.
-      const bescheid = () => h('p', { class: 'nb-bescheid' }, h('b', {}, 'Wir wissen Bescheid.'), ' Wir kommen gleich zu euch, oder ihr zahlt direkt an der Theke.');
+      // "Wir möchten zahlen": sagt der Theke Bescheid. Bezahlt wird an der Theke.
+      const bescheid = () => h('p', { class: 'nb-bescheid' }, h('b', {}, 'Bitte kommt zum Bezahlen an die Theke.'), ' Wir wissen Bescheid und machen eure Rechnung fertig.');
       const zahlFehler = h('p', { class: 'nb-fehler', role: 'alert', hidden: true });
       const zahlKnopf = h('button', { class: 'nb-knopf mitte', type: 'button', onclick: zahlen }, 'Wir möchten zahlen');
       async function zahlen() {

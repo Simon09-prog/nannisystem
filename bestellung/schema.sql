@@ -331,7 +331,6 @@ begin
     if not found then return jsonb_build_object('ok', false, 'fehler', 'artikel'); end if;
     if a.versteckt then return jsonb_build_object('ok', false, 'fehler', 'artikel'); end if;
     if a.ausverkauft_am = _heute() then return jsonb_build_object('ok', false, 'fehler', 'ausverkauft', 'artikel', a.name); end if;
-    if a.kategorie = 'lunchdeal' and not _lunchzeit() then return jsonb_build_object('ok', false, 'fehler', 'lunchzeit', 'artikel', a.name); end if;
 
     -- Extras: nur solche, die es in der Kategorie dieses Artikels wirklich gibt
     select count(distinct j->>'name') into v_gewollt
@@ -343,9 +342,11 @@ begin
       where x.kategorie = a.kategorie
         and x.name in (select j->>'name' from jsonb_array_elements(case when jsonb_typeof(pos->'extras') = 'array' then pos->'extras' else '[]'::jsonb end) j);
     if jsonb_array_length(v_extras) <> v_gewollt then return jsonb_build_object('ok', false, 'fehler', 'artikel'); end if;
-    -- Lunch Deal: genau ein Getränk muss gewählt sein
-    if a.kategorie = 'lunchdeal' and (select count(*) from jsonb_array_elements(v_extras) j where j->>'name' like 'Getränk: %') <> 1 then
-      return jsonb_build_object('ok', false, 'fehler', 'ungueltig');
+    -- Lunch Deal: zur Lunchzeit genau ein Getränk inklusive, zu allen anderen Zeiten dieselben Gerichte ohne Getränk
+    if a.kategorie = 'lunchdeal' then
+      v_gewollt := (select count(*) from jsonb_array_elements(v_extras) j where j->>'name' like 'Getränk: %');
+      if _lunchzeit() and v_gewollt <> 1 then return jsonb_build_object('ok', false, 'fehler', 'ungueltig'); end if;
+      if not _lunchzeit() and v_gewollt > 0 then return jsonb_build_object('ok', false, 'fehler', 'lunchzeit', 'artikel', a.name); end if;
     end if;
 
     v_summe := v_summe + (a.preis_cent + v_extra_cent) * v_menge;

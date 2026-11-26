@@ -67,7 +67,7 @@
       "id": "fresh", "name": "Nannis Fresh Bar", "short": "Fresh Bar", "sub": "Frisch gepresste Säfte und Smoothies", "img": "bilder/cheesecake-limo.webp",
       "groups": [
         { "title": "Frisch gepresst", "items": [
-          {"name": "Frisch gepresster Orangensaft", "price": "5,90", "desc": "Frisch gepresst und ohne Zusätze."},
+          {"name": "Frisch gepresster Orangensaft", "price": "4,90", "desc": "Frisch gepresst und ohne Zusätze."},
           {"name": "Beet & Juice", "price": "6,50", "desc": "Frisch gepresster Mix aus Roter Bete, Apfel, Möhre, Ingwer, Zitrone und frischem Orangensaft – fruchtig und leicht würzig."}
         ] },
         { "title": "Smoothies", "items": [
@@ -90,7 +90,7 @@
       "notes": ["„Zurück zu den Quellen“ ist natürliches Mineralwasser aus ursprünglichen, geschützten Quellen in Deutschland."]
     },
     {
-      "id": "lunchdeal", "name": "Nanni Lunch Deal", "short": "Lunch Deal", "sub": "Mo–Mi und Fr 11:30–14:30 Uhr · inkl. Getränk deiner Wahl", "img": "bilder/knusper-roesti.webp",
+      "id": "lunchdeal", "name": "Nanni Lunch Deal", "short": "Lunch Deal", "sub": "Mo–Mi und Fr 11:30–14:30 Uhr inkl. Getränk deiner Wahl, sonst ohne Getränk", "img": "bilder/knusper-roesti.webp",
       "items": [
         {"name": "Apfel-Brie-Grilltoast", "price": "13,90", "tags": ["veggie"], "desc": "Knusprig getoastet, gefüllt mit Apfel, Brie und Feigensenf. Dazu Preiselbeersoße, eine kleine Portion Pommes und Salat mit Granatapfelkernen und Walnüssen, abgerundet mit Apfel-Senf-Vinaigrette."},
         {"name": "Winterburger Goat", "price": "14,90", "tags": ["veggie"], "desc": "Brioche Bun mit Preiselbeersoße und Honig-Senf-Sauce, belegt mit Baby-Leaf-Mix, karamellisiertem Ziegenkäse, Apfel und Avocado. Dazu Pommes mit Kräuterquark."},
@@ -98,10 +98,10 @@
         {"name": "Nannis Knusper-Rösti", "price": "13,90", "tags": ["veggie"], "desc": "Kartoffelrösti mit Kräuterquark, Spiegelei, Kürbiskernen und Beilagensalat."}
       ],
       "extras": [{"title": "Getränk inklusive (eins auswählen)", "items": [["Getränk: Café Crema", "0,00"], ["Getränk: Americano", "0,00"], ["Getränk: Espresso", "0,00"], ["Getränk: Espresso Doppio", "0,00"], ["Getränk: Espresso Macchiato", "0,00"], ["Getränk: Cappuccino", "0,00"], ["Getränk: Flat White", "0,00"], ["Getränk: Milchkaffee", "0,00"], ["Getränk: Latte Macchiato", "0,00"], ["Getränk: Earl Grey", "0,00"], ["Getränk: Jasmin-Grüntee", "0,00"], ["Getränk: Früchtetee Waldbeere", "0,00"], ["Getränk: Frischer Minztee", "0,00"], ["Getränk: Frischer Ingwer-Zitronentee", "0,00"], ["Getränk: Pfirsich-Limo", "0,00"], ["Getränk: Zitronen-Minze-Holunder-Limo", "0,00"], ["Getränk: Himbeer-Minze-Holunder-Limo", "0,00"], ["Getränk: Maracuja-Limette-Limo", "0,00"]]}],
-      "notes": ["Im Preis ist ein Getränk deiner Wahl enthalten: Kaffee, Tee oder eine hausgemachte Limo. Beim Bestellen am Handy wählt ihr es direkt mit aus."]
+      "notes": ["Mo–Mi und Fr von 11:30 bis 14:30 Uhr ist ein Getränk deiner Wahl im Preis enthalten: Kaffee, Tee oder eine hausgemachte Limo. Beim Bestellen am Handy wählt ihr es direkt mit aus.", "Zu allen anderen Zeiten gibt es die Gerichte zum selben Preis, aber ohne Getränk."]
     },
     {
-      "id": "fruehstueck", "name": "Good Morning, Nanni", "short": "Frühstück", "sub": "Mit Eiern aus ökologischer Haltung", "img": "bilder/brunch-favourite.webp",
+      "id": "fruehstueck", "name": "Good Morning, Nanni", "short": "Frühstück", "sub": "Mit Eiern aus ökologischer Haltung",
       "items": [
         {"name": "Rührei Genuss", "price": "7,90", "desc": "Cremiges Rührei, geröstetes Sauerteigbrot und Frischkäsecreme.", "tags": ["veggie", "vegan-opt"]},
         {"name": "Omelett-Bar", "price": "8,90", "desc": "Frisch zubereitetes Omelett mit Brot und Frischkäsecreme – verfeinere dein Omelett mit den Extras unten.", "tags": ["veggie"]},
@@ -132,7 +132,7 @@
       "addons": true
     },
     {
-      "id": "pancakes", "name": "Süßkartoffel-Pancakes", "short": "Pancakes", "sub": "Herzhaft. Süß. Süßkartoffel.", "img": "bilder/halloumi-pancakes.webp",
+      "id": "pancakes", "name": "Süßkartoffel-Pancakes", "short": "Süßkartoffel-Pancakes", "sub": "Herzhaft. Süß. Süßkartoffel.", "img": "bilder/halloumi-pancakes.webp",
       "items": [
         {"name": "Süßkartoffel-Pancakes mit Halloumi", "price": "11,50", "tags": ["veggie", "scharf"], "desc": "Belegt mit Rucola-Mix, Tomaten, Halloumi, Kürbiskernen, Chili, Balsamico und Honig. Herzhaft, süß und einfach unwiderstehlich!"},
         {"name": "Süßkartoffel-Pancakes mit Tofu & Avocado", "price": "11,50", "tags": ["veggie"], "desc": "Belegt mit Rucola-Mix, Tomaten, Avocado, Tofu, Granatapfelkernen und Balsamico. Frisch, nussig und voller Power!"},
@@ -154,14 +154,10 @@
       "addons": true
     },
     {
-      "id": "lunch", "name": "Nannis Lunch Favourites", "short": "Lunch", "sub": "Mo–Mi und Fr ab 15 Uhr, am Wochenende schon ab 12 Uhr", "img": "bilder/burger-lunch.webp",
+      "id": "pommes", "name": "Süßkartoffel-Pommes", "short": "Pommes", "sub": "Knusprig, mit Dip deiner Wahl", "img": "bilder/suesskartoffel-pommes.webp",
       "items": [
-        {"name": "Golden Goat Club Sandwich", "price": "14,90", "desc": "Frischkäse, Rucola, Tomaten, Avocado, karamellisierter Ziegenkäse und Walnüsse. Dazu Süßkartoffel-Pommes mit veganem Reibe-Topping und Dip.", "tags": ["veggie"]},
-        {"name": "Chicken Karaage Burger", "price": "15,50", "desc": "Brioche Bun, Honey-Mustard-Sauce, Romanasalat, Tomate, Chicken Karaage, Cheddar-Melt und Pickled Onions. Dazu Süßkartoffel-Pommes mit veganem Reibe-Topping und Dip."},
-        {"name": "Avocado-Halloumi Burger", "price": "15,50", "desc": "Brioche Bun, Avocado-Mash, Romanasalat, Tomate, Avocado, Halloumi, Honig-Drizzle, Pickled Onions und hausgemachte Honig-Senf-Sauce. Dazu Süßkartoffel-Pommes mit veganem Reibe-Topping und Dip.", "tags": ["veggie"]},
         {"name": "Süßkartoffel-Pommes mit Dip", "price": "6,90", "desc": "Dip deiner Wahl: Trüffelcreme, Kräuterquark, vegane Mayo oder Ketchup.", "tags": ["vegan"]}
-      ],
-      "addons": true
+      ]
     },
     {
       "id": "sweets", "name": "Nannis Sweets", "short": "Sweets", "sub": "French Toast und fluffige Pancakes", "img": "bilder/french-toast.webp",
