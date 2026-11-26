@@ -58,7 +58,7 @@
       "id": "limo", "name": "Hausgemachte Limo", "short": "Limo", "sub": "Frisch. Fruchtig. Hausgemacht.", "img": "bilder/limo-karaffe.webp",
       "items": [
         {"name": "Pfirsich-Limo", "price": "4,90", "desc": "Pfirsichsirup und Mineralwasser."},
-        {"name": "Zitronen-Minze-Holunder-Limo", "price": "6,50", "desc": "Zitrone, Minze, Ingwersirup, Holundersirup und Mineralwasser."},
+        {"name": "Zitronen-Minze-Holunder-Limo", "price": "6,50", "desc": "Zitrone, Minze, Holundersirup und Mineralwasser."},
         {"name": "Himbeer-Minze-Holunder-Limo", "price": "6,50", "desc": "Zitrone, Minze, Himbeersirup, Holundersirup und Mineralwasser."},
         {"name": "Maracuja-Limette-Limo", "price": "6,50", "desc": "Limette, Maracujasirup und Mineralwasser."}
       ]
@@ -149,7 +149,7 @@
         {"name": "Smoky Tofu Bagel", "price": "9,90", "desc": "Frischkäse, Rucola, Tomaten, Avocado, Tofu, Pickled Onions und Granatapfel-Drizzle.", "tags": ["vegan"]},
         {"name": "Sucuk Egg Bagel", "price": "9,90", "desc": "Avocado-Mash, Rucola, Tomate, Rührei, Sucuk und Sriracha-Mayo."},
         {"name": "Egg Bagel", "price": "8,90", "desc": "Frischkäse, Rucola, Tomate, Rührei, veganes Reibe-Topping und Balsamico.", "tags": ["veggie", "vegan-opt"]},
-        {"name": "Salmon Bagel", "price": "10,90", "desc": "Frisch belegt mit Frischkäse, Rucola, Gurkensalat, Lachs, Pickled Onions und Dill-Dattelsenf-Dressing. Auch mit veganem Lachs.", "tags": ["vegan-opt"]}
+        {"name": "Salmon Bagel", "price": "10,90", "desc": "Frisch belegt mit Frischkäse, Rucola, Gurkensalat, Lachs, Pickled Onions, frischem Dill und Dill-Dattelsenf-Dressing. Auch mit veganem Lachs.", "tags": ["vegan-opt"]}
       ],
       "notes": ["Alle Bagels gibt es auch glutenfrei (+1,50 €). Kann Spuren von Gluten enthalten.", "Alle veganen Optionen werden mit unserer veganen Creme serviert."],
       "addons": true
