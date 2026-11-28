@@ -15,7 +15,7 @@ menu = json.load(open(os.path.join(HERE, "menu.json"), encoding="utf-8"))
 cats = menu["kategorien"]
 
 # Kategorien ohne Foto bekommen ein Linien-Icon (Symbole stehen in beiden Seiten im <defs>-Block)
-ICON = {"favourites": "i-iced", "fresh": "i-citrus", "soft": "i-bottle", "fruehstueck": "i-egg",
+ICON = {"winter": "i-cup", "favourites": "i-iced", "fresh": "i-citrus", "soft": "i-bottle", "fruehstueck": "i-egg",
         "bowls": "i-bowl", "lunchdeal": "i-bowl", "tee-matcha": "i-cup", "limo": "i-spritz", "shokupan": "i-bagel", "sweets": "i-waffle", "bagels": "i-bagel", "waffeln": "i-waffle"}
 # Markierung -> (CSS-Klasse, Text, Icon)
 TAG = {"vegan": ("tag-vegan", "vegan", "i-leaf"), "veggie": ("tag-veggie", "veggie", "i-leaf"),
@@ -38,6 +38,11 @@ def thumb(c, size):
     if c.get("img"):
         return f'<span class="cat-thumb"><img src="{c["img"]}" alt="" loading="lazy" width="{size}" height="{size}"></span>'
     return f'<span class="cat-thumb cat-icon"><svg aria-hidden="true"><use href="#{ICON.get(c["id"], "i-cup")}"/></svg></span>'
+
+
+def theme(c):
+    """Eigener Look einer Kategorie (z. B. "winter" = weinrot), als zusätzliche CSS-Klasse."""
+    return f' theme-{c["theme"]}' if c.get("theme") else ""
 
 
 def groups(c):
@@ -100,7 +105,7 @@ for i, c in enumerate(cats):
     low = min(price_num(it["price"]) for it in all_items(c))
     low_s = f"{low:.2f}".replace(".", ",")
     acc.append(
-        f'<details class="cat" name="karte" id="k-{c["id"]}"{" open" if i == 0 else ""}>'
+        f'<details class="cat{theme(c)}" name="karte" id="k-{c["id"]}"{" open" if i == 0 else ""}>'
         f'<summary>{thumb(c, 56)}<span class="cat-title"><b>{e(c["name"])}</b><small>{e(c["sub"])}</small></span>'
         f'<span class="cat-meta">ab {low_s}&nbsp;€</span><span class="cat-plus" aria-hidden="true"></span></summary>'
         f'<div class="cat-body">{body_html(c)}</div></details>'
@@ -114,9 +119,9 @@ assert n == 1, "Marker in index.html nicht gefunden"
 open(idx_path, "w", encoding="utf-8").write(idx)
 
 # ---------- 2) karte.html ----------
-chips = "".join(f'<a href="#{c["id"]}">{e(c.get("short", c["name"]))}</a>' for c in cats)
+chips = "".join(f'<a href="#{c["id"]}"{(' class="chip-' + c["theme"] + '"') if c.get("theme") else ""}>{e(c.get("short", c["name"]))}</a>' for c in cats)
 sections = "".join(
-    f'<section class="kcat" id="{c["id"]}"><header class="kcat-head">{thumb(c, 64)}'
+    f'<section class="kcat{theme(c)}" id="{c["id"]}"><header class="kcat-head">{thumb(c, 64)}'
     f'<div><h2>{e(c["name"])}</h2><p>{e(c["sub"])}</p></div></header>{body_html(c)}</section>'
     for c in cats
 )

@@ -22,6 +22,19 @@
       "notes": ["Alle Kaffees gibt es auch koffeinfrei.", "Milchalternativen ohne Aufpreis: Kokos-, Hafer- und Sojamilch."]
     },
     {
+      "id": "winter", "name": "Winter Specials", "short": "Winter Specials", "sub": "Ein Schluck Winterglück", "theme": "winter",
+      "items": [
+        {"name": "Winter Glühwein", "price": "4,90", "desc": "Roter Glühwein mit Orange & Zimt."},
+        {"name": "Baileys Snow Latte", "price": "6,90", "desc": "Espresso, Milch, Baileys, Sahne & Schokoraspeln."},
+        {"name": "Biscoff Latte", "price": "5,90", "desc": "Espresso, Milch, Lotuscreme, Zimtsirup, Sahne & Kekscrumble."},
+        {"name": "Lebkuchen Latte", "price": "5,90", "desc": "Espresso, Milch, Lebkuchensirup & Zimt."},
+        {"name": "Marshmallow Hot Chocolate", "price": "5,90", "desc": "Heiße Schokolade mit gerösteten Marshmallows & Schokosauce."},
+        {"name": "Hot Chocolate mit Rum", "price": "5,50", "desc": "Heiße Schokolade mit Rum."}
+      ],
+      "extras": [{"title": "Extras", "items": [["Schlagsahne", "0,80"], ["Schuss Rum (4 cl)", "2,50"], ["Schuss Baileys (4 cl)", "2,50"]]}],
+      "notes": ["Winter Glühwein, Baileys Snow Latte und Hot Chocolate mit Rum enthalten Alkohol. Glühwein gibt es ab 16, Getränke mit Rum oder Baileys ab 18 Jahren."]
+    },
+    {
       "id": "tee-matcha", "name": "Tee & Matcha", "sub": "Frisch aufgegossen", "img": "bilder/matcha-mango.webp",
       "items": [
         {"name": "Earl Grey", "price": "3,50", "desc": "Feiner Schwarztee mit Bergamotte-Aroma."},

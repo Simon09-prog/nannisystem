@@ -6,7 +6,7 @@ import { fileURLToPath } from 'node:url';
 
 const HIER = fileURLToPath(new URL('.', import.meta.url));
 // Diese Kategorien sind Getränke. Die Theke kann sie getrennt vom Essen servieren.
-const GETRAENKE = new Set(['kaffee', 'tee-matcha', 'favourites', 'limo', 'fresh', 'soft']);
+const GETRAENKE = new Set(['winter', 'kaffee', 'tee-matcha', 'favourites', 'limo', 'fresh', 'soft']);
 const cent = p => Math.round(parseFloat(p.replace(',', '.')) * 100);
 
 export function karte() {

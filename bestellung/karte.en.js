@@ -329,5 +329,20 @@ window.NANNI_EN = {
   'Unser Pancake-Teig ist hausgemacht und vegan. Er ist nicht glutenfrei.': 'Our pancake batter is homemade and vegan. It is not gluten-free.',
   'Süßkartoffel-Pommes': 'Sweet potato fries',
   'Zitrone, Minze, Holundersirup und Mineralwasser.': 'Lemon, mint, elderflower syrup and sparkling water.',
-  'Frisch belegt mit Frischkäse, Rucola, Gurkensalat, Lachs, Pickled Onions, frischem Dill und Dill-Dattelsenf-Dressing. Auch mit veganem Lachs.': 'Freshly topped with cream cheese, rocket, cucumber salad, salmon, pickled onions, fresh dill and dill date-mustard dressing. Also available with vegan salmon.'
+  'Frisch belegt mit Frischkäse, Rucola, Gurkensalat, Lachs, Pickled Onions, frischem Dill und Dill-Dattelsenf-Dressing. Auch mit veganem Lachs.': 'Freshly topped with cream cheese, rocket, cucumber salad, salmon, pickled onions, fresh dill and dill date-mustard dressing. Also available with vegan salmon.',
+  'Winter Specials': 'Winter Specials',
+  'Ein Schluck Winterglück': 'A sip of winter happiness',
+  'Winter Glühwein': 'Winter mulled wine',
+  'Roter Glühwein mit Orange & Zimt.': 'Red mulled wine with orange & cinnamon.',
+  'Espresso, Milch, Baileys, Sahne & Schokoraspeln.': 'Espresso, milk, Baileys, whipped cream & chocolate shavings.',
+  'Espresso, Milch, Lotuscreme, Zimtsirup, Sahne & Kekscrumble.': 'Espresso, milk, Lotus spread, cinnamon syrup, whipped cream & biscuit crumble.',
+  'Lebkuchen Latte': 'Gingerbread Latte',
+  'Espresso, Milch, Lebkuchensirup & Zimt.': 'Espresso, milk, gingerbread syrup & cinnamon.',
+  'Heiße Schokolade mit gerösteten Marshmallows & Schokosauce.': 'Hot chocolate with toasted marshmallows & chocolate sauce.',
+  'Hot Chocolate mit Rum': 'Hot Chocolate with rum',
+  'Heiße Schokolade mit Rum.': 'Hot chocolate with rum.',
+  'Schlagsahne': 'Whipped cream',
+  'Schuss Rum (4 cl)': 'Shot of rum (4 cl)',
+  'Schuss Baileys (4 cl)': 'Shot of Baileys (4 cl)',
+  'Winter Glühwein, Baileys Snow Latte und Hot Chocolate mit Rum enthalten Alkohol. Glühwein gibt es ab 16, Getränke mit Rum oder Baileys ab 18 Jahren.': 'Winter mulled wine, Baileys Snow Latte and Hot Chocolate with rum contain alcohol. Mulled wine from age 16, drinks with rum or Baileys from age 18.'
 };

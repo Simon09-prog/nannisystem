@@ -121,6 +121,21 @@ h1, h2, h4, p { margin: 0; }
 .cat-notes { list-style: none; margin: 14px 0 0; padding: 11px 14px; background: var(--chip, var(--cream)); border-radius: 12px; font-size: .88rem; color: var(--muted); display: grid; gap: 5px; }
 .cat-notes li { display: flex; gap: 9px; }
 .cat-notes li::before { content: ""; width: 5px; height: 5px; border-radius: 50%; background: var(--sage); flex: none; margin-top: .6em; }
+
+/* Winter Specials: weinrot wie die Winterkarte im Café */
+.theme-winter { --wein: #43111a; --wein-akzent: #f4b9c5; --line: rgba(247, 236, 224, .2); --muted: #e8d3ca; --chip: rgba(255, 255, 255, .1);
+  background: var(--wein); color: #f7ece0; border-radius: 22px; }
+.theme-winter .mi-price, .theme-winter .extras b, .theme-winter .extras li span { color: var(--wein-akzent); }
+.theme-winter .mi-line { border-bottom-color: rgba(247, 236, 224, .35); }
+.theme-winter .cat-thumb { background: rgba(255, 255, 255, .12); }
+.theme-winter .cat-icon svg { color: var(--wein-akzent); }
+.theme-winter .cat-notes li::before { background: var(--wein-akzent); }
+.theme-winter .nb-plus { color: #fff; }
+.theme-winter .nb-plus::before { background: rgba(255, 255, 255, .22); }
+.kcat.theme-winter { padding: 24px 20px 22px; margin-top: 44px; }
+.kcat.theme-winter .kcat-head h2 { color: #fff; }
+.chips a.chip-winter { background: #43111a; border-color: #43111a; color: #f7ece0; }
+.chips a.chip-winter.on { box-shadow: 0 0 0 2px var(--paper), 0 0 0 3.5px #43111a; }
 .k-main { --chip: var(--paper); }
 
 /* Fuss */
