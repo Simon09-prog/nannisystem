@@ -41,7 +41,7 @@ test('Theke: Tische anlegen, doppelte werden abgelehnt', async () => {
 test('Gast: Link-Arten', async () => {
   assert.deepEqual(await rpc('tisch_info', { p_code: 'gibtsnicht' }), { ok: false });
   const fest = await rpc('tisch_info', { p_code: tischCode });
-  assert.deepEqual(fest, { ok: true, wahl: false, aktiv: true, offen: true, lunch: true, ausverkauft: [], bewertung_url: '', tisch: '1', bereich: 'Drinnen' });
+  assert.deepEqual(fest, { ok: true, wahl: false, aktiv: true, offen: true, lunch: true, kuchen: true, ausverkauft: [], bewertung_url: '', tisch: '1', bereich: 'Drinnen' });
   const laden = await rpc('tisch_info', { p_code: ladenCode });
   assert.equal(laden.wahl, true);
   assert.equal(laden.tische.length, 2);
@@ -458,6 +458,25 @@ test('Lunch Deal außerhalb der Lunchzeit: dieselben Gerichte, aber ohne Geträn
     const ohne = await rpc('bestellung_aufgeben', { p_code: tischCode, p_positionen: [{ name: 'Nannis Knusper-Rösti', menge: 1, extras: [] }] });
     assert.equal(ohne.ok, true);
     assert.equal(ohne.summe_cent, 1390);
+  } finally {
+    await s.db.query(vorher);
+  }
+});
+
+test('Kaffee & Kuchen Deal: nur montags 12–18 Uhr bestellbar, sonst nur sichtbar', async () => {
+  const tischCode = (await rpc('theke_tische', { p_key: K })).tische.at(-1).code;
+  await s.db.query("update bestellungen set status = 'serviert' where status = 'neu'");
+  const deal = [{ name: 'Kaffee & Kuchen Deal', menge: 1, extras: [] }];
+  assert.equal((await rpc('bestellung_aufgeben', { p_code: tischCode, p_positionen: deal })).ok, true);
+  const vorher = (await s.db.query("select pg_get_functiondef('_kuchenzeit'::regproc) as d")).rows[0].d;
+  await s.db.query("create or replace function _kuchenzeit() returns boolean language sql stable as $$ select false $$");
+  try {
+    assert.equal((await rpc('tisch_info', { p_code: tischCode })).kuchen, false);
+    const nein = await rpc('bestellung_aufgeben', { p_code: tischCode, p_positionen: deal });
+    assert.equal(nein.fehler, 'kuchenzeit');
+    assert.equal(nein.artikel, 'Kaffee & Kuchen Deal');
+    // Andere Artikel gehen weiterhin
+    assert.equal((await rpc('bestellung_aufgeben', { p_code: tischCode, p_positionen: [{ name: 'Espresso', menge: 1, extras: [] }] })).ok, true);
   } finally {
     await s.db.query(vorher);
   }

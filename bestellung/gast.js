@@ -16,6 +16,7 @@
   const euro = c => (c / 100).toFixed(2).replace('.', ',') + ' €';
   const uhr = ms => new Date(ms).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' }) + ' Uhr';   // T macht daraus auf Englisch "15:53"
   const STUNDE = 3600e3;
+  const KUCHEN_DEAL = 'Kaffee & Kuchen Deal';   // nur montags 12–18 Uhr bestellbar, sonst nur sichtbar
 
   // h('button', { class: 'x', onclick: fn }, 'Text', kind) baut ein Element. Text wird nie als HTML gelesen.
   function h(tag, props = {}, ...kinder) {
@@ -127,7 +128,7 @@
     }
     const ausverkauft = new Set(info.ausverkauft || []);
     const tischName = t => 'Tisch ' + t.name + (t.bereich ? ' · ' + t.bereich : '');
-    korb = korb.filter(z => !ausverkauft.has(z.name));   // was inzwischen ausverkauft ist, fliegt aus dem Korb
+    korb = korb.filter(z => !ausverkauft.has(z.name) && !(z.name === KUCHEN_DEAL && info.kuchen === false));   // was inzwischen ausverkauft ist, fliegt aus dem Korb
     const zeilenPreis = z => (z.cent + z.extras.reduce((s, x) => s + x.cent, 0)) * z.menge;
     const korbSumme = () => korb.reduce((s, z) => s + zeilenPreis(z), 0);
     const korbAnzahl = () => korb.reduce((s, z) => s + z.menge, 0);
@@ -168,6 +169,12 @@
           let eigene = [];
           try { eigene = JSON.parse(li.dataset.x || '[]').map(([name, cent]) => ({ name, cent })); } catch { /* ohne Auswahl */ }
           const artikel = { name: li.dataset.n, cent: +li.dataset.p, text: li.querySelector(':scope > p')?.textContent || '', extras: [...extras, ...eigene] };
+          // Kaffee & Kuchen Deal: sichtbar, aber nur montags 12–18 Uhr bestellbar; die Datenbank sagt, ob gerade Kuchenzeit ist
+          if (artikel.name === KUCHEN_DEAL && info.kuchen === false) {
+            li.classList.add('nb-aus');
+            li.querySelector('.mi-top').append(h('span', { class: 'nb-ausverkauft' }, 'nur Mo 12–18 Uhr'));
+            continue;
+          }
           if (ausverkauft.has(artikel.name)) {
             li.classList.add('nb-aus');
             li.querySelector('.mi-top').append(h('span', { class: 'nb-ausverkauft' }, 'ausverkauft'));
@@ -331,6 +338,9 @@
         } catch { return scheitern('Keine Verbindung. Prüft kurz euer Netz und versucht es noch einmal.'); }
         if (!antwort.ok && antwort.fehler === 'lunchzeit') {
           return scheitern('Die Lunch-Deal-Zeit ist gerade vorbei. „' + antwort.artikel + '“ gibt es jetzt nur ohne Getränk. Nehmt es bitte aus der Bestellung und legt es neu in den Warenkorb.');
+        }
+        if (!antwort.ok && antwort.fehler === 'kuchenzeit') {
+          return scheitern('Den Kaffee & Kuchen Deal gibt es nur montags von 12 bis 18 Uhr. Nehmt ihn bitte aus der Bestellung.');
         }
         if (!antwort.ok && antwort.fehler === 'ausverkauft') {
           return scheitern('„' + antwort.artikel + '“ ist leider gerade ausverkauft. Nehmt es bitte aus der Bestellung.');

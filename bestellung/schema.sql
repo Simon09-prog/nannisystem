@@ -163,6 +163,14 @@ language sql stable security definer set search_path = public as $$
     and (now() at time zone 'Europe/Berlin')::time between time '11:30' and time '14:30')
 $$;
 
+-- Kaffee & Kuchen Deal: nur montags von 12 bis 18 Uhr bestellbar (bei immer_offen zum Testen jederzeit)
+create or replace function _kuchenzeit() returns boolean
+language sql stable security definer set search_path = public as $$
+  select (select immer_offen from einstellungen) or (
+    extract(isodow from now() at time zone 'Europe/Berlin') = 1
+    and (now() at time zone 'Europe/Berlin')::time between time '12:00' and time '18:00')
+$$;
+
 -- Namen der Artikel, die heute ausverkauft sind
 create or replace function _ausverkauft() returns jsonb
 language sql stable security definer set search_path = public as $$
@@ -278,13 +286,13 @@ declare e einstellungen; t tische;
 begin
   select * into e from einstellungen;
   if p_code = e.laden_code then
-    return jsonb_build_object('ok', true, 'wahl', true, 'aktiv', e.aktiv, 'offen', _offen(), 'lunch', _lunchzeit(), 'ausverkauft', _ausverkauft(), 'bewertung_url', e.bewertung_url, 'tische', coalesce(
+    return jsonb_build_object('ok', true, 'wahl', true, 'aktiv', e.aktiv, 'offen', _offen(), 'lunch', _lunchzeit(), 'kuchen', _kuchenzeit(), 'ausverkauft', _ausverkauft(), 'bewertung_url', e.bewertung_url, 'tische', coalesce(
       (select jsonb_agg(jsonb_build_object('id', id, 'name', name, 'bereich', bereich) order by bereich, length(name), name) from tische),
       '[]'::jsonb));
   end if;
   select * into t from tische where code = p_code;
   if not found then return jsonb_build_object('ok', false); end if;
-  return jsonb_build_object('ok', true, 'wahl', false, 'aktiv', e.aktiv, 'offen', _offen(), 'lunch', _lunchzeit(), 'ausverkauft', _ausverkauft(), 'bewertung_url', e.bewertung_url, 'tisch', t.name, 'bereich', t.bereich);
+  return jsonb_build_object('ok', true, 'wahl', false, 'aktiv', e.aktiv, 'offen', _offen(), 'lunch', _lunchzeit(), 'kuchen', _kuchenzeit(), 'ausverkauft', _ausverkauft(), 'bewertung_url', e.bewertung_url, 'tisch', t.name, 'bereich', t.bereich);
 end $$;
 
 -- Bestellung abschicken. Preise, die der Browser mitschickt, werden ignoriert:
@@ -331,6 +339,7 @@ begin
     if not found then return jsonb_build_object('ok', false, 'fehler', 'artikel'); end if;
     if a.versteckt then return jsonb_build_object('ok', false, 'fehler', 'artikel'); end if;
     if a.ausverkauft_am = _heute() then return jsonb_build_object('ok', false, 'fehler', 'ausverkauft', 'artikel', a.name); end if;
+    if a.name = 'Kaffee & Kuchen Deal' and not _kuchenzeit() then return jsonb_build_object('ok', false, 'fehler', 'kuchenzeit', 'artikel', a.name); end if;
 
     -- Extras: nur solche, die es in der Kategorie dieses Artikels wirklich gibt, oder nur für diesen Artikel ("@Artikelname")
     select count(distinct j->>'name') into v_gewollt

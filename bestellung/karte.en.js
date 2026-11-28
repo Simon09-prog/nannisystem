@@ -199,6 +199,8 @@ window.NANNI_EN = {
   'z. B. mit Hafermilch, koffeinfrei, ohne Zwiebeln': 'e.g. with oat milk, decaf, no onions',
   'Fragen zu Allergenen oder Zusatzstoffen? Tippt unten auf „Kellner rufen“, wir helfen gern.': 'Questions about allergens or additives? Tap “Call a waiter” below – we’re happy to help.',
   'Hinzufügen': 'Add', 'ausverkauft': 'sold out',
+  'nur Mo 12–18 Uhr': 'Mon 12–6 pm only',
+  'Den Kaffee & Kuchen Deal gibt es nur montags von 12 bis 18 Uhr. Nehmt ihn bitte aus der Bestellung.': 'The coffee & cake deal is only available on Mondays from 12 to 6 pm. Please remove it from your order.',
   'Eure Bestellung': 'Your order', 'Euer Tisch': 'Your table', 'Nummer eintragen': 'enter number',
   'Summe': 'Total', 'Bezahlt wird wie gewohnt bei uns im Café.': 'You pay as usual here in the café.',
   'Bestellung abschicken': 'Send order', 'Wird gesendet …': 'Sending …',
