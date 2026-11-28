@@ -365,5 +365,10 @@ window.NANNI_EN = {
   'Trüffelcreme': 'Truffle cream',
   'Sriracha-Mayo': 'Sriracha mayo',
   'z. B. koffeinfrei, ohne Zwiebeln': 'e.g. decaf, no onions',
-  'Milchalternativen ohne Aufpreis: Hafer- und Kokosmilch. Beim Bestellen am Handy wählt ihr die Milch direkt aus.': 'Milk alternatives at no extra charge: oat and coconut milk. When ordering by phone, you choose your milk right away.'
+  'Milchalternativen ohne Aufpreis: Hafer- und Kokosmilch. Beim Bestellen am Handy wählt ihr die Milch direkt aus.': 'Milk alternatives at no extra charge: oat and coconut milk. When ordering by phone, you choose your milk right away.',
+  'Dip inklusive': 'Dip included',
+  'Bitte Dip wählen': 'Please choose a dip',
+  'Kräuterquark': 'Herb quark',
+  'Vegane Mayo': 'Vegan mayo',
+  'Ketchup': 'Ketchup'
 };

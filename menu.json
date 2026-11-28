@@ -141,7 +141,7 @@
         {"name": "Halloumi-Honey Drop", "price": "12,90", "desc": "Toskanacreme, Rucola, Halloumi, Tomaten, Honig, Kürbiskerne, Chili und Granatapfel-Drizzle.", "tags": ["veggie", "scharf"]},
         {"name": "Pastrami New York Style Drop", "price": "13,90", "desc": "Frischkäse, Rucola, Tomaten, Pastrami, Cornichons und Käse-Melt, Dattel-Senf-Dressing und Balsamico."},
         {"name": "Burrata Italia", "price": "13,90", "desc": "Pesto, Rucola, Tomaten, Burrata, geröstete Pinienkerne, Olivenöl und Balsamico-Drizzle.", "tags": ["veggie"]},
-        {"name": "Kleine Süßkartoffel-Pommes + Dip", "price": "3,90", "desc": "Zu deinem Shokupan. Dip: Trüffelcreme, Kräuterquark, vegane Mayo oder Ketchup."}
+        {"name": "Kleine Süßkartoffel-Pommes + Dip", "price": "3,90", "desc": "Zu deinem Shokupan. Dip: Trüffelcreme, Kräuterquark, vegane Mayo oder Ketchup.", "wahl": {"Dip": ["Trüffelcreme", "Kräuterquark", "Vegane Mayo", "Ketchup"]}}
       ],
       "addons": true
     },

@@ -433,6 +433,12 @@ test('Auswahl je Gericht: Milchsorte frei wählbar, Egg Drop mit genau einem Top
   assert.equal(egg.summe_cent, 1090);
   // Die Auswahl gilt nur für dieses Gericht, nicht für andere Shokupans
   assert.equal((await bestellen('Burrata Italia', ['Topping: Sucuk'])).fehler, 'artikel');
+  // Kleine Pommes: genau ein Dip, inklusive
+  await s.db.query("update bestellungen set status = 'serviert' where status = 'neu'");
+  assert.equal((await bestellen('Kleine Süßkartoffel-Pommes + Dip', [])).fehler, 'ungueltig');
+  const pommes = await bestellen('Kleine Süßkartoffel-Pommes + Dip', ['Dip: Ketchup']);
+  assert.equal(pommes.ok, true);
+  assert.equal(pommes.summe_cent, 390);
 });
 
 test('Lunch Deal außerhalb der Lunchzeit: dieselben Gerichte, aber ohne Getränk', async () => {
