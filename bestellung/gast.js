@@ -133,7 +133,6 @@
     const korbAnzahl = () => korb.reduce((s, z) => s + z.menge, 0);
     const zusatz = z => [...z.extras.map(x => x.name), z.notiz].filter(Boolean).join(' · ');
     const fertig = b => b.status === 'serviert' || b.status === 'abgelehnt';
-    const offeneRechnung = () => bestellungen.some(b => !b.bezahlt && b.status !== 'abgelehnt');
     function korbSpeichern() { merken.schreiben('korb', korb); leisteZeichnen(); }
 
     // ---------------------------------------------------------- Tisch-Anzeige im Kopf
@@ -444,21 +443,7 @@
       const b = blatt('Eure Bestellungen', 'Bezahlt wird bei uns an der Theke.');
       standListe = b.inhalt; standZeichnen();
       b.d.addEventListener('close', () => { standListe = null; });
-      // "Wir möchten zahlen": sagt der Theke Bescheid. Bezahlt wird an der Theke.
-      const bescheid = () => h('p', { class: 'nb-bescheid' }, h('b', {}, 'Bitte kommt zum Bezahlen an die Theke.'), ' Wir wissen Bescheid und machen eure Rechnung fertig.');
-      const zahlFehler = h('p', { class: 'nb-fehler', role: 'alert', hidden: true });
-      const zahlKnopf = h('button', { class: 'nb-knopf mitte', type: 'button', onclick: zahlen }, 'Wir möchten zahlen');
-      async function zahlen() {
-        if (!tisch) return tischWaehlen(zahlen);
-        zahlKnopf.disabled = true; zahlFehler.hidden = true;
-        try {
-          const antwort = await NANNI.rpc('zahlen_wuenschen', { p_code: code, ...(info.wahl && { p_tisch: tisch.id }) });
-          if (antwort.ok) { merken.schreiben('zahlen', Date.now()); return zahlKnopf.replaceWith(bescheid()); }
-          zahlFehler.textContent = T(antwort.fehler === 'nichts' ? 'An eurem Tisch ist nichts mehr offen.' : 'Das hat nicht geklappt. Kommt bitte kurz zu uns an die Theke.');
-        } catch { zahlFehler.textContent = T('Keine Verbindung. Versucht es noch einmal oder kommt zu uns an die Theke.'); }
-        zahlFehler.hidden = false; zahlKnopf.disabled = false;
-      }
-      if (offeneRechnung()) b.fuss.append(Date.now() - merken.lesen('zahlen', 0) < 3 * STUNDE ? bescheid() : zahlKnopf, zahlFehler);
+      // Bezahlt wird an der Theke; einen Knopf "Wir möchten zahlen" gibt es nicht.
       b.fuss.append(h('button', { class: 'nb-knopf hell mitte', type: 'button', onclick: () => b.d.close() }, 'Weiter in der Karte'));
     }
 
@@ -468,7 +453,6 @@
       clearTimeout(wecker);
       // Nachfragen, bis alles bezahlt oder abgelehnt ist: zügig, solange noch etwas in Arbeit ist, sonst gemächlich
       const offen = bestellungen.filter(b => !b.bezahlt && b.status !== 'abgelehnt');
-      if (!offen.length) merken.schreiben('zahlen', 0);
       if (!offen.length || document.hidden) return;
       try {
         const antwort = await NANNI.rpc('bestellung_status', { p_ids: offen.map(b => b.id) });
