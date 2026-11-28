@@ -118,7 +118,7 @@ window.NANNI_EN = {
   'Pesto, Rucola, Tomaten, Burrata, geröstete Pinienkerne, Olivenöl und Balsamico-Drizzle.':
     'Pesto, rocket, tomatoes, burrata, toasted pine nuts, olive oil and balsamic drizzle.',
   'Kleine Süßkartoffel-Pommes + Dip': 'Small sweet potato fries + dip',
-  'Zu deinem Shokupan. Dip: Trüffelcreme, Kräuterquark, vegane Mayo oder Ketchup.': 'With your shokupan. Dip: truffle cream, herb quark, vegan mayo or ketchup.',
+  'Zu deinem Shokupan. Dip: Trüffelcreme, Sriracha, vegane Mayo oder Ketchup.': 'With your shokupan. Dip: truffle cream, sriracha, vegan mayo or ketchup.',
   'Süßkartoffel-Pancakes': 'Sweet potato pancakes',
   'Herzhaft. Süß. Süßkartoffel.': 'Savoury. Sweet. Sweet potato.',
   'Süßkartoffel-Pancakes mit Halloumi': 'Sweet potato pancakes with halloumi',
@@ -160,7 +160,7 @@ window.NANNI_EN = {
   'Brioche Bun, Avocado-Mash, Romanasalat, Tomate, Avocado, Halloumi, Honig-Drizzle, Pickled Onions und hausgemachte Honig-Senf-Sauce. Dazu Süßkartoffel-Pommes mit veganem Reibe-Topping und Dip.':
     'Brioche bun, avocado mash, romaine lettuce, tomato, avocado, halloumi, honey drizzle, pickled onions and homemade honey mustard sauce. Served with sweet potato fries with vegan grated topping and dip.',
   'Süßkartoffel-Pommes mit Dip': 'Sweet potato fries with dip',
-  'Dip deiner Wahl: Trüffelcreme, Kräuterquark, vegane Mayo oder Ketchup.': 'Dip of your choice: truffle cream, herb quark, vegan mayo or ketchup.',
+  'Dip deiner Wahl: Trüffelcreme, Sriracha, vegane Mayo oder Ketchup.': 'Dip of your choice: truffle cream, sriracha, vegan mayo or ketchup.',
   'Lunch Deal: Mo–Mi und Fr von 11:30 bis 14:30 Uhr, am Wochenende ab 12 Uhr den ganzen Tag. Getränke sind nicht inklusive.': 'Lunch Deal: Mon–Wed and Fri from 11:30 am to 2:30 pm, on weekends all day from 12 noon. Drinks are not included.',
   'Nannis Sweets': 'Nanni’s Sweets',
   'French Toast und fluffige vegane Pancakes': 'French toast and fluffy vegan pancakes',
@@ -368,7 +368,7 @@ window.NANNI_EN = {
   'Milchalternativen ohne Aufpreis: Hafer- und Kokosmilch. Beim Bestellen am Handy wählt ihr die Milch direkt aus.': 'Milk alternatives at no extra charge: oat and coconut milk. When ordering by phone, you choose your milk right away.',
   'Dip inklusive': 'Dip included',
   'Bitte Dip wählen': 'Please choose a dip',
-  'Kräuterquark': 'Herb quark',
+  'Sriracha': 'Sriracha',
   'Vegane Mayo': 'Vegan mayo',
   'Ketchup': 'Ketchup'
 };

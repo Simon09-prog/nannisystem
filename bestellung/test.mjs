@@ -439,6 +439,11 @@ test('Auswahl je Gericht: Milchsorte frei wählbar, Egg Drop mit genau einem Top
   const pommes = await bestellen('Kleine Süßkartoffel-Pommes + Dip', ['Dip: Ketchup']);
   assert.equal(pommes.ok, true);
   assert.equal(pommes.summe_cent, 390);
+  // Große Pommes: ebenfalls genau ein Dip, inklusive
+  assert.equal((await bestellen('Süßkartoffel-Pommes mit Dip', [])).fehler, 'ungueltig');
+  const gross = await bestellen('Süßkartoffel-Pommes mit Dip', ['Dip: Sriracha']);
+  assert.equal(gross.ok, true);
+  assert.equal(gross.summe_cent, 690);
 });
 
 test('Lunch Deal außerhalb der Lunchzeit: dieselben Gerichte, aber ohne Getränk', async () => {
