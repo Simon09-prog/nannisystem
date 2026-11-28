@@ -7,6 +7,7 @@ import { fileURLToPath } from 'node:url';
 const HIER = fileURLToPath(new URL('.', import.meta.url));
 // Diese Kategorien sind Getränke. Die Theke kann sie getrennt vom Essen servieren.
 const GETRAENKE = new Set(['winter', 'kaffee', 'tee-matcha', 'favourites', 'limo', 'fresh', 'soft']);
+const MILCH = ['Kuhmilch', 'Hafermilch', 'Kokosmilch'];   // bei Getränken mit "milch": true (wie in build_menu.py)
 const cent = p => Math.round(parseFloat(p.replace(',', '.')) * 100);
 
 export function karte() {
@@ -14,7 +15,12 @@ export function karte() {
   const artikel = [], extras = [];
   for (const k of menu.kategorien) {
     const gruppen = k.groups ? k.groups.map(g => g.items) : [k.items];
-    for (const it of gruppen.flat()) artikel.push({ name: it.name, kategorie: k.id, preis_cent: cent(it.price), getraenk: GETRAENKE.has(k.id), beschreibung: it.desc || '' });
+    for (const it of gruppen.flat()) {
+      artikel.push({ name: it.name, kategorie: k.id, preis_cent: cent(it.price), getraenk: GETRAENKE.has(k.id), beschreibung: it.desc || '' });
+      // Auswahl nur für dieses Gericht (Milchsorte, Topping, Soße): als Extras mit der "Kategorie" "@Artikelname", ohne Aufpreis
+      const wahl = { ...(it.milch ? { Milch: MILCH } : {}), ...(it.wahl || {}) };
+      for (const [gruppe, optionen] of Object.entries(wahl)) for (const o of optionen) extras.push({ kategorie: '@' + it.name, name: `${gruppe}: ${o}`, preis_cent: 0 });
+    }
     const bloecke = (k.extras || []).flatMap(b => b.items).concat(k.addons ? menu.addons || [] : []);
     for (const [name, preis] of bloecke) {
       // Steht ein Extra doppelt in einer Kategorie (Omelett-Extras und Add-ons), muss der Preis gleich sein

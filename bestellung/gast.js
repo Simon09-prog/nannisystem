@@ -165,7 +165,10 @@
         const extras = [...bereich.querySelectorAll('.extras li[data-n]')].map(li => ({ name: li.dataset.n, cent: +li.dataset.p }))
           .filter(x => !(ohneGetraenk && x.name.startsWith('Getränk: ')));
         for (const li of bereich.querySelectorAll('.mi[data-n]')) {
-          const artikel = { name: li.dataset.n, cent: +li.dataset.p, text: li.querySelector('p')?.textContent || '', extras };
+          // Auswahl nur für dieses Gericht (data-x aus build_menu.py), z. B. Milchsorte oder Topping und Soße beim Egg Drop
+          let eigene = [];
+          try { eigene = JSON.parse(li.dataset.x || '[]').map(([name, cent]) => ({ name, cent })); } catch { /* ohne Auswahl */ }
+          const artikel = { name: li.dataset.n, cent: +li.dataset.p, text: li.querySelector(':scope > p')?.textContent || '', extras: [...extras, ...eigene] };
           if (ausverkauft.has(artikel.name)) {
             li.classList.add('nb-aus');
             li.querySelector('.mi-top').append(h('span', { class: 'nb-ausverkauft' }, 'ausverkauft'));
@@ -211,27 +214,35 @@
     function artikelBlatt(artikel) {
       const b = blatt(artikel.name, artikel.text);
       let menge = 1;
-      // Extras, die mit "Getränk: " beginnen, sind eine Pflicht-Auswahl (genau eins, z. B. das Getränk im Lunch Deal)
-      const WAHL = 'Getränk: ';
-      const wahl = artikel.extras.filter(x => x.name.startsWith(WAHL)).map(x => ({ x, feld: h('input', { type: 'radio', name: 'nb-wahl' }) }));
-      const haken = artikel.extras.filter(x => !x.name.startsWith(WAHL)).map(x => ({ x, feld: h('input', { type: 'checkbox' }) }));
+      // Extras der Form "Gruppe: Wahl" sind eine Auswahl: je Gruppe genau eins, z. B. "Getränk: Cappuccino" im Lunch Deal,
+      // "Milch: Hafermilch" (Kuhmilch ist vorausgewählt) oder "Topping: Bacon" und "Soße: Trüffelcreme" beim Egg Drop
+      const GRUPPE = /^([^:]+): (.+)$/;
+      const gruppen = new Map();   // Gruppe -> [{ x, feld, wert }]
+      for (const x of artikel.extras) {
+        const m = x.name.match(GRUPPE);
+        if (!m) continue;
+        if (!gruppen.has(m[1])) gruppen.set(m[1], []);
+        gruppen.get(m[1]).push({ x, wert: m[2], feld: h('input', { type: 'radio', name: 'nb-wahl-' + m[1], checked: m[1] === 'Milch' && m[2] === 'Kuhmilch' }) });
+      }
+      const wahl = [...gruppen.values()].flat();
+      const haken = artikel.extras.filter(x => !GRUPPE.test(x.name)).map(x => ({ x, feld: h('input', { type: 'checkbox' }) }));
       const gewaehlt = () => [...wahl, ...haken].filter(k => k.feld.checked).map(k => k.x);
       const preis = x => x.cent ? '+' + euro(x.cent) : 'inklusive';
       // Normaler Preis des Getränks aus der Karte: wird durchgestrichen gezeigt, gezahlt wird 0 €
       const normalPreis = name => +document.querySelector(`.mi[data-n="${CSS.escape(name)}"]`)?.dataset.p || 0;
-      if (wahl.length) {
-        b.inhalt.append(h('h4', {}, 'Getränk inklusive'), h('ul', { class: 'nb-extras' },
-          wahl.map(k => {
-            const name = k.x.name.slice(WAHL.length), normal = normalPreis(name);
-            return h('li', {}, h('label', {}, k.feld, h('span', {}, name),
-              h('em', {}, normal ? [h('s', { style: 'opacity:.6;margin-right:6px' }, euro(normal)), euro(0)] : preis(k.x))));
+      for (const [gruppe, optionen] of gruppen) {
+        b.inhalt.append(h('h4', {}, gruppe === 'Milch' ? 'Milch' : gruppe + ' inklusive'), h('ul', { class: 'nb-extras' },
+          optionen.map(k => {
+            const normal = gruppe === 'Getränk' && normalPreis(k.wert);
+            return h('li', {}, h('label', {}, k.feld, h('span', {}, k.wert),
+              h('em', {}, normal ? [h('s', { style: 'opacity:.6;margin-right:6px' }, euro(normal)), euro(0)] : gruppe === 'Milch' ? 'ohne Aufpreis' : preis(k.x))));
           })));
       }
       if (haken.length) {
         b.inhalt.append(h('h4', {}, haken.every(k => !k.x.cent) ? 'Inklusive dazu' : 'Extras'), h('ul', { class: 'nb-extras' },
           haken.map(k => h('li', {}, h('label', {}, k.feld, h('span', {}, k.x.name), h('em', {}, preis(k.x)))))));
       }
-      const wunsch = h('textarea', { rows: 2, maxlength: 200, placeholder: 'z. B. mit Hafermilch, koffeinfrei, ohne Zwiebeln' });
+      const wunsch = h('textarea', { rows: 2, maxlength: 200, placeholder: 'z. B. koffeinfrei, ohne Zwiebeln' });
       b.inhalt.append(h('h4', {}, 'Wunsch dazu'), wunsch,
         h('p', { class: 'nb-klein' }, 'Fragen zu Allergenen oder Zusatzstoffen? Tippt unten auf „Kellner rufen“, wir helfen gern.'));
 
@@ -243,9 +254,9 @@
         korbSpeichern(); b.d.close();
       } });
       const preisZeigen = () => {
-        const fehlt = wahl.length && !wahl.some(k => k.feld.checked);
+        const fehlt = [...gruppen.keys()].find(g => !gruppen.get(g).some(k => k.feld.checked));
         dazu.disabled = !!fehlt;
-        dazu.replaceChildren(h('span', {}, fehlt ? 'Bitte Getränk wählen' : 'Hinzufügen'),
+        dazu.replaceChildren(h('span', {}, fehlt ? 'Bitte ' + fehlt + ' wählen' : 'Hinzufügen'),
           h('span', {}, euro((artikel.cent + gewaehlt().reduce((s, x) => s + x.cent, 0)) * menge)));
       };
       [...wahl, ...haken].forEach(k => k.feld.addEventListener('change', preisZeigen));

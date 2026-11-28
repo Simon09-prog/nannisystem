@@ -57,6 +57,16 @@ def all_items(c):
 PREIS = {it["name"]: it["price"] for c in cats for it in all_items(c)}
 
 
+MILCH = ["Kuhmilch", "Hafermilch", "Kokosmilch"]   # bei Getränken mit "milch": true, ohne Aufpreis, Kuhmilch ist vorausgewählt
+
+
+def wahl(it):
+    """Auswahl nur für dieses eine Gericht: [(Name, Cent)], z. B. ("Milch: Hafermilch", 0) oder ("Topping: Bacon", 0).
+    Je Gruppe (Text vor dem Doppelpunkt) wählt der Gast genau eins; die Datenbank prüft das."""
+    gruppen = ({"Milch": MILCH} if it.get("milch") else {}) | it.get("wahl", {})
+    return [(f"{g}: {o}", 0) for g, optionen in gruppen.items() for o in optionen]
+
+
 def item_html(it):
     marks = ""
     for t in it.get("tags", []):
@@ -65,7 +75,8 @@ def item_html(it):
     if it.get("badge"):
         marks += f' <span class="tag tag-badge">{e(it["badge"])}</span>'
     desc = f'<p>{e(it["desc"])}</p>' if it.get("desc") else ""
-    return (f'<li class="mi" data-n="{e(it["name"])}" data-p="{cents(it["price"])}"><div class="mi-top"><h4>{e(it["name"])}{marks}</h4>'
+    x = f' data-x="{e(json.dumps(wahl(it), ensure_ascii=False))}"' if wahl(it) else ""
+    return (f'<li class="mi" data-n="{e(it["name"])}" data-p="{cents(it["price"])}"{x}><div class="mi-top"><h4>{e(it["name"])}{marks}</h4>'
             f'<span class="mi-line" aria-hidden="true"></span><span class="mi-price">{it["price"]}&nbsp;€</span></div>{desc}</li>')
 
 

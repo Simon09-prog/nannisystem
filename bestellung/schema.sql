@@ -332,16 +332,27 @@ begin
     if a.versteckt then return jsonb_build_object('ok', false, 'fehler', 'artikel'); end if;
     if a.ausverkauft_am = _heute() then return jsonb_build_object('ok', false, 'fehler', 'ausverkauft', 'artikel', a.name); end if;
 
-    -- Extras: nur solche, die es in der Kategorie dieses Artikels wirklich gibt
+    -- Extras: nur solche, die es in der Kategorie dieses Artikels wirklich gibt, oder nur für diesen Artikel ("@Artikelname")
     select count(distinct j->>'name') into v_gewollt
       from jsonb_array_elements(case when jsonb_typeof(pos->'extras') = 'array' then pos->'extras' else '[]'::jsonb end) j;
     select coalesce(jsonb_agg(jsonb_build_object('name', x.name, 'preis_cent', x.preis_cent) order by x.name), '[]'::jsonb),
            coalesce(sum(x.preis_cent), 0)
       into v_extras, v_extra_cent
       from extras x
-      where x.kategorie = a.kategorie
+      where (x.kategorie = a.kategorie or x.kategorie = '@' || a.name)
         and x.name in (select j->>'name' from jsonb_array_elements(case when jsonb_typeof(pos->'extras') = 'array' then pos->'extras' else '[]'::jsonb end) j);
     if jsonb_array_length(v_extras) <> v_gewollt then return jsonb_build_object('ok', false, 'fehler', 'artikel'); end if;
+    -- Auswahl "Gruppe: Wahl" (z. B. "Milch: Hafermilch", "Topping: Bacon"): höchstens eins je Gruppe.
+    -- Jede Gruppe außer Milch (ohne Wahl = Kuhmilch) und Getränk (Lunch Deal, siehe unten) braucht genau eins.
+    if exists (select 1 from jsonb_array_elements(v_extras) j where j->>'name' like '%: %'
+               group by split_part(j->>'name', ': ', 1) having count(*) > 1)
+       or exists (select 1 from extras x
+               where (x.kategorie = a.kategorie or x.kategorie = '@' || a.name) and x.name like '%: %'
+                 and split_part(x.name, ': ', 1) not in ('Getränk', 'Milch')
+                 and not exists (select 1 from jsonb_array_elements(v_extras) j
+                                 where split_part(j->>'name', ': ', 1) = split_part(x.name, ': ', 1))) then
+      return jsonb_build_object('ok', false, 'fehler', 'ungueltig');
+    end if;
     -- Lunch Deal: zur Lunchzeit genau ein Getränk inklusive, zu allen anderen Zeiten dieselben Gerichte ohne Getränk
     if a.kategorie = 'lunchdeal' then
       v_gewollt := (select count(*) from jsonb_array_elements(v_extras) j where j->>'name' like 'Getränk: %');

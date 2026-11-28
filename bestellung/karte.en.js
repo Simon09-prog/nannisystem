@@ -348,5 +348,22 @@ window.NANNI_EN = {
   'Glühwein, Baileys Snow Latte, Lebkuchen Latte und mehr': 'Mulled wine, Baileys Snow Latte, Gingerbread Latte and more',
   'Goldbraun gebackene Pancakes mit heißen Kirschen, Vanillesoße, Banane und Trauben.': 'Golden pancakes with hot cherries, vanilla sauce, banana and grapes.',
   'Warmes, cremiges Porridge mit heißen Kirschen, Chiasamen, Erdnussmus, Banane, Trauben und Granola.': 'Warm, creamy porridge with hot cherries, chia seeds, peanut butter, banana, grapes and granola.',
-  'Neu': 'New'
+  'Neu': 'New',
+  'Milch': 'Milk',
+  'ohne Aufpreis': 'no extra charge',
+  'Kuhmilch': 'Cow’s milk',
+  'Hafermilch': 'Oat milk',
+  'Kokosmilch': 'Coconut milk',
+  'Topping inklusive': 'Topping included',
+  'Soße inklusive': 'Sauce included',
+  'Bitte Topping wählen': 'Please choose a topping',
+  'Bitte Soße wählen': 'Please choose a sauce',
+  'Bitte Milch wählen': 'Please choose a milk',
+  'Bacon': 'Bacon',
+  'Sucuk': 'Sucuk',
+  'Tofu': 'Tofu',
+  'Trüffelcreme': 'Truffle cream',
+  'Sriracha-Mayo': 'Sriracha mayo',
+  'z. B. koffeinfrei, ohne Zwiebeln': 'e.g. decaf, no onions',
+  'Milchalternativen ohne Aufpreis: Hafer- und Kokosmilch. Beim Bestellen am Handy wählt ihr die Milch direkt aus.': 'Milk alternatives at no extra charge: oat and coconut milk. When ordering by phone, you choose your milk right away.'
 };

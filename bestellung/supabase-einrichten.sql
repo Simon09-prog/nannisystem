@@ -332,16 +332,27 @@ begin
     if a.versteckt then return jsonb_build_object('ok', false, 'fehler', 'artikel'); end if;
     if a.ausverkauft_am = _heute() then return jsonb_build_object('ok', false, 'fehler', 'ausverkauft', 'artikel', a.name); end if;
 
-    -- Extras: nur solche, die es in der Kategorie dieses Artikels wirklich gibt
+    -- Extras: nur solche, die es in der Kategorie dieses Artikels wirklich gibt, oder nur für diesen Artikel ("@Artikelname")
     select count(distinct j->>'name') into v_gewollt
       from jsonb_array_elements(case when jsonb_typeof(pos->'extras') = 'array' then pos->'extras' else '[]'::jsonb end) j;
     select coalesce(jsonb_agg(jsonb_build_object('name', x.name, 'preis_cent', x.preis_cent) order by x.name), '[]'::jsonb),
            coalesce(sum(x.preis_cent), 0)
       into v_extras, v_extra_cent
       from extras x
-      where x.kategorie = a.kategorie
+      where (x.kategorie = a.kategorie or x.kategorie = '@' || a.name)
         and x.name in (select j->>'name' from jsonb_array_elements(case when jsonb_typeof(pos->'extras') = 'array' then pos->'extras' else '[]'::jsonb end) j);
     if jsonb_array_length(v_extras) <> v_gewollt then return jsonb_build_object('ok', false, 'fehler', 'artikel'); end if;
+    -- Auswahl "Gruppe: Wahl" (z. B. "Milch: Hafermilch", "Topping: Bacon"): höchstens eins je Gruppe.
+    -- Jede Gruppe außer Milch (ohne Wahl = Kuhmilch) und Getränk (Lunch Deal, siehe unten) braucht genau eins.
+    if exists (select 1 from jsonb_array_elements(v_extras) j where j->>'name' like '%: %'
+               group by split_part(j->>'name', ': ', 1) having count(*) > 1)
+       or exists (select 1 from extras x
+               where (x.kategorie = a.kategorie or x.kategorie = '@' || a.name) and x.name like '%: %'
+                 and split_part(x.name, ': ', 1) not in ('Getränk', 'Milch')
+                 and not exists (select 1 from jsonb_array_elements(v_extras) j
+                                 where split_part(j->>'name', ': ', 1) = split_part(x.name, ': ', 1))) then
+      return jsonb_build_object('ok', false, 'fehler', 'ungueltig');
+    end if;
     -- Lunch Deal: zur Lunchzeit genau ein Getränk inklusive, zu allen anderen Zeiten dieselben Gerichte ohne Getränk
     if a.kategorie = 'lunchdeal' then
       v_gewollt := (select count(*) from jsonb_array_elements(v_extras) j where j->>'name' like 'Getränk: %');
@@ -919,12 +930,75 @@ insert into artikel (name, kategorie, preis_cent, getraenk, beschreibung) values
   ('Fruchttraum', 'waffeln', 890, false, 'Bunte Früchte und Erdbeersauce.')
   on conflict (name) do update set beschreibung = case when artikel.beschreibung = '' then excluded.beschreibung else artikel.beschreibung end;
 insert into extras (kategorie, name, preis_cent) values
+  ('@Espresso Macchiato', 'Milch: Kuhmilch', 0),
+  ('@Espresso Macchiato', 'Milch: Hafermilch', 0),
+  ('@Espresso Macchiato', 'Milch: Kokosmilch', 0),
+  ('@Cappuccino', 'Milch: Kuhmilch', 0),
+  ('@Cappuccino', 'Milch: Hafermilch', 0),
+  ('@Cappuccino', 'Milch: Kokosmilch', 0),
+  ('@Flat White', 'Milch: Kuhmilch', 0),
+  ('@Flat White', 'Milch: Hafermilch', 0),
+  ('@Flat White', 'Milch: Kokosmilch', 0),
+  ('@Milchkaffee', 'Milch: Kuhmilch', 0),
+  ('@Milchkaffee', 'Milch: Hafermilch', 0),
+  ('@Milchkaffee', 'Milch: Kokosmilch', 0),
+  ('@Latte Macchiato', 'Milch: Kuhmilch', 0),
+  ('@Latte Macchiato', 'Milch: Hafermilch', 0),
+  ('@Latte Macchiato', 'Milch: Kokosmilch', 0),
   ('kaffee', 'Extra Espresso Shot', 150),
   ('kaffee', 'Sahne', 80),
   ('kaffee', 'Flavours', 100),
+  ('@Baileys Snow Latte', 'Milch: Kuhmilch', 0),
+  ('@Baileys Snow Latte', 'Milch: Hafermilch', 0),
+  ('@Baileys Snow Latte', 'Milch: Kokosmilch', 0),
+  ('@Biscoff Latte', 'Milch: Kuhmilch', 0),
+  ('@Biscoff Latte', 'Milch: Hafermilch', 0),
+  ('@Biscoff Latte', 'Milch: Kokosmilch', 0),
+  ('@Lebkuchen Latte', 'Milch: Kuhmilch', 0),
+  ('@Lebkuchen Latte', 'Milch: Hafermilch', 0),
+  ('@Lebkuchen Latte', 'Milch: Kokosmilch', 0),
+  ('@Marshmallow Hot Chocolate', 'Milch: Kuhmilch', 0),
+  ('@Marshmallow Hot Chocolate', 'Milch: Hafermilch', 0),
+  ('@Marshmallow Hot Chocolate', 'Milch: Kokosmilch', 0),
+  ('@Hot Chocolate mit Rum', 'Milch: Kuhmilch', 0),
+  ('@Hot Chocolate mit Rum', 'Milch: Hafermilch', 0),
+  ('@Hot Chocolate mit Rum', 'Milch: Kokosmilch', 0),
   ('winter', 'Schlagsahne', 80),
   ('winter', 'Schuss Rum (4 cl)', 250),
   ('winter', 'Schuss Baileys (4 cl)', 250),
+  ('@Hot Matcha', 'Milch: Kuhmilch', 0),
+  ('@Hot Matcha', 'Milch: Hafermilch', 0),
+  ('@Hot Matcha', 'Milch: Kokosmilch', 0),
+  ('@Iced Matcha', 'Milch: Kuhmilch', 0),
+  ('@Iced Matcha', 'Milch: Hafermilch', 0),
+  ('@Iced Matcha', 'Milch: Kokosmilch', 0),
+  ('@Strawberry Iced Matcha', 'Milch: Kuhmilch', 0),
+  ('@Strawberry Iced Matcha', 'Milch: Hafermilch', 0),
+  ('@Strawberry Iced Matcha', 'Milch: Kokosmilch', 0),
+  ('@Mango Iced Matcha', 'Milch: Kuhmilch', 0),
+  ('@Mango Iced Matcha', 'Milch: Hafermilch', 0),
+  ('@Mango Iced Matcha', 'Milch: Kokosmilch', 0),
+  ('@Iced Latte', 'Milch: Kuhmilch', 0),
+  ('@Iced Latte', 'Milch: Hafermilch', 0),
+  ('@Iced Latte', 'Milch: Kokosmilch', 0),
+  ('@Iced Vanilla Latte', 'Milch: Kuhmilch', 0),
+  ('@Iced Vanilla Latte', 'Milch: Hafermilch', 0),
+  ('@Iced Vanilla Latte', 'Milch: Kokosmilch', 0),
+  ('@Iced Chai Latte', 'Milch: Kuhmilch', 0),
+  ('@Iced Chai Latte', 'Milch: Hafermilch', 0),
+  ('@Iced Chai Latte', 'Milch: Kokosmilch', 0),
+  ('@Chai Latte', 'Milch: Kuhmilch', 0),
+  ('@Chai Latte', 'Milch: Hafermilch', 0),
+  ('@Chai Latte', 'Milch: Kokosmilch', 0),
+  ('@Pumpkin Spice Latte', 'Milch: Kuhmilch', 0),
+  ('@Pumpkin Spice Latte', 'Milch: Hafermilch', 0),
+  ('@Pumpkin Spice Latte', 'Milch: Kokosmilch', 0),
+  ('@Hot Chocolate', 'Milch: Kuhmilch', 0),
+  ('@Hot Chocolate', 'Milch: Hafermilch', 0),
+  ('@Hot Chocolate', 'Milch: Kokosmilch', 0),
+  ('@Hot White Chocolate', 'Milch: Kuhmilch', 0),
+  ('@Hot White Chocolate', 'Milch: Hafermilch', 0),
+  ('@Hot White Chocolate', 'Milch: Kokosmilch', 0),
   ('lunchdeal', 'Getränk: Café Crema', 0),
   ('lunchdeal', 'Getränk: Americano', 0),
   ('lunchdeal', 'Getränk: Espresso', 0),
@@ -957,6 +1031,12 @@ insert into extras (kategorie, name, preis_cent) values
   ('fruehstueck', 'Veganer Lachs', 280),
   ('fruehstueck', 'Pastrami', 280),
   ('fruehstueck', 'Burrata', 450),
+  ('@Nanni Egg Drop', 'Topping: Bacon', 0),
+  ('@Nanni Egg Drop', 'Topping: Sucuk', 0),
+  ('@Nanni Egg Drop', 'Topping: Lachs', 0),
+  ('@Nanni Egg Drop', 'Topping: Tofu', 0),
+  ('@Nanni Egg Drop', 'Soße: Trüffelcreme', 0),
+  ('@Nanni Egg Drop', 'Soße: Sriracha-Mayo', 0),
   ('shokupan', 'Pochiertes Ei', 150),
   ('shokupan', 'Avocado', 200),
   ('shokupan', 'Sucuk', 200),

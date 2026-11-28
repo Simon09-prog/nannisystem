@@ -411,6 +411,30 @@ test('Lunch Deal: genau ein Getränk inklusive', async () => {
   assert.equal(mit.summe_cent, 1390);
 });
 
+test('Auswahl je Gericht: Milchsorte frei wählbar, Egg Drop mit genau einem Topping und einer Soße', async () => {
+  const tischCode = (await rpc('theke_tische', { p_key: K })).tische.at(-1).code;
+  await s.db.query("update bestellungen set status = 'serviert' where status = 'neu'");
+  const bestellen = (name, extras) => rpc('bestellung_aufgeben', { p_code: tischCode, p_positionen: [{ name, menge: 1, extras: extras.map(name => ({ name })) }] });
+  // Milch: ohne Wahl (= Kuhmilch) oder genau eine Sorte, ohne Aufpreis; nicht zwei Sorten, keine Milch beim Espresso
+  assert.equal((await bestellen('Cappuccino', [])).ok, true);
+  const hafer = await bestellen('Cappuccino', ['Milch: Hafermilch']);
+  assert.equal(hafer.ok, true);
+  assert.equal(hafer.summe_cent, 390);
+  await s.db.query("update bestellungen set status = 'serviert' where status = 'neu'");
+  assert.equal((await bestellen('Cappuccino', ['Milch: Hafermilch', 'Milch: Kokosmilch'])).fehler, 'ungueltig');
+  assert.equal((await bestellen('Espresso', ['Milch: Hafermilch'])).fehler, 'artikel');
+  assert.equal((await bestellen('Cappuccino', ['Milch: Sojamilch'])).fehler, 'artikel');
+  // Egg Drop: Topping und Soße sind Pflicht, je genau eins, beides inklusive
+  assert.equal((await bestellen('Nanni Egg Drop', [])).fehler, 'ungueltig');
+  assert.equal((await bestellen('Nanni Egg Drop', ['Topping: Sucuk'])).fehler, 'ungueltig');
+  assert.equal((await bestellen('Nanni Egg Drop', ['Topping: Sucuk', 'Topping: Bacon', 'Soße: Trüffelcreme'])).fehler, 'ungueltig');
+  const egg = await bestellen('Nanni Egg Drop', ['Topping: Sucuk', 'Soße: Trüffelcreme']);
+  assert.equal(egg.ok, true);
+  assert.equal(egg.summe_cent, 1090);
+  // Die Auswahl gilt nur für dieses Gericht, nicht für andere Shokupans
+  assert.equal((await bestellen('Burrata Italia', ['Topping: Sucuk'])).fehler, 'artikel');
+});
+
 test('Lunch Deal außerhalb der Lunchzeit: dieselben Gerichte, aber ohne Getränk', async () => {
   const tischCode = (await rpc('theke_tische', { p_key: K })).tische.at(-1).code;
   await s.db.query("update bestellungen set status = 'serviert' where status = 'neu'");   // Platz für neue Bestellungen an diesem Tisch

@@ -11,25 +11,25 @@
         {"name": "Americano", "price": "3,50"},
         {"name": "Espresso", "price": "2,90"},
         {"name": "Espresso Doppio", "price": "4,40"},
-        {"name": "Espresso Macchiato", "price": "3,30"},
-        {"name": "Cappuccino", "price": "3,90"},
-        {"name": "Flat White", "price": "5,30"},
-        {"name": "Milchkaffee", "price": "4,50"},
-        {"name": "Latte Macchiato", "price": "4,50"},
+        {"name": "Espresso Macchiato", "price": "3,30", "milch": true},
+        {"name": "Cappuccino", "price": "3,90", "milch": true},
+        {"name": "Flat White", "price": "5,30", "milch": true},
+        {"name": "Milchkaffee", "price": "4,50", "milch": true},
+        {"name": "Latte Macchiato", "price": "4,50", "milch": true},
         {"name": "Kaffee & Kuchen Deal", "price": "6,00", "desc": "Immer montags von 12 bis 18 Uhr.", "badge": "Montag"}
       ],
       "extras": [{"title": "Extras", "items": [["Extra Espresso Shot", "1,50"], ["Sahne", "0,80"], ["Flavours", "1,00"]]}],
-      "notes": ["Alle Kaffees gibt es auch koffeinfrei.", "Milchalternativen ohne Aufpreis: Kokos-, Hafer- und Sojamilch."]
+      "notes": ["Alle Kaffees gibt es auch koffeinfrei.", "Milchalternativen ohne Aufpreis: Hafer- und Kokosmilch. Beim Bestellen am Handy wählt ihr die Milch direkt aus."]
     },
     {
       "id": "winter", "name": "Winter Specials", "short": "Winter Specials", "sub": "Ein Schluck Winterglück", "theme": "winter",
       "items": [
         {"name": "Winter Glühwein", "price": "4,90", "desc": "Roter Glühwein mit Orange & Zimt."},
-        {"name": "Baileys Snow Latte", "price": "6,90", "desc": "Espresso, Milch, Baileys, Sahne & Schokoraspeln."},
-        {"name": "Biscoff Latte", "price": "5,90", "desc": "Espresso, Milch, Lotuscreme, Zimtsirup, Sahne & Kekscrumble."},
-        {"name": "Lebkuchen Latte", "price": "5,90", "desc": "Espresso, Milch, Lebkuchensirup & Zimt."},
-        {"name": "Marshmallow Hot Chocolate", "price": "5,90", "desc": "Heiße Schokolade mit gerösteten Marshmallows & Schokosauce."},
-        {"name": "Hot Chocolate mit Rum", "price": "5,50", "desc": "Heiße Schokolade mit Rum."}
+        {"name": "Baileys Snow Latte", "price": "6,90", "desc": "Espresso, Milch, Baileys, Sahne & Schokoraspeln.", "milch": true},
+        {"name": "Biscoff Latte", "price": "5,90", "desc": "Espresso, Milch, Lotuscreme, Zimtsirup, Sahne & Kekscrumble.", "milch": true},
+        {"name": "Lebkuchen Latte", "price": "5,90", "desc": "Espresso, Milch, Lebkuchensirup & Zimt.", "milch": true},
+        {"name": "Marshmallow Hot Chocolate", "price": "5,90", "desc": "Heiße Schokolade mit gerösteten Marshmallows & Schokosauce.", "milch": true},
+        {"name": "Hot Chocolate mit Rum", "price": "5,50", "desc": "Heiße Schokolade mit Rum.", "milch": true}
       ],
       "extras": [{"title": "Extras", "items": [["Schlagsahne", "0,80"], ["Schuss Rum (4 cl)", "2,50"], ["Schuss Baileys (4 cl)", "2,50"]]}],
       "notes": ["Winter Glühwein, Baileys Snow Latte und Hot Chocolate mit Rum enthalten Alkohol. Glühwein gibt es ab 16, Getränke mit Rum oder Baileys ab 18 Jahren."]
@@ -42,10 +42,10 @@
         {"name": "Früchtetee Waldbeere", "price": "3,50", "desc": "Aus feinen Beerennoten – fruchtig, süß-säuerlich und aromatisch."},
         {"name": "Frischer Minztee", "price": "4,20", "desc": "Aus frischer Minze – mild und beruhigend."},
         {"name": "Frischer Ingwer-Zitronentee", "price": "4,20", "desc": "Frischer Ingwer – wärmend, intensiv und natürlich erfrischend."},
-        {"name": "Hot Matcha", "price": "5,90"},
-        {"name": "Iced Matcha", "price": "5,90"},
-        {"name": "Strawberry Iced Matcha", "price": "6,50"},
-        {"name": "Mango Iced Matcha", "price": "6,50"}
+        {"name": "Hot Matcha", "price": "5,90", "milch": true},
+        {"name": "Iced Matcha", "price": "5,90", "milch": true},
+        {"name": "Strawberry Iced Matcha", "price": "6,50", "milch": true},
+        {"name": "Mango Iced Matcha", "price": "6,50", "milch": true}
       ]
     },
     {
@@ -53,17 +53,17 @@
       "groups": [
         { "title": "Iced", "items": [
           {"name": "Iced Americano", "price": "3,90"},
-          {"name": "Iced Latte", "price": "4,50"},
-          {"name": "Iced Vanilla Latte", "price": "5,20"},
-          {"name": "Iced Chai Latte", "price": "4,90"}
+          {"name": "Iced Latte", "price": "4,50", "milch": true},
+          {"name": "Iced Vanilla Latte", "price": "5,20", "milch": true},
+          {"name": "Iced Chai Latte", "price": "4,90", "milch": true}
         ] },
         { "title": "Hot & Special", "items": [
-          {"name": "Chai Latte", "price": "4,90"},
-          {"name": "Pumpkin Spice Latte", "price": "5,50"}
+          {"name": "Chai Latte", "price": "4,90", "milch": true},
+          {"name": "Pumpkin Spice Latte", "price": "5,50", "milch": true}
         ] },
         { "title": "Sweet", "items": [
-          {"name": "Hot Chocolate", "price": "4,50"},
-          {"name": "Hot White Chocolate", "price": "4,50"}
+          {"name": "Hot Chocolate", "price": "4,50", "milch": true},
+          {"name": "Hot White Chocolate", "price": "4,50", "milch": true}
         ] }
       ]
     },
@@ -137,7 +137,7 @@
       "id": "shokupan", "name": "Shokupan Sandwiches", "short": "Shokupan", "sub": "Frisch gebacken, liebevoll belegt und knusprig getoastet", "img": "bilder/club-sandwich.webp",
       "callout": {"title": "Shokupan. New. Fresh. Urban.", "text": "Unser Egg Drop Sandwich wird mit japanischem Milchbrot zubereitet – besonders soft und fluffig, mit feiner, brioche-ähnlicher Note. Goldig getoastet und frisch belegt wird es bei uns zum modernen Brunch- und Lunch-Sandwich."},
       "items": [
-        {"name": "Nanni Egg Drop", "price": "10,90", "desc": "Goldbraun getoastet mit Topping deiner Wahl, Cheddar-Melt, fluffigem, cremigem Rührei und Avocado, dazu hausgemachter Sweet-Cream-Senf als Finish. Topping: Bacon, Sucuk, Lachs oder Tofu. Sauce: Trüffelcreme oder Sriracha-Mayo.", "tags": ["veggie"]},
+        {"name": "Nanni Egg Drop", "price": "10,90", "desc": "Goldbraun getoastet mit Topping deiner Wahl, Cheddar-Melt, fluffigem, cremigem Rührei und Avocado, dazu hausgemachter Sweet-Cream-Senf als Finish. Topping: Bacon, Sucuk, Lachs oder Tofu. Sauce: Trüffelcreme oder Sriracha-Mayo.", "tags": ["veggie"], "wahl": {"Topping": ["Bacon", "Sucuk", "Lachs", "Tofu"], "Soße": ["Trüffelcreme", "Sriracha-Mayo"]}},
         {"name": "Halloumi-Honey Drop", "price": "12,90", "desc": "Toskanacreme, Rucola, Halloumi, Tomaten, Honig, Kürbiskerne, Chili und Granatapfel-Drizzle.", "tags": ["veggie", "scharf"]},
         {"name": "Pastrami New York Style Drop", "price": "13,90", "desc": "Frischkäse, Rucola, Tomaten, Pastrami, Cornichons und Käse-Melt, Dattel-Senf-Dressing und Balsamico."},
         {"name": "Burrata Italia", "price": "13,90", "desc": "Pesto, Rucola, Tomaten, Burrata, geröstete Pinienkerne, Olivenöl und Balsamico-Drizzle.", "tags": ["veggie"]},
