@@ -128,7 +128,8 @@
       "items": [
         {"name": "Classic Açaí Bowl", "price": "11,90", "desc": "Cremige Açaí, kalt serviert mit Beeren, Banane, Crunchy Granola, Chiasamen und Kokosflocken – verfeinert mit Dattelsirup.", "tags": ["vegan"]},
         {"name": "Lotus Crunch Açaí Bowl", "price": "12,90", "desc": "Cremige Açaí, kalt serviert mit Beeren, Banane, Crunchy Granola, Soja-Vanillecreme, Chiasamen und Kokosflocken – getoppt mit Lotus Swirl und Lotus Crumble.", "tags": ["vegan"]},
-        {"name": "Apfel Crunch Porridge", "price": "9,90", "desc": "Warmes, cremiges Porridge mit Apfelkompott und Apfelstücken, Granola, gemahlenen Haselnüssen, Kokosflocken und Zimt – verfeinert mit einem Hauch Lotus Swirl.", "tags": ["vegan"]}
+        {"name": "Apfel Crunch Porridge", "price": "9,90", "desc": "Warmes, cremiges Porridge mit Apfelkompott und Apfelstücken, Granola, gemahlenen Haselnüssen, Kokosflocken und Zimt – verfeinert mit einem Hauch Lotus Swirl.", "tags": ["vegan"]},
+        {"name": "Cherry Porridge", "price": "9,90", "desc": "Warmes, cremiges Porridge mit heißen Kirschen, Chiasamen, Erdnussmus, Banane, Trauben und Granola.", "badge": "Neu"}
       ],
       "notes": ["Porridge auch mit glutenfreien Zutaten (+1,50 €): glutenfreie Haferflocken, glutenfreier Haferdrink und Mandelmus.", "Unser Granola ist vegan und wird mit glutenfreien Haferflocken hergestellt. Kann Spuren von Gluten enthalten."]
     },
@@ -182,6 +183,7 @@
         { "title": "Fluffy Pancakes", "items": [
           {"name": "Classy Berry Pancakes", "price": "11,90", "desc": "Goldbraun gebackene Pancakes mit Beeren, cremiger Soja-Vanillecreme und Bio-Ahornsirup.", "tags": ["veggie"]},
           {"name": "Bueno Berry Pancakes", "price": "11,90", "desc": "Goldbraun gebackene Pancakes mit Beeren, Bueno Crumble und Bueno-Sauce.", "tags": ["veggie"]},
+          {"name": "Cherry Pancakes", "price": "11,90", "desc": "Goldbraun gebackene Pancakes mit heißen Kirschen, Vanillesoße, Banane und Trauben.", "tags": ["veggie"], "badge": "Neu"},
           {"name": "Nannis Vegan Banana Bread", "price": "9,90", "desc": "Getoastetes veganes Bananenbrot aus glutenfreien Zutaten mit Soja-Vanillecreme, Banane, Beeren, hausgemachtem Granola und Bio-Ahornsirup.", "tags": ["vegan"]}
         ] }
       ]

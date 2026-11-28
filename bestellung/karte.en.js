@@ -345,5 +345,8 @@ window.NANNI_EN = {
   'Schuss Rum (4 cl)': 'Shot of rum (4 cl)',
   'Schuss Baileys (4 cl)': 'Shot of Baileys (4 cl)',
   'Winter Glühwein, Baileys Snow Latte und Hot Chocolate mit Rum enthalten Alkohol. Glühwein gibt es ab 16, Getränke mit Rum oder Baileys ab 18 Jahren.': 'Winter mulled wine, Baileys Snow Latte and Hot Chocolate with rum contain alcohol. Mulled wine from age 16, drinks with rum or Baileys from age 18.',
-  'Glühwein, Baileys Snow Latte, Lebkuchen Latte und mehr': 'Mulled wine, Baileys Snow Latte, Gingerbread Latte and more'
+  'Glühwein, Baileys Snow Latte, Lebkuchen Latte und mehr': 'Mulled wine, Baileys Snow Latte, Gingerbread Latte and more',
+  'Goldbraun gebackene Pancakes mit heißen Kirschen, Vanillesoße, Banane und Trauben.': 'Golden pancakes with hot cherries, vanilla sauce, banana and grapes.',
+  'Warmes, cremiges Porridge mit heißen Kirschen, Chiasamen, Erdnussmus, Banane, Trauben und Granola.': 'Warm, creamy porridge with hot cherries, chia seeds, peanut butter, banana, grapes and granola.',
+  'Neu': 'New'
 };
